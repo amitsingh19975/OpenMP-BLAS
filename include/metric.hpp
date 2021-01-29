@@ -31,8 +31,8 @@ namespace amt{
             if(auto it = m_data.find(name); it != m_data.end()){
                 auto& data = it->second;
                 data.agg += gflops;
-                data.min += std::min(data.min,gflops);
-                data.max += std::max(data.max,gflops);
+                data.min = std::min(data.min,gflops);
+                data.max = std::max(data.max,gflops);
                 data.plot.push_back(gflops);
             }else{
                 flops_data f;
@@ -101,8 +101,9 @@ namespace amt{
                 os << "Name: "<< k << '\n';
                 os << '\t' << "Min GFlops: "<<v.min<<'\n';
                 os << '\t' << "Max GFlops: "<<v.max<<'\n';
-                os << '\t' << "Avg GFlops: "<<avg<<'\n' << '\n';
-                os << '\t' << "Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
+                os << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
+                os << '\t' << "Avg GFlops: "<<avg<<'\n';
+                os << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return os;
         }
