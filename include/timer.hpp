@@ -12,7 +12,10 @@ namespace amt{
         using base_type = decltype(clock_type::now());
 
         constexpr double operator()() noexcept{
-            m_end = clock_type::now();
+            if(!m_stopped){
+                m_end = clock_type::now();
+                m_stopped = true;
+            }
             auto diff = (m_end - m_start);
             return std::chrono::duration<double>(diff).count();
         }
@@ -74,6 +77,7 @@ namespace amt{
 
         constexpr void start() noexcept{
             m_start = clock_type::now();
+            m_stopped = false;
         }
 
         constexpr operator double(){
@@ -87,6 +91,7 @@ namespace amt{
     private:
         base_type m_start{clock_type::now()};
         base_type m_end;
+        bool m_stopped{false};
     };
     
 
