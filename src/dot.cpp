@@ -4,7 +4,6 @@
 #include <vector>
 #include <cassert>
 #include <timer.hpp>
-#include <mtm.hpp>
 #include <matplot/matplot.h>
 #include <boost/numeric/ublas/tensor.hpp>
 #include <cblas.h>
@@ -45,7 +44,7 @@ int main(){
     {   
         std::size_t M = static_cast<std::size_t>(el);
         std::size_t N = 1u;
-        auto ops = 2. * static_cast<double>(M) * static_cast<double>(N) * static_cast<double>(K);
+        auto ops = 2. * static_cast<double>(M) * static_cast<double>(N) * static_cast<double>(1ul);
         ub::dynamic_tensor<float> a(ub::extents<>{M,K});
         std::iota(a.begin(), a.end(), 1.f);
         ub::dynamic_tensor<float> b(ub::extents<>{K,N});
@@ -97,17 +96,4 @@ int main(){
     // plt::scatter(x,y,2);
     // plt::show();
     return 0;
-// Avg Flops: 4.08413
-// Max Flops: 4.80707
-// Min Flops: 0.527291
 }
-
-
-// int main(){
-//     ub::dynamic_tensor<float> t{ ub::extents<>{5,5} };
-//     std::iota(t.begin(), t.end(), 1.f);
-//     std::cout<<t<<'\n';
-//     trans(t.data(), t.strides().data(), t.extents().data());
-//     std::cout<<t<<'\n';
-// }
-
