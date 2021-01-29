@@ -5,7 +5,7 @@
 #include <cassert>
 #include <timer.hpp>
 #include <metric.hpp>
-#include <boost/numeric/ublas/tensor.hpp>
+#include <dot.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <cblas.h>
 #include <complex>
@@ -79,15 +79,39 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
     return static_cast<int>(ret);
 }
 
+template<typename ValueType>
+int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+
+    ValueType ret{};
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        amt::timer t{};
+        {   
+            amt::dot_prod(ret, v1, v2);
+        }
+        auto st = t.stop();
+        if constexpr(std::is_same_v<ValueType,float>){
+            m.insert_or_update("tensor_same_layout_float", (ops / st) * 10e-9);
+        }else if constexpr(std::is_same_v<ValueType,double>){
+            m.insert_or_update("tensor_same_layout_double", (ops / st) * 10e-9);
+        }
+    }
+    return static_cast<int>(ret);
+}
+
 int main(){
     using value_type = double;
     constexpr auto max_size = 1000ul;
     int res = 0;
     std::vector<double> x(max_size);
-    std::iota(x.begin(), x.end(), 1.);
+    std::iota(x.begin(), x.end(), 2.);
     auto m = amt::metric(max_size);
     res += ublas_dot_same_layout<value_type>(x,m);
     res += blas_same_layout<value_type>(x,m);
+    res += tensor_same_layout<value_type>(x,m);
     std::cout<<m<<'\n';
     m.plot(x);
     return res;
