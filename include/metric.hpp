@@ -16,8 +16,8 @@ namespace amt{
         static constexpr double peak_performance = 2.3 * 8 * 32; // peak_performance = freq * cores * FLOP per cycle
         struct flops_data{
             std::vector<double> plot{};
-            double min{ std::numeric_limits<double>::max() };
-            double max{ std::numeric_limits<double>::min() };
+            double min{ peak_performance };
+            double max{ 0. };
             double agg{};
         };
     public:
@@ -83,7 +83,9 @@ namespace amt{
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
-                plt::scatter(x_coord, v.plot)->display_name(k);
+                auto l = plt::scatter(x_coord, v.plot, 2);
+                l->display_name(k);
+                l->marker_face(true);
                 plt::hold(plt::on);
             }
 
@@ -93,11 +95,14 @@ namespace amt{
         }
 
         friend std::ostream& operator<<(std::ostream& os, metric const& m){
+            os << "Peak Performance: "<< peak_performance << " GFlops\n";
             for(auto&& [k,v] : m.m_data){
+                auto avg = (v.agg / static_cast<double>(m.m_total));
                 os << "Name: "<< k << '\n';
                 os << '\t' << "Min GFlops: "<<v.min<<'\n';
                 os << '\t' << "Max GFlops: "<<v.max<<'\n';
-                os << '\t' << "Avg GFlops: "<<(v.agg / static_cast<double>(m.m_total))<<'\n' << '\n';
+                os << '\t' << "Avg GFlops: "<<avg<<'\n' << '\n';
+                os << '\t' << "Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return os;
         }
