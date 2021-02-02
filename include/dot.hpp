@@ -11,21 +11,48 @@ namespace amt {
     template<typename Out, typename In, typename SizeType>
     void dot_prod_helper_same_layout(
         Out* c,
-        In const* a, [[maybe_unused]] SizeType const* wa, [[maybe_unused]] SizeType const* na,
-        In const* b, [[maybe_unused]] SizeType const* wb, [[maybe_unused]] SizeType const* nb
+        In const* a,
+        In const* b, 
+        [[maybe_unused]] SizeType const wb,
+        [[maybe_unused]] SizeType const n
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
         
-        auto N = na[0] * na[1];
-        
         using value_type = std::remove_pointer_t<Out>;
-        [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
 
+        // #pragma omp target map(to: a[0:N], b[0:N]) map(tofrom: sum)
         #pragma omp simd reduction(+:sum) safelen(16)
-        for(auto i = 0ul; i < N; ++i){
+        for(auto i = 0ul; i < n; ++i){
             sum += (a[i] * b[i]);
+        }
+
+        *c = sum;
+
+    }
+
+    template<typename Out, typename In, typename SizeType>
+    void dot_prod_helper_diff_layout(
+        Out* c,
+        In const* a,
+        In const* b, 
+        [[maybe_unused]] SizeType const wb,
+        [[maybe_unused]] SizeType const n
+    ) noexcept
+    {
+        static_assert(std::is_same_v<Out,In>);
+        
+        using value_type = std::remove_pointer_t<Out>;
+        value_type sum = {0};
+
+        // #pragma omp target map(to: a[0:N], b[0:N]) map(tofrom: sum)
+        // #pragma omp parallel
+        {
+            #pragma omp for simd safelen(16)
+            for(auto i = 0ul; i < n; ++i){
+                sum += (a[i] * b[i * wb]);
+            }
         }
 
         *c = sum;
@@ -52,6 +79,8 @@ namespace amt {
         
         auto const& na = a.extents();
         auto const& nb = b.extents();
+        auto const& wa = a.strides();
+        auto const& wb = b.strides();
 
         if( !( boost::numeric::ublas::is_vector(na) && boost::numeric::ublas::is_vector(nb) ) ) {
             throw std::runtime_error(
@@ -60,20 +89,41 @@ namespace amt {
             );
         }
 
+        std::size_t NA = boost::numeric::ublas::product(na);
+        std::size_t NB = boost::numeric::ublas::product(nb);
+        std::size_t WA = wa[0] * wa[1];
+        std::size_t WB = wb[0] * wb[1];
+
+        if( NA != NB ){
+            throw std::runtime_error(
+                "amt::dot_prod(boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
+                "both vector must be of same size"
+            );
+        }
 
         if constexpr( std::is_same_v<layout_type1,layout_type2> ){
-
-            if( !( (na[0] == nb[0]) && (na[1] == nb[1]) ) ){
-                throw std::runtime_error(
-                    "amt::dot_prod(boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
-                    "both vector must be of same size"
-                );
-            }
-
             dot_prod_helper_same_layout(
                 &c,
-                a.data(), a.strides().data(), a.extents().data(),
-                b.data(), b.strides().data(), b.extents().data()
+                a.data(),
+                b.data(),
+                1ul,
+                NA
+            );
+        }else if constexpr( std::is_same_v< layout_type1, boost::numeric::ublas::layout::last_order > ){
+            dot_prod_helper_diff_layout(
+                &c,
+                b.data(),
+                a.data(),
+                WA,
+                NA
+            );
+        }else{
+            dot_prod_helper_diff_layout(
+                &c,
+                a.data(),
+                b.data(),
+                WB,
+                NA
             );
         }
     }
