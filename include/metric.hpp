@@ -19,30 +19,40 @@ namespace amt{
             double min{ peak_performance };
             double max{ 0. };
             double agg{};
+
+            void update(double f){
+                agg += f;
+                min = std::min(min,f);
+                max = std::max(max,f);
+                plot.push_back(f);
+            }
         };
     public:
-        using base_type = std::unordered_map<std::string_view,flops_data>;
+        using base_type = std::unordered_map<std::string,flops_data>;
         using size_type = std::size_t;
         metric(size_type total)
             : m_total(total)
         {}
         
-        void insert_or_update(std::string_view name, double gflops){
+        auto& insert_or_update(std::string const& name, double gflops){
             if(auto it = m_data.find(name); it != m_data.end()){
                 auto& data = it->second;
-                data.agg += gflops;
-                data.min = std::min(data.min,gflops);
-                data.max = std::max(data.max,gflops);
-                data.plot.push_back(gflops);
+                data.update(gflops);
+                return data;
             }else{
                 flops_data f;
                 f.agg = gflops;
                 f.plot.reserve(m_total);
                 m_data[name] = std::move(f);
+                return m_data[name];
             }
         }
         
-        void insert_or_update(std::string_view name, std::vector<double>&& gflops){
+        auto& operator[](std::string const& name){
+            return m_data[name];
+        }
+        
+        void insert_or_update(std::string const& name, std::vector<double>&& gflops){
             if(auto it = m_data.find(name); it != m_data.end()){
                 auto& data = it->second;
                 data.agg = std::accumulate(gflops.begin(), gflops.end(), 0., std::plus<>{});
@@ -61,30 +71,21 @@ namespace amt{
             }
         }
 
-        flops_data& operator[](std::string_view name){
-            if(auto it = m_data.find(name); it != m_data.end()){
-                return it->second;
-            }else{
-                throw std::runtime_error("amt::metric::operator[](std::string_view): Key not found");
-            }
-        }
-
-        flops_data const& operator[](std::string_view name) const{
-            if(auto it = m_data.find(name); it != m_data.end()){
-                return it->second;
-            }else{
-                throw std::runtime_error("amt::metric::operator[](std::string_view): Key not found");
-            }
-        }
-
         void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops") const{
             namespace plt = matplot;
+
+            auto norm = [](std::string name){
+                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+                    return c == '_' ? ' ' : c;
+                });
+                return name;
+            };
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
                 auto l = plt::scatter(x_coord, v.plot, 2);
-                l->display_name(k);
+                l->display_name(norm(k));
                 l->marker_face(true);
                 plt::hold(plt::on);
             }

@@ -4,6 +4,7 @@
 #include <boost/numeric/ublas/tensor.hpp>
 #include <omp.h>
 #include <optional>
+#include <x86intrin.h>
 
 namespace amt {
 
@@ -11,33 +12,31 @@ namespace amt {
     void dot_prod_helper_same_layout(
         Out* c,
         In const* a, [[maybe_unused]] SizeType const* wa, [[maybe_unused]] SizeType const* na,
-        In const* b, [[maybe_unused]] SizeType const* wb, [[maybe_unused]] SizeType const* nb,
-        [[maybe_unused]] std::size_t num_of_threads
+        In const* b, [[maybe_unused]] SizeType const* wb, [[maybe_unused]] SizeType const* nb
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
         
-        auto N = std::max(na[0], na[1]);
+        auto N = na[0] * na[1];
+        
         using value_type = std::remove_pointer_t<Out>;
-        constexpr auto alignment = alignof(value_type);
-        value_type sum{};
+        [[maybe_unused]] constexpr auto alignment = alignof(value_type);
+        value_type sum = {0};
 
-        // omp_set_num_threads(static_cast<int>(num_of_threads));
-        
-        #pragma omp simd reduction(+:sum) safelen(16) aligned(a,b:alignment)
+        #pragma omp simd reduction(+:sum) safelen(16)
         for(auto i = 0ul; i < N; ++i){
-            sum += a[i] * b[i];
+            sum += (a[i] * b[i]);
         }
-        
+
         *c = sum;
+
     }
 
     template<typename Out, typename E1, typename E2>
     constexpr void dot_prod(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
-        boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_of_threads = {std::nullopt}
+        boost::numeric::ublas::tensor_core<E2> const& b
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
@@ -61,8 +60,6 @@ namespace amt {
             );
         }
 
-        std::size_t threads = num_of_threads.value_or( static_cast<std::size_t>(omp_get_num_procs()) );
-
 
         if constexpr( std::is_same_v<layout_type1,layout_type2> ){
 
@@ -76,8 +73,7 @@ namespace amt {
             dot_prod_helper_same_layout(
                 &c,
                 a.data(), a.strides().data(), a.extents().data(),
-                b.data(), b.strides().data(), b.extents().data(),
-                threads
+                b.data(), b.strides().data(), b.extents().data()
             );
         }
     }
