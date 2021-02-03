@@ -223,7 +223,7 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 // #define TEST_ON
-#define DIFFERENT_LAYOUT
+// #define DIFFERENT_LAYOUT
 
 int main(){
     using value_type = float;
