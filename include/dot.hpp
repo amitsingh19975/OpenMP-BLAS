@@ -20,10 +20,11 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
+        constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
 
         // #pragma omp target map(to: a[0:N], b[0:N]) map(tofrom: sum)
-        #pragma omp simd reduction(+:sum) safelen(16)
+        #pragma omp simd reduction(+:sum) safelen(16) aligned(a,b:alignment)
         for(auto i = 0ul; i < n; ++i){
             sum += (a[i] * b[i]);
         }
@@ -44,12 +45,13 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
+        constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
 
         // #pragma omp target map(to: a[0:N], b[0:N]) map(tofrom: sum)
         // #pragma omp parallel
         {
-            #pragma omp for simd safelen(16)
+            #pragma omp for simd safelen(16) schedule(simd:static) aligned(a,b:alignment)
             for(auto i = 0ul; i < n; ++i){
                 sum += (a[i] * b[i * wb]);
             }
