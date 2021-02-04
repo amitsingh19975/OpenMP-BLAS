@@ -8,12 +8,19 @@ if(NOT DEFINED OpenBLAS_HOME)
     set(OpenBLAS_HOME "/usr/local/opt/openblas")
 endif(NOT DEFINED OpenBLAS_HOME)
 
+if(NOT DEFINED BLIS_HOME)
+    set(BLIS_HOME "/usr/local")
+endif(NOT DEFINED BLIS_HOME)
+
 
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/OpenMP.cmake)
 include(cmake/Matplot.cmake)
 include(cmake/Boost.cmake)
 include(cmake/OpenBlas.cmake)
+include(cmake/Blis.cmake)
+include(cmake/Eigen.cmake)
+# include(cmake/MKL.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

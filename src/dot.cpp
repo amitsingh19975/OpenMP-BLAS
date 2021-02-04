@@ -9,6 +9,8 @@
 #include <dot.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <cblas.h>
+#include <blis.h>
+#include <Eigen/Dense>
 #include <complex>
 
 
@@ -151,8 +153,64 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
     return static_cast<int>(ret);
 }
 
+template<typename ValueType>
+int blis_same_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        amt::timer t{};
+        {   
+            if constexpr(std::is_same_v<ValueType,float>){
+                bli_sdotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
+            }else{
+                bli_ddotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
+            }
+        }
+        auto st = t.stop();
+        metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
+template<typename ValueType>
+int eigen_same_layout(std::vector<double> const& x, amt::metric& m){
+    using namespace Eigen;
+    using vector_type = Matrix<ValueType,-1,1,ColMajor>;
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        vector_type v1(sz), v2(sz);
+        v1.fill(3.);
+        v2.fill(3.);
+        amt::timer t{};
+        {   
+            ret += v1.dot(v2);
+        }
+        auto st = t.stop();
+        metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
 template<typename ValueType, typename L>
-int tensor_diff_layout(std::vector<double> const& x, amt::metric& m){
+int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -222,8 +280,81 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     return static_cast<int>(ret);
 }
 
+template<typename ValueType, typename L>
+int blis_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    using other_layout = std::conditional_t<
+        std::is_same_v<L,ub::layout::first_order>,
+        ub::layout::last_order,
+        ub::layout::first_order
+    >;
+
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        auto w1 = static_cast<dim_t>(v1.strides()[0] * v1.strides()[1]);
+        auto w2 = static_cast<dim_t>(v2.strides()[0] * v2.strides()[1]);
+        amt::timer t{};
+        {   
+            if constexpr(std::is_same_v<ValueType,float>){
+                bli_sdotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), w1, v2.data(), w2, &ret);
+            }else if constexpr(std::is_same_v<ValueType,double>){
+                bli_ddotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), w1, v2.data(), w2, &ret);
+            }
+        }
+
+        auto st = t.stop();
+        metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
+template<typename ValueType, typename L>
+int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+    using namespace Eigen;
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr auto layout = (std::is_same_v<L,ub::layout::first_order> ? ColMajor : RowMajor);
+    constexpr auto other_layout = (std::is_same_v<L,ub::layout::first_order> ? RowMajor : ColMajor);
+
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        
+        Matrix<ValueType,-1,1,layout> v1(sz);
+        Matrix<ValueType,1,-1,other_layout> v2(sz);
+        v1.fill(3.);
+        v2.fill(3.);
+        amt::timer t{};
+        {   
+            ret += v1.dot(v2);
+        }
+
+        auto st = t.stop();
+        metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
 // #define TEST_ON
-// #define DIFFERENT_LAYOUT
+#define DIFFERENT_LAYOUT
 
 int main(){
     using value_type = float;
@@ -239,13 +370,14 @@ int main(){
         res += ublas_dot_same_layout<value_type>(x,m);
         res += blas_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
+        res += blis_same_layout<value_type>(x,m);
+        res += eigen_same_layout<value_type>(x,m);
     #else
 
         res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        // res += blas_dot_diff_layout<value_type,ub::layout::last_order>(x,m);
-
-        res += tensor_diff_layout<value_type,ub::layout::first_order>(x,m);
-        // res += tensor_diff_layout<value_type,ub::layout::last_order>(x,m);
+        res += tensor_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        res += blis_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        res += eigen_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
 
 
     #endif
