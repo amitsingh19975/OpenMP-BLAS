@@ -130,6 +130,26 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType>
+int ref_same_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        amt::timer t{};
+        {   
+            amt::dot_prod(ret, v1, v2);
+        }
+        auto st = t.stop();
+        m.update_ref((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
+template<typename ValueType>
 int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -205,6 +225,33 @@ int eigen_same_layout(std::vector<double> const& x, amt::metric& m){
         }
         auto st = t.stop();
         metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+
+template<typename ValueType, typename L>
+int ref_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    using other_layout = std::conditional_t<
+        std::is_same_v<L,ub::layout::first_order>,
+        ub::layout::last_order,
+        ub::layout::first_order
+    >;
+
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        amt::timer t{};
+        {   
+            amt::dot_prod_ref(ret, v1, v2);
+        }
+        auto st = t.stop();
+        m.update_ref((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
 }
@@ -354,7 +401,8 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 // #define TEST_ON
-#define DIFFERENT_LAYOUT
+// #define DIFFERENT_LAYOUT
+// #define SPEEDUP_PLOT
 
 int main(){
     using value_type = float;
@@ -367,23 +415,27 @@ int main(){
     std::iota(x.begin(), x.end(), 2.);
     auto m = amt::metric(max_size);
     #ifndef DIFFERENT_LAYOUT
+        res += ref_same_layout<value_type>(x,m);
         res += ublas_dot_same_layout<value_type>(x,m);
         res += blas_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
         res += blis_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
     #else
-
+        res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += tensor_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blis_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += eigen_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
 
-
     #endif
 
     std::cout<<m<<'\n';
-    m.plot(x);
+    #ifndef SPEEDUP_PLOT
+        m.plot(x);
+    #else
+        m.plot_speedup(x);
+    #endif
     return res;
 #else
     

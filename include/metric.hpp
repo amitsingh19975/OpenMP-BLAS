@@ -71,6 +71,10 @@ namespace amt{
             }
         }
 
+        void update_ref(double f){
+            m_ref.update(f);
+        }
+
         void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops") const{
             namespace plt = matplot;
 
@@ -89,6 +93,34 @@ namespace amt{
                 l->marker_face(true);
                 plt::hold(plt::on);
             }
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
+        void plot_speedup(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP(%)") const{
+            namespace plt = matplot;
+
+            auto norm = [](std::string name){
+                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+                    return c == '_' ? ' ' : c;
+                });
+                return name;
+            };
+
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            plt::ylim({0.,1000.});
+            for(auto&& [k,v] : m_data){
+                std::vector<double> speed(m_total);
+                std::transform(v.plot.begin(), v.plot.end(), m_ref.plot.begin(), speed.begin(), [](auto l, auto r){
+                    return (l / r) * 100.;
+                });
+                auto l = plt::scatter(x_coord, speed, 2);
+                l->display_name(norm(k));
+                l->marker_face(true);
+                plt::hold(plt::on);
+            }
 
             plt::hold(plt::off);
             plt::legend();
@@ -99,11 +131,14 @@ namespace amt{
             os << "Peak Performance: "<< peak_performance << " GFlops\n";
             for(auto&& [k,v] : m.m_data){
                 auto avg = (v.agg / static_cast<double>(m.m_total));
+                auto ref_avg = (m.m_ref.agg / static_cast<double>(m.m_total));
                 os << "Name: "<< k << '\n';
                 os << '\t' << "Min GFlops: "<<v.min<<'\n';
                 os << '\t' << "Max GFlops: "<<v.max<<'\n';
+                os << '\t' << "Max SpeedUp: "<<((v.max / m.m_ref.max) * 100.)<<'\n';
                 os << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
                 os << '\t' << "Avg GFlops: "<<avg<<'\n';
+                os << '\t' << "Avg SpeedUp: "<<((avg / ref_avg) * 100.)<<'\n';
                 os << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return os;
@@ -111,6 +146,7 @@ namespace amt{
 
     private:
         base_type m_data{};
+        flops_data m_ref{};
         size_type m_total{};
     };
 
