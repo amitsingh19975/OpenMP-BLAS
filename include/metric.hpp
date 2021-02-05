@@ -135,10 +135,10 @@ namespace amt{
                 os << "Name: "<< k << '\n';
                 os << '\t' << "Min GFlops: "<<v.min<<'\n';
                 os << '\t' << "Max GFlops: "<<v.max<<'\n';
-                os << '\t' << "Max SpeedUp: "<<((v.max / m.m_ref.max) * 100.)<<'\n';
+                os << '\t' << "Max SpeedUp: "<<((v.max / m.m_ref.max))<<'\n';
                 os << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
                 os << '\t' << "Avg GFlops: "<<avg<<'\n';
-                os << '\t' << "Avg SpeedUp: "<<((avg / ref_avg) * 100.)<<'\n';
+                os << '\t' << "Avg SpeedUp: "<<((avg / ref_avg))<<'\n';
                 os << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return os;

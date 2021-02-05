@@ -4,12 +4,14 @@
 #include <boost/numeric/ublas/tensor.hpp>
 #include <omp.h>
 #include <optional>
-#include <x86intrin.h>
+
+#define AMT_INLINE __attribute__((always_inline))
+#define AMT_NO_OPT __attribute__ ((optnone))
 
 namespace amt {
 
     template<typename Out, typename In, typename SizeType>
-    void dot_prod_helper_ref(
+    AMT_NO_OPT void dot_prod_helper_ref(
         Out* c,
         In const* a,
         In const* b, 
@@ -20,9 +22,12 @@ namespace amt {
         
         using value_type = std::remove_pointer_t<Out>;
         value_type sum = {0};
-
+        auto ai = a;
+        auto bi = b;
         for(auto i = 0ul; i < n; ++i){
-            sum += (a[i] * b[i]);
+            sum += *ai * *bi;
+            ++ai;
+            ++bi;
         }
 
         *c = sum;
@@ -51,7 +56,7 @@ namespace amt {
     // }
 
     template<typename Out, typename In, typename SizeType>
-    void dot_prod_helper(
+    AMT_INLINE void dot_prod_helper(
         Out* c,
         In const* a,
         In const* b, 
@@ -61,11 +66,11 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
-        [[maybe_unused]] constexpr auto block = (256ul / (sizeof(value_type) * 8ul)) * 16ul;
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
     
-        #pragma omp simd reduction(+:sum) safelen(16) aligned(a,b:alignment)
+        // #pragma omp simd
+        #pragma omp parallel for reduction(+:sum) schedule(dynamic)
         for(auto i = 0ul; i < n; ++i){
             sum += (a[i] * b[i]);
         }
@@ -100,22 +105,28 @@ namespace amt {
 
     // }
 
-    template<typename Out, typename E1, typename E2>
+    template<typename Out, typename E1, typename E2, typename... Timer>
     constexpr void dot_prod(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
-        boost::numeric::ublas::tensor_core<E2> const& b
+        boost::numeric::ublas::tensor_core<E2> const& b,
+        Timer&... t
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
         using tensor_type2 = boost::numeric::ublas::tensor_core<E2>;
-
         static_assert(
             std::is_same_v< typename tensor_type1::value_type, typename tensor_type2::value_type > && 
             std::is_same_v< Out, typename tensor_type2::value_type >,
             "both tensor type and result type must be of same value_type"
         );
+
+        static_assert(
+            sizeof...(Timer) <= 1u,
+            "there can only be one profiler"
+        );
         
+        std::tuple<Timer&...> timer(t...);
         auto const& na = a.extents();
         auto const& nb = b.extents();
 
@@ -135,20 +146,32 @@ namespace amt {
                 "both vector must be of same size"
             );
         }
-
-        dot_prod_helper(
-            &c,
-            a.data(),
-            b.data(),
-            NA
-        );
+        
+        if constexpr(sizeof...(Timer) > 0u){
+            std::get<0>(timer).start();
+            dot_prod_helper(
+                &c,
+                a.data(),
+                b.data(),
+                NA
+            );
+            std::get<0>(timer).stop();
+        }else{
+            dot_prod_helper(
+                &c,
+                a.data(),
+                b.data(),
+                NA
+            );
+        }
     }
 
-    template<typename Out, typename E1, typename E2>
+    template<typename Out, typename E1, typename E2, typename... Timer>
     constexpr void dot_prod_ref(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
-        boost::numeric::ublas::tensor_core<E2> const& b
+        boost::numeric::ublas::tensor_core<E2> const& b,
+        Timer&... t
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
@@ -159,6 +182,13 @@ namespace amt {
             std::is_same_v< Out, typename tensor_type2::value_type >,
             "both tensor type and result type must be of same value_type"
         );
+        
+        static_assert(
+            sizeof...(Timer) <= 1u,
+            "there can only be one profiler"
+        );
+        
+        std::tuple<Timer&...> timer(t...);
         
         auto const& na = a.extents();
         auto const& nb = b.extents();
@@ -180,12 +210,23 @@ namespace amt {
             );
         }
 
-        dot_prod_helper_ref(
-            &c,
-            a.data(),
-            b.data(),
-            NA
-        );
+        if constexpr(sizeof...(Timer) > 0u){
+            std::get<0>(timer).start();
+            dot_prod_helper_ref(
+                &c,
+                a.data(),
+                b.data(),
+                NA
+            );
+            std::get<0>(timer).stop();
+        }else{
+            dot_prod_helper_ref(
+                &c,
+                a.data(),
+                b.data(),
+                NA
+            );
+        }
     }
 
 } // namespace amt

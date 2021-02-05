@@ -141,9 +141,9 @@ int ref_same_layout(std::vector<double> const& x, amt::metric& m){
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
         amt::timer t{};
         {   
-            amt::dot_prod(ret, v1, v2);
+            amt::dot_prod_ref(ret, v1, v2, t);
         }
-        auto st = t.stop();
+        auto st = t();
         m.update_ref((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
@@ -165,9 +165,9 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
         amt::timer t{};
         {   
-            amt::dot_prod(ret, v1, v2);
+            amt::dot_prod(ret, v1, v2, t);
         }
-        auto st = t.stop();
+        auto st = t();
         metric_data.update((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
@@ -248,9 +248,9 @@ int ref_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
         ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
         amt::timer t{};
         {   
-            amt::dot_prod_ref(ret, v1, v2);
+            amt::dot_prod_ref(ret, v1, v2, t);
         }
-        auto st = t.stop();
+        auto st = t();
         m.update_ref((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
@@ -280,9 +280,9 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
         ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
         amt::timer t{};
         {   
-            amt::dot_prod(ret, v1, v2);
+            amt::dot_prod(ret, v1, v2, t);
         }
-        auto st = t.stop();
+        auto st = t();
         metric_data.update((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
@@ -406,9 +406,9 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 // #define SPEEDUP_PLOT
 
 int main(){
-    // using value_type = float;
-    using value_type = double;
-    constexpr auto max_size = 4096ul;
+    using value_type = float;
+    // using value_type = double;
+    constexpr auto max_size = 4096;
     
 #ifndef ENABLE_TEST
 
