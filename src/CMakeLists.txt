@@ -10,7 +10,7 @@ if ( EXISTS "${SRC_LIST_PATH}" )
     target_link_libraries( "${src_name}" PRIVATE 
                             project_options project_warnings 
                             ${OPENMP_LIB} ${MATPLOT_LIB} ${OpenBLAS_LIB} Eigen3::Eigen
-                            ${BLIS_LIB} ${MKL_LIB}
+                            ${BLIS_LIB} ${MKL_LIB} 
     )
     
   endforeach(SRC_FULL_NAME ${SRC_LIST})

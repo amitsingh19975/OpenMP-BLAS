@@ -400,15 +400,17 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     return static_cast<int>(ret);
 }
 
-// #define TEST_ON
-// #define DIFFERENT_LAYOUT
+// #define ENABLE_TEST
+#define DIFFERENT_LAYOUT
+// #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 
 int main(){
-    using value_type = float;
+    // using value_type = float;
+    using value_type = double;
     constexpr auto max_size = 4096ul;
     
-#ifndef TEST_ON
+#ifndef ENABLE_TEST
 
     int res = 0;
     std::vector<double> x(max_size);
@@ -431,11 +433,14 @@ int main(){
     #endif
 
     std::cout<<m<<'\n';
-    #ifndef SPEEDUP_PLOT
-        m.plot(x);
-    #else
-        m.plot_speedup(x);
+    #ifndef DISABLE_PLOT
+        #ifndef SPEEDUP_PLOT
+            m.plot(x);
+        #else
+            m.plot_speedup(x);
+        #endif
     #endif
+    
     return res;
 #else
     
