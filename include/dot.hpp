@@ -69,9 +69,28 @@ namespace amt {
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
     
-        // #pragma omp simd
-        #pragma omp parallel for reduction(+:sum) schedule(dynamic)
+        #pragma omp simd aligned(a,b:alignment)
         for(auto i = 0ul; i < n; ++i){
+            sum += (a[i] * b[i]);
+        }
+        *c = sum;
+    }
+
+    template<std::size_t N, typename Out, typename In>
+    AMT_INLINE void static_dot_prod_helper(
+        Out* c,
+        In const* a,
+        In const* b
+    ) noexcept
+    {
+        static_assert(std::is_same_v<Out,In>);
+        
+        using value_type = std::remove_pointer_t<Out>;
+        [[maybe_unused]] constexpr auto alignment = alignof(value_type);
+        value_type sum = {0};
+    
+        #pragma omp simd safelen(N)  aligned(a,b:alignment)
+        for(auto i = 0ul; i < N; ++i){
             sum += (a[i] * b[i]);
         }
         *c = sum;
@@ -115,6 +134,9 @@ namespace amt {
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
         using tensor_type2 = boost::numeric::ublas::tensor_core<E2>;
+        using extents_type1 = typename tensor_type1::extents_type;
+        using extents_type2 = typename tensor_type2::extents_type;
+        
         static_assert(
             std::is_same_v< typename tensor_type1::value_type, typename tensor_type2::value_type > && 
             std::is_same_v< Out, typename tensor_type2::value_type >,
@@ -136,7 +158,9 @@ namespace amt {
                 "both tensor must be vector"
             );
         }
-
+        
+        constexpr bool is_na_static = boost::numeric::ublas::is_static_v<extents_type1>;
+        constexpr bool is_nb_static = boost::numeric::ublas::is_static_v<extents_type2>;
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
 
@@ -146,24 +170,57 @@ namespace amt {
                 "both vector must be of same size"
             );
         }
-        
-        if constexpr(sizeof...(Timer) > 0u){
-            std::get<0>(timer).start();
-            dot_prod_helper(
-                &c,
-                a.data(),
-                b.data(),
-                NA
-            );
-            std::get<0>(timer).stop();
+
+        auto size_fn = [&](){
+            if constexpr(is_na_static){
+                constexpr auto sz = boost::numeric::ublas::product(extents_type1{});
+                return std::integral_constant<std::size_t, sz>{};
+            }else if constexpr(is_nb_static){
+                constexpr auto sz = boost::numeric::ublas::product(extents_type2{});
+                return std::integral_constant<std::size_t, sz>{};
+            }else{
+                return std::integral_constant<std::size_t, 0ul>{};
+            }
+        };
+
+        if constexpr(is_na_static || is_nb_static){
+            constexpr std::size_t Sz = decltype(size_fn())::value;
+
+            if constexpr(sizeof...(Timer) > 0u){
+                std::get<0>(timer).start();
+                static_dot_prod_helper<Sz>(
+                    &c,
+                    a.data(),
+                    b.data()
+                );
+                std::get<0>(timer).stop();
+            }else{
+                static_dot_prod_helper<Sz>(
+                    &c,
+                    a.data(),
+                    b.data()
+                );
+            }
         }else{
-            dot_prod_helper(
-                &c,
-                a.data(),
-                b.data(),
-                NA
-            );
+            if constexpr(sizeof...(Timer) > 0u){
+                std::get<0>(timer).start();
+                dot_prod_helper(
+                    &c,
+                    a.data(),
+                    b.data(),
+                    NA
+                );
+                std::get<0>(timer).stop();
+            }else{
+                dot_prod_helper(
+                    &c,
+                    a.data(),
+                    b.data(),
+                    NA
+                );
+            }
         }
+
     }
 
     template<typename Out, typename E1, typename E2, typename... Timer>

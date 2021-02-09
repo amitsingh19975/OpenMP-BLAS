@@ -5,22 +5,27 @@ project(BenchmarkingOperations CXX)
 # Including cmake settings
 
 if(NOT DEFINED OpenBLAS_HOME)
-    set(OpenBLAS_HOME "/usr/local/opt/openblas")
+    add_compile_definitions(OpenBLAS_HOME="/usr/local/opt/openblas")
+    # set(OpenBLAS_HOME "/usr/local/opt/openblas")
 endif(NOT DEFINED OpenBLAS_HOME)
 
 if(NOT DEFINED BLIS_HOME)
     set(BLIS_HOME "/usr/local")
 endif(NOT DEFINED BLIS_HOME)
 
+if(NOT DEFINED MKL_HOME)
+    set(MKL_HOME "/opt/intel/mkl")
+endif(NOT DEFINED MKL_HOME)
+
 
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/OpenMP.cmake)
 include(cmake/Matplot.cmake)
 include(cmake/Boost.cmake)
-include(cmake/OpenBlas.cmake)
+# include(cmake/OpenBlas.cmake)
 include(cmake/Blis.cmake)
 include(cmake/Eigen.cmake)
-# include(cmake/MKL.cmake)
+include(cmake/MKL.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

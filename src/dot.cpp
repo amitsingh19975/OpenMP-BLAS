@@ -6,12 +6,16 @@
 #include <cassert>
 #include <timer.hpp>
 #include <metric.hpp>
+#include <openblas.hpp>
 #include <dot.hpp>
 #include <boost/numeric/ublas/vector.hpp>
-#include <cblas.h>
+// #include <cblas.h>
+#include <mkl_cblas.h>
 #include <blis.h>
 #include <Eigen/Dense>
 #include <complex>
+#include <boost/mp11/list.hpp>
+#include <boost/mp11/algorithm.hpp>
 
 
 namespace plt = matplot;
@@ -101,7 +105,7 @@ int ublas_dot_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType>
-int blas_same_layout(std::vector<double> const& x, amt::metric& m){
+int mkl_same_layout(std::vector<double> const& x, amt::metric& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -117,9 +121,9 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
         amt::timer t{};
         {   
             if constexpr(std::is_same_v<ValueType,float>){
-                ret = cblas_sdot(static_cast<blasint>(sz),v1.data(), 1u, v2.data(), 1u);
+                ret = cblas_sdot(static_cast<MKL_INT>(sz),v1.data(), 1u, v2.data(), 1u);
             }else if constexpr(std::is_same_v<ValueType,double>){
-                ret = cblas_ddot(static_cast<blasint>(sz),v1.data(), 1u, v2.data(), 1u);
+                ret = cblas_ddot(static_cast<MKL_INT>(sz),v1.data(), 1u, v2.data(), 1u);
             }
         }
 
@@ -128,6 +132,33 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
     }
     return static_cast<int>(ret);
 }
+
+#ifdef AMT_BENCHMARK_OPENBLAS_HPP
+template<typename ValueType>
+int blas_same_layout(std::vector<double> const& x, amt::metric& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    for(auto const& el : x){
+        double const ops = 2. * el;
+        auto sz = static_cast<std::size_t>(el);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        amt::timer t{};
+        {   
+            ret = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), 1, v2.data(), 1);
+        }
+
+        auto st = t.stop();
+        metric_data.update((ops / st) * 10e-9);
+    }
+    return static_cast<int>(ret);
+}
+#endif
 
 template<typename ValueType>
 int ref_same_layout(std::vector<double> const& x, amt::metric& m){
@@ -170,6 +201,36 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
         auto st = t();
         metric_data.update((ops / st) * 10e-9);
     }
+    return static_cast<int>(ret);
+}
+
+template<std::size_t Start, std::size_t End, typename ValueType>
+int static_tensor_same_layout(amt::metric& m){
+    using namespace boost::mp11;
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    std::string fn_name = std::string(__func__) 
+        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+    
+    auto& metric_data = m[fn_name];
+    ValueType ret{};
+
+    using number_list = mp_iota_c<End>;
+    using range = mp_drop_c<number_list, std::max(1ul, Start) >;
+
+    mp_for_each<range>([&](auto I){
+        constexpr auto sz = decltype(I)::value;
+        double const ops = 2. * sz;
+        using extents_type = ub::static_extents<1ul, sz>;
+        using tensor_type = ub::static_tensor<ValueType,extents_type>;
+        tensor_type v1(3.), v2( 3.);
+        amt::timer t{};
+        {   
+            amt::dot_prod(ret, v1, v2, t);
+        }
+        auto st = t();
+        metric_data.update((ops / st) * 10e-9);
+    });
     return static_cast<int>(ret);
 }
 
@@ -288,6 +349,7 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     return static_cast<int>(ret);
 }
 
+#ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType, typename L>
 int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
@@ -314,11 +376,7 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
         auto w2 = static_cast<blasint>(v2.strides()[0] * v2.strides()[1]);
         amt::timer t{};
         {   
-            if constexpr(std::is_same_v<ValueType,float>){
-                ret = cblas_sdot(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
-            }else if constexpr(std::is_same_v<ValueType,double>){
-                ret = cblas_ddot(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
-            }
+            ret = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
         }
 
         auto st = t.stop();
@@ -326,6 +384,7 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
     }
     return static_cast<int>(ret);
 }
+#endif
 
 template<typename ValueType, typename L>
 int blis_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
@@ -401,7 +460,7 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 // #define ENABLE_TEST
-#define DIFFERENT_LAYOUT
+// #define DIFFERENT_LAYOUT
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 
@@ -409,6 +468,7 @@ int main(){
     using value_type = float;
     // using value_type = double;
     constexpr auto max_size = 4096;
+    amt::OpenBlasFnLoader::init();
     
 #ifndef ENABLE_TEST
 
@@ -421,7 +481,9 @@ int main(){
         res += ublas_dot_same_layout<value_type>(x,m);
         res += blas_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
+        // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         res += blis_same_layout<value_type>(x,m);
+        res += mkl_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);

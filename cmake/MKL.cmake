@@ -1,12 +1,22 @@
-set(BLA_VENDOR Intel10_64lp)
+SET(MKL_INCLUDE_SEARCH_PATHS
+    ${MKL_HOME}
+    ${MKL_HOME}/include
+)
 
-find_package(BLAS REQUIRED)
+link_directories(${MKL_HOME}/lib)
+link_directories(/opt/intel/lib)
 
-if(BLAS_FOUND)
-    message(STATUS "MKL FOUND")
-    set(MKL_LIB BLAS::BLAS)
-    include_directories()
-else()
-    message(FATAL_ERROR "MKL NOT FOUND")
-endif(BLAS_FOUND)
+FIND_PATH(MKL_INCLUDE_DIR NAMES 
+    mkl_cblas.h PATHS ${MKL_INCLUDE_SEARCH_PATHS}
+)
 
+SET(MKL_LIB 
+    mkl_intel_ilp64
+    mkl_intel_thread 
+    mkl_core
+    iomp5
+)
+
+include_directories(${MKL_INCLUDE_DIR})
+
+message("MKL_INCLUDE_DIR: ${MKL_INCLUDE_DIR}, MKL_LIB: ${MKL_LIB}")
