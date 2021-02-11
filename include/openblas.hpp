@@ -4,6 +4,9 @@
 #include <dlfcn.h>
 #include <string>
 #include <memory>
+#include <functional>
+#include <boost/dll/shared_library.hpp>
+#include <boost/core/demangle.hpp>
 
 using blasint = int;
 
@@ -19,24 +22,24 @@ namespace amt{
 
         namespace detail{
             // vector times vector inner product
-            float(*sdot)(blasint,const float*,blasint,const float*,blasint);
-            double(*ddot)(blasint,const double*,blasint,const double*,blasint);
+            std::function<float(blasint,const float*,blasint,const float*,blasint)> sdot = nullptr;
+            std::function<double(blasint,const double*,blasint,const double*,blasint)> ddot = nullptr;
             
             // vector times vector outer product
-            void(*sger) (const ORDER order, const blasint M, const blasint N, const float  alpha, const float *X, const blasint incX, const float *Y, const blasint incY, float *A, const blasint lda);
-            void(*dger) (const ORDER order, const blasint M, const blasint N, const double  alpha, const double *X, const blasint incX, const double *Y, const blasint incY, double *A, const blasint lda);
+            std::function<void(const ORDER order, const blasint M, const blasint N, const float  alpha, const float *X, const blasint incX, const float *Y, const blasint incY, float *A, const blasint lda)> sger = nullptr;
+            std::function<void(const ORDER order, const blasint M, const blasint N, const double  alpha, const double *X, const blasint incX, const double *Y, const blasint incY, double *A, const blasint lda)> dger = nullptr;
 
             // matrix times vector
-            void (*sgemv)(const ORDER order,  const TRANSPOSE trans,  const blasint m, const blasint n,
-            const float alpha, const float  *a, const blasint lda,  const float  *x, const blasint incx,  const float beta,  float  *y, const blasint incy);
-            void (*dgemv)(const ORDER order,  const TRANSPOSE trans,  const blasint m, const blasint n,
-            const double alpha, const double  *a, const blasint lda,  const double  *x, const blasint incx,  const double beta,  double  *y, const blasint incy);
+            std::function<void (const ORDER order,  const TRANSPOSE trans,  const blasint m, const blasint n,
+            const float alpha, const float  *a, const blasint lda,  const float  *x, const blasint incx,  const float beta,  float  *y, const blasint incy)> sgemv = nullptr;
+            std::function<void (const ORDER order,  const TRANSPOSE trans,  const blasint m, const blasint n,
+            const double alpha, const double  *a, const blasint lda,  const double  *x, const blasint incx,  const double beta,  double  *y, const blasint incy)> dgemv = nullptr;
 
             // matrix times matrix
-            void (*sgemm)(const ORDER Order, const TRANSPOSE TransA, const TRANSPOSE TransB, const blasint M, const blasint N, const blasint K,
-            const float alpha, const float *A, const blasint lda, const float *B, const blasint ldb, const float beta, float *C, const blasint ldc);
-            void (*dgemm)(const ORDER Order, const TRANSPOSE TransA, const TRANSPOSE TransB, const blasint M, const blasint N, const blasint K,
-            const double alpha, const double *A, const blasint lda, const double *B, const blasint ldb, const double beta, double *C, const blasint ldc);
+            std::function<void (const ORDER Order, const TRANSPOSE TransA, const TRANSPOSE TransB, const blasint M, const blasint N, const blasint K,
+            const float alpha, const float *A, const blasint lda, const float *B, const blasint ldb, const float beta, float *C, const blasint ldc)> sgemm = nullptr;
+            std::function<void (const ORDER Order, const TRANSPOSE TransA, const TRANSPOSE TransB, const blasint M, const blasint N, const blasint K,
+            const double alpha, const double *A, const blasint lda, const double *B, const blasint ldb, const double beta, double *C, const blasint ldc)> dgemm = nullptr;
         }
 
         template<typename ValueType>
@@ -106,42 +109,46 @@ namespace amt{
     }
 
     class OpenBlasFnLoader{
-    
-    public:
-        
+        using base_type = boost::dll::shared_library;
         OpenBlasFnLoader()
-            : m_handle( dlopen(m_name.data(), RTLD_LOCAL|RTLD_LAZY), &detail::destroy_handle )
+            : m_handle( m_path.data() )
         {
-            if(!m_handle){
-                throw std::runtime_error(dlerror());
-            }
         }
 
-        template<typename Fn>
-        void get(Fn& fn, std::string_view fn_name) const{
-            fn = reinterpret_cast<std::decay_t<Fn>>(
-                dlsym(m_handle.get(), fn_name.data())
-            );
-            if(!fn){
-                throw std::runtime_error(dlerror());
-            }
+        template<typename R, typename... Args>
+        void get_fn(std::function<R(Args...)>& fn, std::string_view fn_name) const{
+            if(m_handle.has(fn_name.data())){
+                fn = m_handle.get<R(Args...)>(fn_name.data());
+            }else
+                throw std::runtime_error("amt::OpenBlasFnLoader::get(Fn&, std::string_view) : function does not exist");
         }
+
+    public:
+        OpenBlasFnLoader(OpenBlasFnLoader const& other) = delete;
+        OpenBlasFnLoader(OpenBlasFnLoader&& other) = default;
+        OpenBlasFnLoader& operator=(OpenBlasFnLoader const& other) = delete;
+        OpenBlasFnLoader& operator=(OpenBlasFnLoader&& other) = default;
+
 
         static void init(){
             auto mod = OpenBlasFnLoader();
-            mod.get(blas::detail::sdot, "cblas_sdot");
-            mod.get(blas::detail::ddot, "cblas_ddot");
-            mod.get(blas::detail::sger, "cblas_sger");
-            mod.get(blas::detail::dger, "cblas_dger");
-            mod.get(blas::detail::sgemv, "cblas_sgemv");
-            mod.get(blas::detail::dgemv, "cblas_dgemv");
-            mod.get(blas::detail::sgemm, "cblas_sgemm");
-            mod.get(blas::detail::dgemm, "cblas_dgemm");
+            mod.get_fn(blas::detail::sdot, "cblas_sdot");
+            mod.get_fn(blas::detail::ddot, "cblas_ddot");
+            mod.get_fn(blas::detail::sger, "cblas_sger");
+            mod.get_fn(blas::detail::dger, "cblas_dger");
+            mod.get_fn(blas::detail::sgemv, "cblas_sgemv");
+            mod.get_fn(blas::detail::dgemv, "cblas_dgemv");
+            mod.get_fn(blas::detail::sgemm, "cblas_sgemm");
+            mod.get_fn(blas::detail::dgemm, "cblas_dgemm");
+        }
+
+        ~OpenBlasFnLoader(){
+            m_handle.unload();
         }
 
     private:
-        constexpr static std::string_view m_name{OpenBLAS_HOME "/lib/libopenblas.dylib"};
-        std::unique_ptr<void, void(*)(void*)> m_handle{nullptr,&detail::destroy_handle};
+        std::string_view m_path{OpenBLAS_LIB};
+        base_type m_handle;
     };
 
 } // namespace amt

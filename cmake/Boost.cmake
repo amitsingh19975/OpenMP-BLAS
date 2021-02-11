@@ -1,4 +1,4 @@
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 
 if(Boost_FOUND)
     message(STATUS "Found Boost")
