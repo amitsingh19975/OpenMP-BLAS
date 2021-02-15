@@ -456,9 +456,9 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 // #define SPEEDUP_PLOT
 
 int main(){
-    // using value_type = float;
-    using value_type = double;
-    constexpr auto max_size = 4096;
+    using value_type = float;
+    // using value_type = double;
+    constexpr auto max_size = 64ul;
     amt::OpenBlasFnLoader::init();
     
 #ifndef ENABLE_TEST
@@ -468,13 +468,13 @@ int main(){
     std::iota(x.begin(), x.end(), 2.);
     auto m = amt::metric(max_size);
     #ifndef DIFFERENT_LAYOUT
-        res += ref_same_layout<value_type>(x,m);
-        res += ublas_dot_same_layout<value_type>(x,m);
-        res += blas_same_layout<value_type>(x,m);
+        // res += ref_same_layout<value_type>(x,m);
+        // res += ublas_dot_same_layout<value_type>(x,m);
+        // res += blas_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
-        // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        res += blis_same_layout<value_type>(x,m);
-        res += mkl_same_layout<value_type>(x,m);
+        // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
+        // res += blis_same_layout<value_type>(x,m);
+        // res += mkl_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);

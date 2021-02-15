@@ -68,8 +68,7 @@ namespace amt {
         using value_type = std::remove_pointer_t<Out>;
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
-    
-        #pragma omp simd aligned(a,b:alignment)
+        #pragma omp simd aligned(a,b:alignment) safelen(8) reduction(+:sum)
         for(auto i = 0ul; i < n; ++i){
             sum += (a[i] * b[i]);
         }
@@ -89,7 +88,7 @@ namespace amt {
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
     
-        #pragma omp simd safelen(N)  aligned(a,b:alignment)
+        #pragma omp simd safelen(N) aligned(a,b:alignment)
         for(auto i = 0ul; i < N; ++i){
             sum += (a[i] * b[i]);
         }

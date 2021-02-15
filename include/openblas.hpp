@@ -120,7 +120,7 @@ namespace amt{
             if(m_handle.has(fn_name.data())){
                 fn = m_handle.get<R(Args...)>(fn_name.data());
             }else
-                throw std::runtime_error("amt::OpenBlasFnLoader::get(Fn&, std::string_view) : function does not exist");
+                throw std::runtime_error("amt::OpenBlasFnLoader::get_fn(Fn&, std::string_view) : function does not exist");
         }
 
     public:
@@ -140,10 +140,6 @@ namespace amt{
             mod.get_fn(blas::detail::dgemv, "cblas_dgemv");
             mod.get_fn(blas::detail::sgemm, "cblas_sgemm");
             mod.get_fn(blas::detail::dgemm, "cblas_dgemm");
-        }
-
-        ~OpenBlasFnLoader(){
-            m_handle.unload();
         }
 
     private:
