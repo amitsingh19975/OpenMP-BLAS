@@ -11,8 +11,8 @@ if ( EXISTS "${SRC_LIST_PATH}" )
                             project_options project_warnings
                             Boost::filesystem
                             ${OPENMP_LIB} ${MATPLOT_LIB} Eigen3::Eigen
-                            ${BLIS_LIB} 
                             ${MKL_LIB}
+                            ${BLIS_LIB} 
                             ${OpenBLAS_LIB}
     )
     

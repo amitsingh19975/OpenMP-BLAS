@@ -88,7 +88,7 @@ namespace amt {
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
     
-        #pragma omp simd safelen(N) aligned(a,b:alignment)
+        #pragma omp simd safelen(N)  aligned(a,b:alignment)
         for(auto i = 0ul; i < N; ++i){
             sum += (a[i] * b[i]);
         }

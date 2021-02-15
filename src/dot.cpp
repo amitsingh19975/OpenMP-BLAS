@@ -16,6 +16,7 @@
 #include <boost/mp11/list.hpp>
 #include <boost/mp11/algorithm.hpp>
 #include <openblas.hpp>
+#include <range.hpp>
 
 
 namespace plt = matplot;
@@ -458,15 +459,17 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 int main(){
     using value_type = float;
     // using value_type = double;
-    constexpr auto max_size = 64ul;
     amt::OpenBlasFnLoader::init();
+    constexpr double max_value = (1u<<14);
     
 #ifndef ENABLE_TEST
 
     int res = 0;
-    std::vector<double> x(max_size);
-    std::iota(x.begin(), x.end(), 2.);
-    auto m = amt::metric(max_size);
+    std::vector<double> x;
+    amt::range(x, 2., max_value, 1.);
+    // amt::range(x, 2., max_value, 2., std::add<>{});
+    auto m = amt::metric(x.size());
+    // exit(0);
     #ifndef DIFFERENT_LAYOUT
         // res += ref_same_layout<value_type>(x,m);
         // res += ublas_dot_same_layout<value_type>(x,m);
@@ -474,7 +477,7 @@ int main(){
         res += tensor_same_layout<value_type>(x,m);
         // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         // res += blis_same_layout<value_type>(x,m);
-        // res += mkl_same_layout<value_type>(x,m);
+        res += mkl_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
