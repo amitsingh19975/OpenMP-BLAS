@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cache_manger.hpp>
+#include <cache_manager.hpp>
 
 int main(){
     auto temp = amt::cache_manager{};

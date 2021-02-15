@@ -199,25 +199,21 @@ namespace amt{
         constexpr reference operator[](size_type k){ return m_data[k]; }
         constexpr const_reference operator[](size_type k) const { return m_data[k]; }
 
-        constexpr size_type size(size_type k) const { return m_data[k].size; }
-        constexpr size_type assoc(size_type k) const { return static_cast<size_type>(m_data[k].associativity); }
-        constexpr size_type line_size(size_type k) const { return static_cast<size_type>(m_data[k].line_size); }
-        constexpr size_type line_size() const { return line_size(0); }
-        
-        constexpr reference l1() noexcept{ return m_data[0ul]; }
-        constexpr const_reference l1() const  noexcept{ return m_data[0ul]; }
-        
-        constexpr reference l2() noexcept{ return m_data[1ul]; }
-        constexpr const_reference l2() const  noexcept{ return m_data[1ul]; }
-        
-        constexpr reference l3() noexcept{ return m_data[2ul]; }
-        constexpr const_reference l3() const  noexcept{ return m_data[2ul]; }
+        constexpr static reference at(size_type k){ return m_data[k]; }
 
-        constexpr iterator begin() noexcept{ return m_data.begin(); }
-        constexpr iterator end() noexcept{ return m_data.end(); }
+        constexpr static size_type size(size_type k) { return m_data[k].size; }
+        constexpr static size_type assoc(size_type k) { return static_cast<size_type>(m_data[k].associativity); }
+        constexpr static size_type line_size(size_type k) { return static_cast<size_type>(m_data[k].line_size); }
+        constexpr static size_type line_size() { return line_size(0); }
+        
+        constexpr static reference l1() noexcept{ return m_data[0ul]; }
+        
+        constexpr static reference l2() noexcept{ return m_data[1ul]; }
+        
+        constexpr static reference l3() noexcept{ return m_data[2ul]; }
 
-        constexpr const_iterator begin() const noexcept{ return m_data.begin(); }
-        constexpr const_iterator end() const noexcept{ return m_data.end(); }
+        constexpr static iterator begin() noexcept{ return m_data.begin(); }
+        constexpr static iterator end() noexcept{ return m_data.end(); }
 
     private:
         static base_type m_data;

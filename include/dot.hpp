@@ -4,6 +4,7 @@
 #include <boost/numeric/ublas/tensor.hpp>
 #include <omp.h>
 #include <optional>
+#include <cache_manager.hpp>
 
 #define AMT_INLINE __attribute__((always_inline))
 #define AMT_NO_OPT __attribute__ ((optnone))
@@ -60,18 +61,44 @@ namespace amt {
         Out* c,
         In const* a,
         In const* b, 
-        [[maybe_unused]] SizeType const n
+        [[maybe_unused]] SizeType n
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
+
+        [[maybe_unused]] auto l2_size = cache_manager::size(1) / alignment;
+        [[maybe_unused]] auto block = l2_size >> 1;
         value_type sum = {0};
-        #pragma omp simd aligned(a,b:alignment) safelen(8) reduction(+:sum)
-        for(auto i = 0ul; i < n; ++i){
-            sum += (a[i] * b[i]);
+        auto ai = a;
+        auto bi = b;
+        
+        if( n >= block ){
+            auto niter = n / block;
+            n = n % block;
+
+            if(niter){
+                #pragma omp parallel for schedule(static) reduction(+:sum)
+                for(auto i = 0ul; i < niter; ++i){
+                    auto temp = value_type{};
+                    #pragma omp simd safelen(8) reduction(+:temp)
+                    for(auto k = 0ul; k < block; ++k)
+                        temp += (ai[k] * bi[k]);
+                    
+                    sum += temp;
+                    ai = a + i * block;
+                    bi = b + i * block;
+                }
+            }
         }
+
+        #pragma omp simd safelen(8) reduction(+:sum)
+        for(auto i = 0ul; i < n; ++i){
+            sum += (ai[i] * bi[i]);
+        }
+
         *c = sum;
     }
 
