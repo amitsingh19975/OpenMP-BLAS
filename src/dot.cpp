@@ -518,8 +518,8 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 // #define SPEEDUP_PLOT
 
 int main(){
-    // using value_type = float;
-    using value_type = double;
+    using value_type = float;
+    // using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
     [[maybe_unused]]constexpr double max_value = (1u<<20);
@@ -536,7 +536,7 @@ int main(){
         // res += blas_same_layout<value_type>(x,m);
         // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         // res += blis_same_layout<value_type>(x,m);
-        res += eigen_same_layout<value_type>(x,m);
+        // res += eigen_same_layout<value_type>(x,m);
         res += mkl_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
     #else

@@ -92,6 +92,9 @@ namespace amt {
                 ai = a + i * block;
                 bi = b + i * block;
             }
+
+            ai = a + niter * block;
+            bi = b + niter * block;
         }        
 
         #pragma omp simd reduction(+:sum)
