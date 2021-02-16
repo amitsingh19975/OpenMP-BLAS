@@ -280,6 +280,7 @@ int blis_same_layout(std::vector<double> const& x, amt::metric& m){
             }
             st += t();
         }
+        st /= static_cast<double>(max_iter);
         metric_data.update((ops / st) * 10e-9);
     }
     return static_cast<int>(ret);
@@ -533,11 +534,11 @@ int main(){
         // res += ref_same_layout<value_type>(x,m);
         // res += ublas_dot_same_layout<value_type>(x,m);
         // res += blas_same_layout<value_type>(x,m);
-        res += tensor_same_layout<value_type>(x,m);
         // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         // res += blis_same_layout<value_type>(x,m);
-        res += mkl_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
+        res += mkl_same_layout<value_type>(x,m);
+        res += tensor_same_layout<value_type>(x,m);
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);

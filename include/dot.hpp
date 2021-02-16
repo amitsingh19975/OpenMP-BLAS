@@ -67,10 +67,12 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
-        [[maybe_unused]] constexpr auto alignment = alignof(value_type);
+        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
 
-        [[maybe_unused]] auto l2_size = cache_manager::size(1) / alignment;
-        [[maybe_unused]] auto block = l2_size >> 1;
+        [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
+        [[maybe_unused]] auto block = ( l1_size << 1 );
+        // std::cout<<block*2 <<' '<< (cache_manager::size(1) / alignof(value_type))<<'\n';
+        // exit(0);
         value_type sum = {0};
         auto ai = a;
         auto bi = b;
@@ -79,22 +81,20 @@ namespace amt {
             auto niter = n / block;
             n = n % block;
 
-            if(niter){
-                #pragma omp parallel for schedule(static) reduction(+:sum)
-                for(auto i = 0ul; i < niter; ++i){
-                    auto temp = value_type{};
-                    #pragma omp simd safelen(8) reduction(+:temp)
-                    for(auto k = 0ul; k < block; ++k)
-                        temp += (ai[k] * bi[k]);
-                    
-                    sum += temp;
-                    ai = a + i * block;
-                    bi = b + i * block;
-                }
+            #pragma omp parallel for schedule(simd:static) reduction(+:sum) firstprivate(a,b,ai,bi)
+            for(auto i = 0ul; i < niter; ++i){
+                auto temp = value_type{};
+                #pragma omp simd reduction(+:temp)
+                for(auto k = 0ul; k < block; ++k)
+                    temp += (ai[k] * bi[k]);
+                
+                sum += temp;
+                ai = a + i * block;
+                bi = b + i * block;
             }
-        }
+        }        
 
-        #pragma omp simd safelen(8) reduction(+:sum)
+        #pragma omp simd reduction(+:sum)
         for(auto i = 0ul; i < n; ++i){
             sum += (ai[i] * bi[i]);
         }
