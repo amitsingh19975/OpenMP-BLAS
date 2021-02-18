@@ -61,7 +61,8 @@ namespace amt {
         Out* c,
         In const* a,
         In const* b, 
-        [[maybe_unused]] SizeType n
+        [[maybe_unused]] SizeType const n,
+        [[maybe_unused]] int num_threads
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
@@ -70,37 +71,52 @@ namespace amt {
         [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
 
         [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
-        [[maybe_unused]] auto block = ( l1_size << 1 );
+        [[maybe_unused]] auto block = l1_size;
         // std::cout<<block*2 <<' '<< (cache_manager::size(1) / alignof(value_type))<<'\n';
         // exit(0);
         value_type sum = {0};
-        auto ai = a;
-        auto bi = b;
         
         if( n >= block ){
             auto niter = n / block;
-            n = n % block;
+            auto nrem = n % block;
+            auto ai = a + niter * block;
+            auto bi = b + niter * block;
+            num_threads = std::min(num_threads,static_cast<int>(niter));
+            auto rem_sum = value_type{};
 
-            #pragma omp parallel for schedule(simd:static) reduction(+:sum) firstprivate(a,b,ai,bi)
-            for(auto i = 0ul; i < niter; ++i){
-                auto temp = value_type{};
-                #pragma omp simd reduction(+:temp)
-                for(auto k = 0ul; k < block; ++k)
-                    temp += (ai[k] * bi[k]);
-                
-                sum += temp;
-                ai = a + i * block;
-                bi = b + i * block;
+            #pragma omp parallel num_threads(num_threads)
+            {
+                #pragma omp for schedule(static) reduction(+:sum) firstprivate(a,b,block,niter) nowait
+                for(auto i = 0ul; i < niter; ++i){
+                    auto ak = a + i * block;
+                    auto bk = b + i * block;
+                    auto temp = value_type{};
+                    
+                    #pragma omp simd reduction(+:temp)
+                    for(auto k = 0ul; k < block; ++k)
+                        temp += (ak[k] * bk[k]);
+                    
+                    sum += temp;
+                }
+
+                #pragma omp single
+                {
+                    #pragma omp simd reduction(+:rem_sum)
+                    for(auto i = 0ul; i < nrem; ++i){
+                        rem_sum += (ai[i] * bi[i]);
+                    }
+                }
             }
 
-            ai = a + niter * block;
-            bi = b + niter * block;
-        }        
+            sum += nrem ? rem_sum : 0ul;
 
-        #pragma omp simd reduction(+:sum)
-        for(auto i = 0ul; i < n; ++i){
-            sum += (ai[i] * bi[i]);
-        }
+        }else{
+            #pragma omp simd reduction(+:sum)
+            for(auto i = 0ul; i < n; ++i){
+                sum += (a[i] * b[i]);
+            }
+        }    
+
 
         *c = sum;
     }
@@ -158,6 +174,7 @@ namespace amt {
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
+        std::optional<std::size_t> num_threads,
         Timer&... t
     )
     {
@@ -192,6 +209,7 @@ namespace amt {
         constexpr bool is_nb_static = boost::numeric::ublas::is_static_v<extents_type2>;
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
+        auto nths = static_cast<int>(num_threads.value_or(omp_get_num_procs()));
 
         if( NA != NB ){
             throw std::runtime_error(
@@ -237,7 +255,8 @@ namespace amt {
                     &c,
                     a.data(),
                     b.data(),
-                    NA
+                    NA,
+                    nths
                 );
                 std::get<0>(timer).stop();
             }else{
@@ -245,7 +264,8 @@ namespace amt {
                     &c,
                     a.data(),
                     b.data(),
-                    NA
+                    NA,
+                    nths
                 );
             }
         }

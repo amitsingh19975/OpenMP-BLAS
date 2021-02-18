@@ -19,18 +19,26 @@
 #include <range.hpp>
 
 constexpr static std::size_t max_iter = 100ul;
+constexpr static float EPLISON = 0.00001f;
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 
+template<typename T, std::enable_if_t< std::is_floating_point_v<T>, void >* = nullptr >
+constexpr bool float_compare(T a, T b, T const epilson) noexcept{
+    return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epilson );
+}
+
 template<typename ValueType>
 void compare_mat_helper(std::size_t sz){
-    ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+    ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz});
+    std::iota(v1.begin(), v1.end(), 1.);
+    auto v2 = v1;
     auto rres = ValueType{}; 
-    amt::dot_prod(rres, v1, v2);
+    amt::dot_prod(rres, v1, v2, std::nullopt);
     auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), 1u, v2.data(), 1u);
 
-    if(lres != rres){
-        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " )\n";
+    if(!float_compare(lres,rres, static_cast<ValueType>(EPLISON))){
+        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
         exit(1);
     }
 }
@@ -44,17 +52,19 @@ void compare_diff_mat_helper(std::size_t sz){
         ub::layout::first_order
     >;
 
-    ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
-    ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+    ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
+    ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
+    std::iota(v1.begin(), v1.end(), 1.);
+    std::iota(v2.begin(), v2.end(), 1.);
     auto w1 = static_cast<blasint>(v1.strides()[0] * v1.strides()[1]);
     auto w2 = static_cast<blasint>(v2.strides()[0] * v2.strides()[1]);
 
     auto rres = ValueType{}; 
-    amt::dot_prod(rres, v1, v2);
+    amt::dot_prod(rres, v1, v2, std::nullopt);
     auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
     
-    if(lres != rres){
-        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " )\n";
+    if(!float_compare(lres,rres, static_cast<ValueType>(EPLISON))){
+        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
         exit(1);
     }
 }
@@ -208,7 +218,7 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
         while(k--){
             amt::timer t{};
             {   
-                amt::dot_prod(ret, v1, v2, t);
+                amt::dot_prod(ret, v1, v2, std::nullopt, t);
             }
             st += t();
         }
@@ -379,7 +389,7 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
         while(k--){
             amt::timer t{};
             {   
-                ret += v1.dot(v2);
+                amt::dot_prod(ret, v1, v2, std::nullopt, t);
             }
             st += t();
         }
@@ -537,8 +547,8 @@ int main(){
         // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         // res += blis_same_layout<value_type>(x,m);
         // res += eigen_same_layout<value_type>(x,m);
-        res += mkl_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
+        res += mkl_same_layout<value_type>(x,m);
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
