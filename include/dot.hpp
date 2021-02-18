@@ -73,30 +73,32 @@ namespace amt {
 
         [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] auto block = l1_size;
-        // std::cout<<block*2 <<' '<< (cache_manager::size(1) / alignof(value_type))<<'\n';
-        // exit(0);
+        
         value_type sum = {0};
 
         auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
-            #pragma omp simd reduction(+:sum)
+            constexpr auto alignement = alignof(In);
+            #pragma omp simd reduction(+:sum) aligned(a,b:alignement)
             for(auto i = 0ul; i < n; ++i){
                 sum += (a[i] * b[i]);
             }
             return sum;
         };
+
+        auto check_if_not_zero = [](auto num){
+            return static_cast<decltype(num)>(static_cast<bool>(num));
+        };
         
         if( n >= block ){
             auto div = std::div(static_cast<int>(n),static_cast<int>(block));
-            auto min_threads = div.quot + static_cast<int>(static_cast<bool>(div.rem));
+            auto min_threads = div.quot + check_if_not_zero(div.rem);
             num_threads = std::min(num_threads, min_threads);
             
-            #pragma omp parallel for schedule(static) reduction(+:sum) firstprivate(a,b,block) num_threads(num_threads)
+            #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
             for(auto i = 0ul; i < n; i += block){
                 auto ib = std::min(block, n - i);
-                auto ak = a + i;
-                auto bk = b + i;
-                sum += simd_loop(ak,bk,ib);
+                sum += simd_loop(a + i,b + i,ib);
             }
 
         }else{
