@@ -19,13 +19,13 @@
 #include <range.hpp>
 
 constexpr static std::size_t max_iter = 100ul;
-constexpr static float EPLISON = 0.00001f;
+constexpr static float EPSILON = std::numeric_limits<float>::epsilon() * 10.f;
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 
 template<typename T, std::enable_if_t< std::is_floating_point_v<T>, void >* = nullptr >
-constexpr bool float_compare(T a, T b, T const epilson) noexcept{
-    return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epilson );
+constexpr bool float_compare(T a, T b, T const epsilon) noexcept{
+    return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon );
 }
 
 template<typename ValueType>
@@ -37,7 +37,7 @@ void compare_mat_helper(std::size_t sz){
     amt::dot_prod(rres, v1, v2, std::nullopt);
     auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), 1u, v2.data(), 1u);
 
-    if(!float_compare(lres,rres, static_cast<ValueType>(EPLISON))){
+    if(!float_compare(lres,rres, static_cast<ValueType>(EPSILON))){
         std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
         exit(1);
     }
@@ -63,7 +63,7 @@ void compare_diff_mat_helper(std::size_t sz){
     amt::dot_prod(rres, v1, v2, std::nullopt);
     auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
     
-    if(!float_compare(lres,rres, static_cast<ValueType>(EPLISON))){
+    if(!float_compare(lres,rres, static_cast<ValueType>(EPSILON))){
         std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
         exit(1);
     }

@@ -5,6 +5,7 @@
 #include <omp.h>
 #include <optional>
 #include <cache_manager.hpp>
+#include <cstdlib>
 
 #define AMT_INLINE __attribute__((always_inline))
 #define AMT_NO_OPT __attribute__ ((optnone))
@@ -75,49 +76,32 @@ namespace amt {
         // std::cout<<block*2 <<' '<< (cache_manager::size(1) / alignof(value_type))<<'\n';
         // exit(0);
         value_type sum = {0};
-        
-        if( n >= block ){
-            auto niter = n / block;
-            auto nrem = n % block;
-            auto ai = a + niter * block;
-            auto bi = b + niter * block;
-            num_threads = std::min(num_threads,static_cast<int>(niter));
-            auto rem_sum = value_type{};
 
-            #pragma omp parallel num_threads(num_threads)
-            {
-                #pragma omp for schedule(static) reduction(+:sum) firstprivate(a,b,block,niter) nowait
-                for(auto i = 0ul; i < niter; ++i){
-                    auto ak = a + i * block;
-                    auto bk = b + i * block;
-                    auto temp = value_type{};
-                    
-                    #pragma omp simd reduction(+:temp)
-                    for(auto k = 0ul; k < block; ++k)
-                        temp += (ak[k] * bk[k]);
-                    
-                    sum += temp;
-                }
-
-                #pragma omp single
-                {
-                    #pragma omp simd reduction(+:rem_sum)
-                    for(auto i = 0ul; i < nrem; ++i){
-                        rem_sum += (ai[i] * bi[i]);
-                    }
-                }
-            }
-
-            sum += nrem ? rem_sum : 0ul;
-
-        }else{
+        auto simd_loop = [](In const* a, In const* b, SizeType const n){
+            auto sum = value_type{};
             #pragma omp simd reduction(+:sum)
             for(auto i = 0ul; i < n; ++i){
                 sum += (a[i] * b[i]);
             }
+            return sum;
+        };
+        
+        if( n >= block ){
+            auto div = std::div(static_cast<int>(n),static_cast<int>(block));
+            auto min_threads = div.quot + static_cast<int>(static_cast<bool>(div.rem));
+            num_threads = std::min(num_threads, min_threads);
+            
+            #pragma omp parallel for schedule(static) reduction(+:sum) firstprivate(a,b,block) num_threads(num_threads)
+            for(auto i = 0ul; i < n; i += block){
+                auto ib = std::min(block, n - i);
+                auto ak = a + i;
+                auto bk = b + i;
+                sum += simd_loop(ak,bk,ib);
+            }
+
+        }else{
+            sum = simd_loop(a,b,n);
         }    
-
-
         *c = sum;
     }
 
