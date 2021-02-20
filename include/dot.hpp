@@ -72,11 +72,12 @@ namespace amt {
         [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
 
         [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
-        [[maybe_unused]] auto block = l1_size;
+        [[maybe_unused]] auto l2_size = cache_manager::size(1) / size_in_bytes;
+        [[maybe_unused]] auto l3_size = cache_manager::size(2) / size_in_bytes;
         
         value_type sum = {0};
 
-        auto simd_loop = [](In const* a, In const* b, SizeType const n){
+        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
             constexpr auto alignement = alignof(In);
             #pragma omp simd reduction(+:sum) aligned(a,b:alignement)
@@ -86,19 +87,32 @@ namespace amt {
             return sum;
         };
 
-        auto check_if_not_zero = [](auto num){
-            return static_cast<decltype(num)>(static_cast<bool>(num));
-        };
-        
-        if( n >= block ){
-            auto div = std::div(static_cast<int>(n),static_cast<int>(block));
-            auto min_threads = div.quot + check_if_not_zero(div.rem);
+        if( n >= l3_size ){
+            
+            #pragma omp parallel num_threads(num_threads) reduction(+:sum)
+            {
+                for(auto i = 0ul; i < n; i += l2_size){
+                    auto ib = std::min(l2_size, n - i);
+                    auto ai = a + i;
+                    auto bi = b + i;
+                    #pragma omp for schedule(dynamic)
+                    for(auto j = 0ul; j < ib; j += l1_size){
+                        auto jb = std::min(l1_size, ib - j);
+                        sum += simd_loop(ai + j, bi + j, jb);
+                    }
+                }
+            }
+
+        }else if( n >= l1_size ){
+            auto q = n / l1_size;
+            auto r = n % l1_size;
+            auto min_threads = static_cast<int>(q) + static_cast<int>(static_cast<bool>(r));
             num_threads = std::min(num_threads, min_threads);
             
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
-            for(auto i = 0ul; i < n; i += block){
-                auto ib = std::min(block, n - i);
-                sum += simd_loop(a + i,b + i,ib);
+            for(auto i = 0ul; i < n; i += l1_size){
+                auto ib = std::min(l1_size, n - i);
+                sum += simd_loop(a + i, b + i, ib);
             }
 
         }else{

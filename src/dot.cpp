@@ -105,7 +105,7 @@ int ublas_dot_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -138,7 +138,7 @@ int mkl_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -168,7 +168,7 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -194,7 +194,7 @@ int ref_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        m.update_ref((ops / st) * 10e-9);
+        m.update_ref((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -223,7 +223,7 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -258,7 +258,7 @@ int static_tensor_same_layout(amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     });
     return static_cast<int>(ret);
 }
@@ -291,7 +291,7 @@ int blis_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -324,7 +324,7 @@ int eigen_same_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -357,7 +357,7 @@ int ref_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        m.update_ref((ops / st) * 10e-9);
+        m.update_ref((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -394,7 +394,7 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -435,7 +435,7 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -479,7 +479,7 @@ int blis_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -517,7 +517,7 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
             st += t();
         }
         st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st) * 10e-9);
+        metric_data.update((ops / st));
     }
     return static_cast<int>(ret);
 }
@@ -532,8 +532,10 @@ int main(){
     // using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
-    [[maybe_unused]]constexpr double max_value = (1u<<20);
+    [[maybe_unused]]constexpr double max_value = (1u<<17);
+    // [[maybe_unused]]constexpr double max_value = (1u<<20);
     amt::range(x, 2., max_value, 1024., std::plus<>{});
+    // amt::range(x, 2., max_value, 2., std::multiplies<>{});
     
 #ifndef ENABLE_TEST
 
@@ -549,6 +551,7 @@ int main(){
         // res += eigen_same_layout<value_type>(x,m);
         res += tensor_same_layout<value_type>(x,m);
         res += mkl_same_layout<value_type>(x,m);
+        // std::cout<<m.tail();
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);

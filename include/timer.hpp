@@ -16,35 +16,40 @@ namespace amt{
                 m_end = clock_type::now();
                 m_stopped = true;
             }
+            return nano();
+        }
+
+        template<typename Unit = std::chrono::nanoseconds>
+        constexpr double cast() const noexcept{
             auto diff = (m_end - m_start);
-            return std::chrono::duration<double>(diff).count();
+            return static_cast<double>(std::chrono::duration_cast<Unit>(diff).count());
         }
 
-        template<typename Unit = std::chrono::milliseconds>
-        constexpr auto cast() const noexcept{
-            auto diff = (m_end - m_start);
-            return std::chrono::duration_cast<Unit>(diff).count();
+        constexpr double nano() const noexcept{
+            return cast<std::chrono::nanoseconds>();
         }
 
-        constexpr auto milli() const noexcept{
-            return cast();
+        constexpr double milli() const noexcept{
+            return cast<std::chrono::milliseconds>();
         }
 
-        constexpr auto micro() const noexcept{
+        constexpr double micro() const noexcept{
             return cast<std::chrono::microseconds>();
         }
 
-        constexpr auto sec() const noexcept{
+        constexpr double sec() const noexcept{
             return cast<std::chrono::seconds>();
         }
 
-        constexpr auto min() const noexcept{
+        constexpr double min() const noexcept{
             return cast<std::chrono::minutes>();
         }
 
-        template<typename Unit = std::chrono::milliseconds>
+        template<typename Unit = std::chrono::nanoseconds>
         std::string str() const{
-            if constexpr( std::is_same_v< Unit, std::chrono::microseconds > ){
+            if constexpr( std::is_same_v< Unit, std::chrono::nanoseconds > ){
+                return std::to_string(nano()) + "ns";
+            }else if constexpr( std::is_same_v< Unit, std::chrono::microseconds > ){
                 return std::to_string(micro()) + "us";
             }else if constexpr( std::is_same_v< Unit, std::chrono::milliseconds > ){
                 return std::to_string(milli()) + "ms";
@@ -53,6 +58,10 @@ namespace amt{
             }else{
                 return std::to_string(min()) + "min";
             }
+        }
+
+        std::string nano_str() const{
+            return str<std::chrono::nanoseconds>();
         }
 
         std::string micro_str() const{

@@ -8,6 +8,7 @@
 #include <matplot/matplot.h>
 #include <algorithm>
 #include <functional>
+#include <sstream>
 
 namespace amt{
 
@@ -125,6 +126,27 @@ namespace amt{
             plt::hold(plt::off);
             plt::legend();
             plt::show();
+        }
+
+        std::string head(std::size_t n = 5) const {
+            std::stringstream ss;
+            for(auto&& [k,v] : m_data){
+                ss << k << ": [ ";
+                for(auto i = 0ul; i < n; ++i) ss << v.plot.at(i)<<", ";
+                ss << "]\n";
+            }
+            return ss.str();
+        }
+
+        std::string tail(std::size_t n = 5) const {
+            std::stringstream ss;
+            for(auto&& [k,v] : m_data){
+                auto last = v.plot.size() - 1 - n;
+                ss << k << ": [ ";
+                for(auto i = 0ul; i < n; ++i) ss << v.plot.at(last + i)<<", ";
+                ss << "]\n";
+            }
+            return ss.str();
         }
 
         friend std::ostream& operator<<(std::ostream& os, metric const& m){
