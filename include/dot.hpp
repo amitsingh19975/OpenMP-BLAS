@@ -61,9 +61,11 @@ namespace amt {
     AMT_INLINE void dot_prod_helper(
         Out* c,
         In const* a,
-        In const* b, 
+        In const* b,
+        [[maybe_unused]] SizeType const wa,
+        [[maybe_unused]] SizeType const wb,
         [[maybe_unused]] SizeType const n,
-        [[maybe_unused]] int num_threads
+        [[maybe_unused]] int max_threads
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
@@ -77,28 +79,28 @@ namespace amt {
         
         value_type sum = {0};
 
-        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
+        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const wa, SizeType const wb, SizeType const n){
             auto sum = value_type{};
             constexpr auto alignement = alignof(In);
             #pragma omp simd reduction(+:sum) aligned(a,b:alignement)
             for(auto i = 0ul; i < n; ++i){
-                sum += (a[i] * b[i]);
+                sum += (a[i * wa] * b[i * wb]);
             }
             return sum;
         };
 
         if( n >= l3_size ){
             
-            #pragma omp parallel num_threads(num_threads) reduction(+:sum)
+            #pragma omp parallel num_threads(max_threads) reduction(+:sum)
             {
                 for(auto i = 0ul; i < n; i += l2_size){
                     auto ib = std::min(l2_size, n - i);
-                    auto ai = a + i;
-                    auto bi = b + i;
+                    auto ai = a + i * wa;
+                    auto bi = b + i * wb;
                     #pragma omp for schedule(dynamic)
                     for(auto j = 0ul; j < ib; j += l1_size){
                         auto jb = std::min(l1_size, ib - j);
-                        sum += simd_loop(ai + j, bi + j, jb);
+                        sum += simd_loop(ai + j * wa, bi + j * wb, wa, wb, jb);
                     }
                 }
             }
@@ -107,16 +109,15 @@ namespace amt {
             auto q = n / l1_size;
             auto r = n % l1_size;
             auto min_threads = static_cast<int>(q) + static_cast<int>(static_cast<bool>(r));
-            num_threads = std::min(num_threads, min_threads);
-            
+            auto num_threads = std::min(max_threads, min_threads);
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
             for(auto i = 0ul; i < n; i += l1_size){
                 auto ib = std::min(l1_size, n - i);
-                sum += simd_loop(a + i, b + i, ib);
+                sum += simd_loop(a + i * wa, b + i * wb, wa, wb, ib);
             }
 
         }else{
-            sum = simd_loop(a,b,n);
+            sum = simd_loop(a, b, wa, wb, n);
         }    
         *c = sum;
     }
@@ -255,6 +256,8 @@ namespace amt {
                     &c,
                     a.data(),
                     b.data(),
+                    1ul,
+                    1ul,
                     NA,
                     nths
                 );
@@ -264,6 +267,8 @@ namespace amt {
                     &c,
                     a.data(),
                     b.data(),
+                    1ul,
+                    1ul,
                     NA,
                     nths
                 );
