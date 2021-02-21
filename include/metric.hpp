@@ -12,9 +12,10 @@
 
 namespace amt{
 
+    template<typename T>
     class metric{
         // Get FLOP per cycle from https://en.wikipedia.org/wiki/FLOPS
-        static constexpr double peak_performance = 2.3 * 8 * 32; // peak_performance = freq * cores * FLOP per cycle
+        static constexpr double peak_performance = 2.3 * 8. * (std::is_same_v<T, double> ? 16. : 32.); // peak_performance = freq * cores * FLOP per cycle
         struct flops_data{
             std::vector<double> plot{};
             double min{ peak_performance };
