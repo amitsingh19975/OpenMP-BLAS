@@ -82,7 +82,7 @@ void compare_diff_mat(std::vector<double> const& x){
 }
 
 template<typename ValueType>
-int ublas_dot_same_layout(std::vector<double> const& x, amt::metric& m){
+int ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
     std::string fn_name = std::string(__func__) 
@@ -111,7 +111,7 @@ int ublas_dot_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType>
-int mkl_same_layout(std::vector<double> const& x, amt::metric& m){
+int mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -145,7 +145,7 @@ int mkl_same_layout(std::vector<double> const& x, amt::metric& m){
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType>
-int blas_same_layout(std::vector<double> const& x, amt::metric& m){
+int blas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -175,7 +175,7 @@ int blas_same_layout(std::vector<double> const& x, amt::metric& m){
 #endif
 
 template<typename ValueType>
-int ref_same_layout(std::vector<double> const& x, amt::metric& m){
+int ref_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     ValueType ret{};
@@ -200,7 +200,7 @@ int ref_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType>
-int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
+int openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -229,7 +229,7 @@ int tensor_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<std::size_t Start, std::size_t End, typename ValueType>
-int static_tensor_same_layout(amt::metric& m){
+int static_tensor_same_layout(amt::metric<ValueType>& m){
     using namespace boost::mp11;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -264,7 +264,7 @@ int static_tensor_same_layout(amt::metric& m){
 }
 
 template<typename ValueType>
-int blis_same_layout(std::vector<double> const& x, amt::metric& m){
+int blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -297,7 +297,7 @@ int blis_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType>
-int eigen_same_layout(std::vector<double> const& x, amt::metric& m){
+int eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
@@ -330,7 +330,7 @@ int eigen_same_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType, typename L>
-int ref_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+int ref_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -363,7 +363,7 @@ int ref_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType, typename L>
-int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -401,7 +401,7 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType, typename L>
-int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+int blas_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -442,7 +442,7 @@ int blas_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 #endif
 
 template<typename ValueType, typename L>
-int blis_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+int blis_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -485,7 +485,7 @@ int blis_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 }
 
 template<typename ValueType, typename L>
-int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
+int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -528,8 +528,8 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric& m){
 // #define SPEEDUP_PLOT
 
 int main(){
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
     // [[maybe_unused]]constexpr double max_value = (1u<<17);
@@ -540,16 +540,16 @@ int main(){
 #ifndef ENABLE_TEST
 
     int res = 0;
-    auto m = amt::metric(x.size());
+    auto m = amt::metric<value_type>(x.size());
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
-        // res += ref_same_layout<value_type>(x,m);
-        // res += ublas_dot_same_layout<value_type>(x,m);
-        // res += blas_same_layout<value_type>(x,m);
-        // // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        // res += blis_same_layout<value_type>(x,m);
-        // res += eigen_same_layout<value_type>(x,m);
-        res += tensor_same_layout<value_type>(x,m);
+        res += ref_same_layout<value_type>(x,m);
+        res += ublas_dot_same_layout<value_type>(x,m);
+        res += blas_same_layout<value_type>(x,m);
+        // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
+        res += blis_same_layout<value_type>(x,m);
+        res += eigen_same_layout<value_type>(x,m);
+        res += openmp_same_layout<value_type>(x,m);
         res += mkl_same_layout<value_type>(x,m);
         // std::cout<<m.tail();
     #else
