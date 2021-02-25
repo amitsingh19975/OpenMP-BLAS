@@ -100,7 +100,7 @@ namespace amt{
             plt::show();
         }
 
-        void plot_speedup(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP(%)") const{
+        void plot_speedup(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP(no-opt as ref)") const{
             namespace plt = matplot;
 
             auto norm = [](std::string name){
@@ -112,11 +112,62 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,1000.});
+            // plt::ylim({0.,1000.});
             for(auto&& [k,v] : m_data){
                 std::vector<double> speed(m_total);
-                std::transform(v.plot.begin(), v.plot.end(), m_ref.plot.begin(), speed.begin(), [](auto l, auto r){
-                    return (l / r) * 100.;
+                std::transform(v.plot.begin(), v.plot.end(), m_ref.plot.begin(), speed.begin(), [](double l, double r){
+                    return (l / r);
+                });
+                auto l = plt::scatter(x_coord, speed, 2);
+                l->display_name(norm(k));
+                l->marker_face(true);
+                plt::hold(plt::on);
+            }
+
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
+        void plot_speedup(std::string pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+            namespace plt = matplot;
+            flops_data const* pref = nullptr;
+
+            auto sz = pattern.size();
+            for(auto&& [k,v] : m_data){
+                if(k.size() < sz) continue;
+                else if(k.size() == sz && (k == pattern)){
+                    pref = std::addressof(v);
+                    break;
+                }else if(k.substr(0,sz) == pattern) {
+                    pref = std::addressof(v);
+                    break;
+                }
+            }
+            if(pref == nullptr){
+                throw std::runtime_error(
+                    "amt::metric::plot_speedup(std::string_view, std::vector<double> const&, std::string_view, std::string_view): "
+                    "unable to find pattern"
+                );
+            }
+
+            ylabel += "("+ pattern + " as ref)";
+
+            auto norm = [](std::string name){
+                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+                    return c == '_' ? ' ' : c;
+                });
+                return name;
+            };
+
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            // plt::ylim({0.,1000.});
+            for(auto&& [k,v] : m_data){
+                if(std::addressof(v) == pref) continue;
+                std::vector<double> speed(m_total);
+                std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
+                    return (l / r);
                 });
                 auto l = plt::scatter(x_coord, speed, 2);
                 l->display_name(norm(k));
@@ -150,21 +201,48 @@ namespace amt{
             return ss.str();
         }
 
-        friend std::ostream& operator<<(std::ostream& os, metric const& m){
-            os << "Peak Performance: "<< peak_performance << " GFlops\n";
-            for(auto&& [k,v] : m.m_data){
-                auto avg = (v.agg / static_cast<double>(m.m_total));
-                auto ref_avg = (m.m_ref.agg / static_cast<double>(m.m_total));
-                os << "Name: "<< k << '\n';
-                os << '\t' << "Min GFlops: "<<v.min<<'\n';
-                os << '\t' << "Max GFlops: "<<v.max<<'\n';
-                os << '\t' << "Max SpeedUp: "<<((v.max / m.m_ref.max))<<'\n';
-                os << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
-                os << '\t' << "Avg GFlops: "<<avg<<'\n';
-                os << '\t' << "Avg SpeedUp: "<<((avg / ref_avg))<<'\n';
-                os << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
+        std::string str(std::optional<std::string_view> pattern = std::nullopt) const{
+            std::stringstream ss;
+            flops_data const* pref = nullptr;
+
+            if (pattern.has_value()){
+                auto& name = pattern.value();
+                auto sz = name.size();
+                for(auto&& [k,v] : m_data){
+                    if(k.size() < sz) continue;
+                    else if(k.size() == sz && (k == name)){
+                        pref = std::addressof(v);
+                        break;
+                    }else if(k.substr(0,sz) == name) {
+                        pref = std::addressof(v);
+                        break;
+                    }
+                }
             }
-            return os;
+
+            ss << "Peak Performance: "<< peak_performance << " GFlops\n";
+            for(auto&& [k,v] : m_data){
+                auto avg = (v.agg / static_cast<double>(m_total));
+                auto ref_avg = (m_ref.agg / static_cast<double>(m_total));
+                ss << "Name: "<< k << '\n';
+                ss << '\t' << "Min GFlops: "<<v.min<<'\n';
+                ss << '\t' << "Max GFlops: "<<v.max<<'\n';
+                ss << '\t' << "Max SpeedUp: "<<((v.max / m_ref.max))<<'\n';
+                ss << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
+                ss << '\t' << "Avg GFlops: "<<avg<<'\n';
+                ss << '\t' << "Avg SpeedUp: "<<((avg / ref_avg))<<'\n';
+                ss << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
+                if(pref){
+                    auto patt_avg = (pref->agg / static_cast<double>(m_total));
+                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((v.max / pref->max))<<'\n';
+                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((avg / patt_avg))<<'\n';
+                }
+            }
+            return ss.str();
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, metric const& m){
+            return os << m.str();
         }
 
     private:
