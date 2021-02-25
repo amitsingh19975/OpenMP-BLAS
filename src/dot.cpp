@@ -145,7 +145,7 @@ int mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType>
-int blas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+int openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -401,7 +401,7 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>&
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType, typename L>
-int blas_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+int openblas_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     using other_layout = std::conditional_t<
@@ -525,16 +525,16 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 // #define ENABLE_TEST
 // #define DIFFERENT_LAYOUT
 // #define DISABLE_PLOT
-// #define SPEEDUP_PLOT
+#define SPEEDUP_PLOT
 
 int main(){
     // using value_type = float;
     using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
-    // [[maybe_unused]]constexpr double max_value = (1u<<17);
-    [[maybe_unused]]constexpr double max_value = (1u<<20);
-    amt::range(x, 2., max_value, 1024., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 16382;
+    // [[maybe_unused]]constexpr double max_value = (1u<<20);
+    amt::range(x, 32., max_value, 32., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
     
 #ifndef ENABLE_TEST
@@ -545,7 +545,7 @@ int main(){
     #ifndef DIFFERENT_LAYOUT
         res += ref_same_layout<value_type>(x,m);
         res += ublas_dot_same_layout<value_type>(x,m);
-        res += blas_same_layout<value_type>(x,m);
+        res += openblas_same_layout<value_type>(x,m);
         // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
         res += blis_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
@@ -554,19 +554,20 @@ int main(){
         // std::cout<<m.tail();
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        res += blas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        res += openblas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += tensor_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += blis_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
         res += eigen_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
 
     #endif
 
-    std::cout<<m<<'\n';
+    std::cout<<m.str("openblas")<<'\n';
     #ifndef DISABLE_PLOT
         #ifndef SPEEDUP_PLOT
             m.plot(x);
         #else
-            m.plot_speedup(x);
+            // m.plot_speedup(x);
+            m.plot_speedup("openblas",x);
         #endif
     #endif
     
