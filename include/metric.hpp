@@ -77,30 +77,18 @@ namespace amt{
             m_ref.update(f);
         }
 
-        void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops") const{
-            namespace plt = matplot;
-
-            auto norm = [](std::string name){
-                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-                    return c == '_' ? ' ' : c;
-                });
-                return name;
-            };
-
-            plt::xlabel(xlabel);
-            plt::ylabel(ylabel);
-            for(auto&& [k,v] : m_data){
-                auto l = plt::scatter(x_coord, v.plot, 2);
-                l->display_name(norm(k));
-                l->marker_face(true);
-                plt::hold(plt::on);
+        void moving_average(std::vector<double>& x, std::size_t n = 5ul) const noexcept{
+            if(x.size() < n) return;
+            for(auto i = n; i < x.size(); ++i){
+                for(auto j = 1ul; j < n; ++j){
+                    x[i] += x[i - j];
+                }
+                x[i] /= static_cast<double>(n);
             }
-            plt::hold(plt::off);
-            plt::legend();
-            plt::show();
+                
         }
 
-        void plot_speedup(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP(no-opt as ref)") const{
+        void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
 
             auto norm = [](std::string name){
@@ -112,18 +100,14 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            // plt::ylim({0.,1000.});
             for(auto&& [k,v] : m_data){
-                std::vector<double> speed(m_total);
-                std::transform(v.plot.begin(), v.plot.end(), m_ref.plot.begin(), speed.begin(), [](double l, double r){
-                    return (l / r);
-                });
-                auto l = plt::scatter(x_coord, speed, 2);
+                moving_average(v.plot);
+                auto l = plt::plot(x_coord, v.plot);
+                l->line_width(2);
                 l->display_name(norm(k));
                 l->marker_face(true);
                 plt::hold(plt::on);
             }
-
             plt::hold(plt::off);
             plt::legend();
             plt::show();
@@ -151,7 +135,7 @@ namespace amt{
                 );
             }
 
-            ylabel += "("+ pattern + " as ref)";
+            ylabel += "("+ pattern + " / existing implementation)";
 
             auto norm = [](std::string name){
                 std::transform(name.begin(), name.end(), name.begin(), [](auto c){
@@ -162,13 +146,14 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            // plt::ylim({0.,1000.});
+            plt::ylim({0.,3.});
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (l / r);
+                    return (r / l);
                 });
+                moving_average(speed);
                 auto l = plt::scatter(x_coord, speed, 2);
                 l->display_name(norm(k));
                 l->marker_face(true);
@@ -223,20 +208,17 @@ namespace amt{
             ss << "Peak Performance: "<< peak_performance << " GFlops\n";
             for(auto&& [k,v] : m_data){
                 auto avg = (v.agg / static_cast<double>(m_total));
-                auto ref_avg = (m_ref.agg / static_cast<double>(m_total));
                 ss << "Name: "<< k << '\n';
                 ss << '\t' << "Min GFlops: "<<v.min<<'\n';
                 ss << '\t' << "Max GFlops: "<<v.max<<'\n';
-                ss << '\t' << "Max SpeedUp: "<<((v.max / m_ref.max))<<'\n';
-                ss << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
-                ss << '\t' << "Avg GFlops: "<<avg<<'\n';
-                ss << '\t' << "Avg SpeedUp: "<<((avg / ref_avg))<<'\n';
-                ss << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
                 if(pref){
                     auto patt_avg = (pref->agg / static_cast<double>(m_total));
-                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((v.max / pref->max))<<'\n';
-                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((avg / patt_avg))<<'\n';
+                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((pref->max / v.max))<<'\n';
+                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((patt_avg / avg))<<'\n';
                 }
+                ss << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
+                ss << '\t' << "Avg GFlops: "<<avg<<'\n';
+                ss << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return ss.str();
         }
