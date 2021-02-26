@@ -101,9 +101,7 @@ namespace amt{
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
-                moving_average(v.plot);
-                auto l = plt::plot(x_coord, v.plot);
-                l->line_width(2);
+                auto l = plt::scatter(x_coord, v.plot, 2);
                 l->display_name(norm(k));
                 l->marker_face(true);
                 plt::hold(plt::on);
@@ -146,7 +144,7 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,3.});
+            plt::ylim({0.,10.});
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
@@ -198,7 +196,7 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,3.});
+            plt::ylim({0.,10.});
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord(100ul);
             std::iota(x_coord.begin(), x_coord.end(), 1.);

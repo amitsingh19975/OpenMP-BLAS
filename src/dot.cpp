@@ -525,16 +525,18 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 // #define ENABLE_TEST
 // #define DIFFERENT_LAYOUT
 // #define DISABLE_PLOT
-#define SPEEDUP_PLOT
+// #define SPEEDUP_PLOT
+#define PLOT_ALL
 
 int main(){
     // using value_type = float;
     using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
-    [[maybe_unused]]constexpr double max_value = 16382;
-    // [[maybe_unused]]constexpr double max_value = (1u<<20);
-    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 16382;
+    // amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = (1u<<20);
+    amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
     
 #ifndef ENABLE_TEST
@@ -543,7 +545,7 @@ int main(){
     auto m = amt::metric<value_type>(x.size());
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
-        res += ref_same_layout<value_type>(x,m);
+        // res += ref_same_layout<value_type>(x,m);
         res += ublas_dot_same_layout<value_type>(x,m);
         res += openblas_same_layout<value_type>(x,m);
         // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
@@ -561,13 +563,15 @@ int main(){
 
     #endif
 
-    std::cout<<m.str("openblas")<<'\n';
+    std::cout<<m.str("openmp")<<'\n';
     #ifndef DISABLE_PLOT
-        #ifndef SPEEDUP_PLOT
+        #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x);
-        #else
-            // m.plot_speedup(x);
-            m.plot_speedup("openblas",x);
+        #endif
+        
+        #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
+            m.plot_speedup("openmp",x);
+            m.plot_speedup_per("openmp");
         #endif
     #endif
     
