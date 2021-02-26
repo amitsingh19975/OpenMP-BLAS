@@ -165,6 +165,70 @@ namespace amt{
             plt::show();
         }
 
+        void plot_speedup_per(std::string pattern, std::string_view xlabel = "Size(%)", std::string ylabel = "SpeedUP") const{
+            namespace plt = matplot;
+            flops_data const* pref = nullptr;
+
+            auto sz = pattern.size();
+            for(auto&& [k,v] : m_data){
+                if(k.size() < sz) continue;
+                else if(k.size() == sz && (k == pattern)){
+                    pref = std::addressof(v);
+                    break;
+                }else if(k.substr(0,sz) == pattern) {
+                    pref = std::addressof(v);
+                    break;
+                }
+            }
+            if(pref == nullptr){
+                throw std::runtime_error(
+                    "amt::metric::plot_speedup(std::string_view, std::vector<double> const&, std::string_view, std::string_view): "
+                    "unable to find pattern"
+                );
+            }
+
+            ylabel += "("+ pattern + " / existing implementation)";
+
+            auto norm = [](std::string name){
+                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+                    return c == '_' ? ' ' : c;
+                });
+                return name;
+            };
+
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            plt::ylim({0.,3.});
+            double size = static_cast<double>(m_total) / 100.;
+            std::vector<double> x_coord(100ul);
+            std::iota(x_coord.begin(), x_coord.end(), 1.);
+            for(auto&& [k,v] : m_data){
+                if(std::addressof(v) == pref) continue;
+                std::vector<double> speed(m_total);
+                std::vector<double> y(100);
+                std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
+                    return (r / l);
+                });
+
+                for(auto i = 1ul; i < 100ul; i++){
+                    auto n = static_cast<std::size_t>(size) * i;
+                    for(auto j = 0ul; j < n; ++j){
+                        y[i] += speed[i + j];
+                    }
+                    y[i] /= static_cast<double>(n);
+                }
+
+                auto l = plt::scatter(x_coord, y, 2);
+                l->display_name(norm(k));
+                l->marker_face(true);
+                plt::hold(plt::on);
+            }
+
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
         std::string head(std::size_t n = 5) const {
             std::stringstream ss;
             for(auto&& [k,v] : m_data){
