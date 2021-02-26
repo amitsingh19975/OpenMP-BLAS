@@ -533,10 +533,10 @@ int main(){
     using value_type = double;
     amt::OpenBlasFnLoader::init();
     std::vector<double> x;
-    // [[maybe_unused]]constexpr double max_value = 16382;
-    // amt::range(x, 32., max_value, 32., std::plus<>{});
-    [[maybe_unused]]constexpr double max_value = (1u<<20);
-    amt::range(x, 2., max_value, 1024., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 16382;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = (1u<<20);
+    // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
     
 #ifndef ENABLE_TEST

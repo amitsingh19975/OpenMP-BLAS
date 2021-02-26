@@ -62,8 +62,6 @@ namespace amt {
         Out* c,
         In const* a,
         In const* b,
-        [[maybe_unused]] SizeType const wa,
-        [[maybe_unused]] SizeType const wb,
         [[maybe_unused]] SizeType const n,
         [[maybe_unused]] int max_threads
     ) noexcept
@@ -79,12 +77,12 @@ namespace amt {
         
         value_type sum = {0};
 
-        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const wa, SizeType const wb, SizeType const n){
+        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
             constexpr auto alignement = alignof(In);
             #pragma omp simd reduction(+:sum) aligned(a,b:alignement)
             for(auto i = 0ul; i < n; ++i){
-                sum += (a[i * wa] * b[i * wb]);
+                sum += (a[i] * b[i]);
             }
             return sum;
         };
@@ -95,12 +93,12 @@ namespace amt {
             {
                 for(auto i = 0ul; i < n; i += l2_size){
                     auto ib = std::min(l2_size, n - i);
-                    auto ai = a + i * wa;
-                    auto bi = b + i * wb;
+                    auto ai = a + i;
+                    auto bi = b + i;
                     #pragma omp for schedule(dynamic)
                     for(auto j = 0ul; j < ib; j += l1_size){
                         auto jb = std::min(l1_size, ib - j);
-                        sum += simd_loop(ai + j * wa, bi + j * wb, wa, wb, jb);
+                        sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
             }
@@ -113,11 +111,11 @@ namespace amt {
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
             for(auto i = 0ul; i < n; i += l1_size){
                 auto ib = std::min(l1_size, n - i);
-                sum += simd_loop(a + i * wa, b + i * wb, wa, wb, ib);
+                sum += simd_loop(a + i, b + i, ib);
             }
 
         }else{
-            sum = simd_loop(a, b, wa, wb, n);
+            sum = simd_loop(a, b, n);
         }    
         *c = sum;
     }
@@ -181,8 +179,6 @@ namespace amt {
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
         using tensor_type2 = boost::numeric::ublas::tensor_core<E2>;
-        using extents_type1 = typename tensor_type1::extents_type;
-        using extents_type2 = typename tensor_type2::extents_type;
         
         static_assert(
             std::is_same_v< typename tensor_type1::value_type, typename tensor_type2::value_type > && 
@@ -206,8 +202,6 @@ namespace amt {
             );
         }
         
-        constexpr bool is_na_static = boost::numeric::ublas::is_static_v<extents_type1>;
-        constexpr bool is_nb_static = boost::numeric::ublas::is_static_v<extents_type2>;
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
         auto nths = static_cast<int>(num_threads.value_or(omp_get_num_procs()));
@@ -219,61 +213,15 @@ namespace amt {
             );
         }
 
-        auto size_fn = [&](){
-            if constexpr(is_na_static){
-                constexpr auto sz = boost::numeric::ublas::product(extents_type1{});
-                return std::integral_constant<std::size_t, sz>{};
-            }else if constexpr(is_nb_static){
-                constexpr auto sz = boost::numeric::ublas::product(extents_type2{});
-                return std::integral_constant<std::size_t, sz>{};
-            }else{
-                return std::integral_constant<std::size_t, 0ul>{};
-            }
-        };
-
-        if constexpr(is_na_static || is_nb_static){
-            constexpr std::size_t Sz = decltype(size_fn())::value;
-
-            if constexpr(sizeof...(Timer) > 0u){
-                std::get<0>(timer).start();
-                static_dot_prod_helper<Sz>(
-                    &c,
-                    a.data(),
-                    b.data()
-                );
-                std::get<0>(timer).stop();
-            }else{
-                static_dot_prod_helper<Sz>(
-                    &c,
-                    a.data(),
-                    b.data()
-                );
-            }
-        }else{
-            if constexpr(sizeof...(Timer) > 0u){
-                std::get<0>(timer).start();
-                dot_prod_helper(
-                    &c,
-                    a.data(),
-                    b.data(),
-                    1ul,
-                    1ul,
-                    NA,
-                    nths
-                );
-                std::get<0>(timer).stop();
-            }else{
-                dot_prod_helper(
-                    &c,
-                    a.data(),
-                    b.data(),
-                    1ul,
-                    1ul,
-                    NA,
-                    nths
-                );
-            }
-        }
+        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
+        dot_prod_helper(
+            &c,
+            a.data(),
+            b.data(),
+            NA,
+            nths
+        );
+        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
 
     }
 
