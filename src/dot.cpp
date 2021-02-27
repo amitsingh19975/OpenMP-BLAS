@@ -19,67 +19,9 @@
 #include <range.hpp>
 
 constexpr static std::size_t max_iter = 100ul;
-constexpr static float EPSILON = std::numeric_limits<float>::epsilon() * 10.f;
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 
-template<typename T, std::enable_if_t< std::is_floating_point_v<T>, void >* = nullptr >
-constexpr bool float_compare(T a, T b, T const epsilon) noexcept{
-    return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon );
-}
-
-template<typename ValueType>
-void compare_mat_helper(std::size_t sz){
-    ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz});
-    std::iota(v1.begin(), v1.end(), 1.);
-    auto v2 = v1;
-    auto rres = ValueType{}; 
-    amt::dot_prod(rres, v1, v2, std::nullopt);
-    auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), 1u, v2.data(), 1u);
-
-    if(!float_compare(lres,rres, static_cast<ValueType>(EPSILON))){
-        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
-        exit(1);
-    }
-}
-
-template<typename ValueType, typename L>
-void compare_diff_mat_helper(std::size_t sz){
-    
-    using other_layout = std::conditional_t<
-        std::is_same_v<L,ub::layout::first_order>,
-        ub::layout::last_order,
-        ub::layout::first_order
-    >;
-
-    ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
-    ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
-    std::iota(v1.begin(), v1.end(), 1.);
-    std::iota(v2.begin(), v2.end(), 1.);
-    auto w1 = static_cast<blasint>(v1.strides()[0] * v1.strides()[1]);
-    auto w2 = static_cast<blasint>(v2.strides()[0] * v2.strides()[1]);
-
-    auto rres = ValueType{}; 
-    amt::dot_prod(rres, v1, v2, std::nullopt);
-    auto lres = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
-    
-    if(!float_compare(lres,rres, static_cast<ValueType>(EPSILON))){
-        std::cerr<<"Incorrect Result: Tensor( " << rres << " ), BLAS( " << lres << " ), N: "<<sz<<'\n';
-        exit(1);
-    }
-}
-
-template<typename ValueType>
-void compare_mat(std::vector<double> const& x){
-    for(auto const& el: x) compare_mat_helper<ValueType>(static_cast<std::size_t>(el));
-    std::cerr << "TEST PASSED!" << std::endl;
-}
-
-template<typename ValueType>
-void compare_diff_mat(std::vector<double> const& x){
-    for(auto const& el: x) compare_diff_mat_helper<ValueType, ub::layout::first_order>(static_cast<std::size_t>(el));
-    std::cerr << "TEST PASSED!" << std::endl;
-}
 
 template<typename ValueType>
 int ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
@@ -522,7 +464,6 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
     return static_cast<int>(ret);
 }
 
-// #define ENABLE_TEST
 // #define DIFFERENT_LAYOUT
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
@@ -538,8 +479,6 @@ int main(){
     // [[maybe_unused]]constexpr double max_value = (1u<<20);
     // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
-    
-#ifndef ENABLE_TEST
 
     int res = 0;
     auto m = amt::metric<value_type>(x.size());
@@ -576,13 +515,5 @@ int main(){
     #endif
     
     return res;
-#else
-    
-    #ifndef DIFFERENT_LAYOUT
-        compare_mat<value_type>(x);
-    #else
-        compare_diff_mat<value_type>(x);
-    #endif
-    return 0;
-#endif
+
 }

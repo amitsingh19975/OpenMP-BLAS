@@ -47,6 +47,9 @@ set_project_arch_settings(project_options)
 include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
+include(cmake/Conan.cmake)
+run_conan()
+
 include(cmake/StaticAnalyzers.cmake)
 
 option(BUILD_SHARED_LIBS "Enable Compilation of shared libraries" OFF)
@@ -54,6 +57,15 @@ option(BUILD_SHARED_LIBS "Enable Compilation of shared libraries" OFF)
 option(ENABLE_PCH "Enable Precompiled Header" OFF)
 if (ENABLE_PCH)
     target_precompile_headers(project_options INTERFACE <iostream> <vector> <map> <utility>)
+endif()
+
+option(ENABLE_TESTING "Enable Test Builds" ON)
+if (ENABLE_TESTING)
+    enable_testing()
+    message(
+        "Building Tests."
+    )
+    add_subdirectory(test)
 endif()
 
 add_subdirectory(src)

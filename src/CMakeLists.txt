@@ -10,7 +10,9 @@ if ( EXISTS "${SRC_LIST_PATH}" )
     target_link_libraries( "${src_name}" PRIVATE 
                             project_options project_warnings
                             Boost::filesystem
-                            ${OPENMP_LIB} ${MATPLOT_LIB} Eigen3::Eigen
+                            ${OPENMP_LIB} 
+                            ${MATPLOT_LIB} 
+                            Eigen3::Eigen
                             ${MKL_LIB}
                             ${BLIS_LIB} 
                             ${OpenBLAS_LIB}
