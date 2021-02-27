@@ -74,7 +74,6 @@ namespace amt {
         [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] auto l2_size = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] auto l3_size = cache_manager::size(2) / size_in_bytes;
-        
         value_type sum = {0};
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
@@ -104,10 +103,8 @@ namespace amt {
             }
 
         }else if( n >= l1_size ){
-            auto q = n / l1_size;
-            auto r = n % l1_size;
-            auto min_threads = static_cast<int>(q) + static_cast<int>(static_cast<bool>(r));
-            auto num_threads = std::min(max_threads, min_threads);
+            auto q = static_cast<int>(n / l1_size);
+            auto num_threads = std::max(1, std::min(max_threads, q));
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
             for(auto i = 0ul; i < n; i += l1_size){
                 auto ib = std::min(l1_size, n - i);

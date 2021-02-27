@@ -65,7 +65,7 @@ int mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -99,7 +99,7 @@ int openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -125,7 +125,7 @@ int ref_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -154,7 +154,7 @@ int openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -189,7 +189,7 @@ int static_tensor_same_layout(amt::metric<ValueType>& m){
         double const ops = 2. * sz;
         using extents_type = ub::static_extents<1ul, sz>;
         using tensor_type = ub::static_tensor<ValueType,extents_type>;
-        tensor_type v1(3.), v2( 3.);
+        tensor_type v1, v2;
         double st{};
         auto k = max_iter;
         while(k--){
@@ -218,7 +218,7 @@ int blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz},3.), v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -254,8 +254,6 @@ int eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         vector_type v1(sz), v2(sz);
-        v1.fill(3.);
-        v2.fill(3.);
         double st{};
         auto k = max_iter;
         while(k--){
@@ -286,8 +284,8 @@ int ref_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m)
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -324,8 +322,8 @@ int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>&
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
         double st{};
         auto k = max_iter;
         while(k--){
@@ -362,8 +360,8 @@ int openblas_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
         auto w1 = static_cast<blasint>(v1.strides()[0] * v1.strides()[1]);
         auto w2 = static_cast<blasint>(v2.strides()[0] * v2.strides()[1]);
         double st{};
@@ -403,8 +401,8 @@ int blis_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz},3.);
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz}, 3.);
+        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
+        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
         auto w1 = static_cast<dim_t>(v1.strides()[0] * v1.strides()[1]);
         auto w2 = static_cast<dim_t>(v2.strides()[0] * v2.strides()[1]);
         double st{};
@@ -447,8 +445,6 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
         
         Matrix<ValueType,-1,1,layout> v1(sz);
         Matrix<ValueType,1,-1,other_layout> v2(sz);
-        v1.fill(3.);
-        v2.fill(3.);
         double st{};
         auto k = max_iter;
         while(k--){
@@ -470,11 +466,11 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 #define PLOT_ALL
 
 int main(){
-    // using value_type = float;
-    using value_type = double;
+    using value_type = float;
+    // using value_type = double;
     std::vector<double> x;
-    [[maybe_unused]]constexpr double max_value = 16382;
-    amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 1024;
+    amt::range(x, 2., max_value, 1., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = (1u<<20);
     // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
@@ -484,10 +480,10 @@ int main(){
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
         // res += ref_same_layout<value_type>(x,m);
-        res += ublas_dot_same_layout<value_type>(x,m);
-        res += openblas_same_layout<value_type>(x,m);
+        // res += ublas_dot_same_layout<value_type>(x,m);
+        // res += openblas_same_layout<value_type>(x,m);
         // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        res += blis_same_layout<value_type>(x,m);
+        // res += blis_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
         res += openmp_same_layout<value_type>(x,m);
         res += mkl_same_layout<value_type>(x,m);
