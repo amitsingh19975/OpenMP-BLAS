@@ -110,10 +110,6 @@ namespace amt{
 
     class OpenBlasFnLoader{
         using base_type = boost::dll::shared_library;
-        OpenBlasFnLoader()
-            : m_handle( m_path.data() )
-        {
-        }
 
         template<typename R, typename... Args>
         void get_fn(std::function<R(Args...)>& fn, std::string_view fn_name) const{
@@ -124,28 +120,34 @@ namespace amt{
         }
 
     public:
+        OpenBlasFnLoader()
+            : m_handle( m_path.data() )
+        {
+            if(!m_is_init){
+                get_fn(blas::detail::sdot, "cblas_sdot");
+                get_fn(blas::detail::ddot, "cblas_ddot");
+                get_fn(blas::detail::sger, "cblas_sger");
+                get_fn(blas::detail::dger, "cblas_dger");
+                get_fn(blas::detail::sgemv, "cblas_sgemv");
+                get_fn(blas::detail::dgemv, "cblas_dgemv");
+                get_fn(blas::detail::sgemm, "cblas_sgemm");
+                get_fn(blas::detail::dgemm, "cblas_dgemm");
+            }
+        }
         OpenBlasFnLoader(OpenBlasFnLoader const& other) = delete;
         OpenBlasFnLoader(OpenBlasFnLoader&& other) = default;
         OpenBlasFnLoader& operator=(OpenBlasFnLoader const& other) = delete;
         OpenBlasFnLoader& operator=(OpenBlasFnLoader&& other) = default;
 
-
-        static void init(){
-            auto mod = OpenBlasFnLoader();
-            mod.get_fn(blas::detail::sdot, "cblas_sdot");
-            mod.get_fn(blas::detail::ddot, "cblas_ddot");
-            mod.get_fn(blas::detail::sger, "cblas_sger");
-            mod.get_fn(blas::detail::dger, "cblas_dger");
-            mod.get_fn(blas::detail::sgemv, "cblas_sgemv");
-            mod.get_fn(blas::detail::dgemv, "cblas_dgemv");
-            mod.get_fn(blas::detail::sgemm, "cblas_sgemm");
-            mod.get_fn(blas::detail::dgemm, "cblas_dgemm");
-        }
-
     private:
         std::string_view m_path{OpenBLAS_LIB};
         base_type m_handle;
+        bool m_is_init{false};
     };
+
+    namespace detail{
+        static OpenBlasFnLoader dont_care_var{};
+    }
 
 } // namespace amt
 

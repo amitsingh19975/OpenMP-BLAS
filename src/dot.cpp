@@ -472,7 +472,6 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 int main(){
     // using value_type = float;
     using value_type = double;
-    amt::OpenBlasFnLoader::init();
     std::vector<double> x;
     [[maybe_unused]]constexpr double max_value = 16382;
     amt::range(x, 32., max_value, 32., std::plus<>{});
