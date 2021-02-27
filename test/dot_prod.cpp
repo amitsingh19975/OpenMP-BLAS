@@ -9,11 +9,11 @@
 template<typename T, typename L = boost::numeric::ublas::layout::first_order>
 using VectorType = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
 
-TEMPLATE_TEST_CASE( "Vector Vector Inner Product for Range[Start: 2, End: 2^14, Step: 1]", "[dot_prod]", float, double ) {
+TEMPLATE_TEST_CASE( "Vector Vector Inner Product for Range[Start: 2, End: 2^17, Step: 1]", "[dot_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
     amt::OpenBlasFnLoader::init();
 
-    constexpr std::size_t total_size = 1 << 14;
+    constexpr std::size_t total_size = 1 << 17;
     std::vector<std::size_t> sizes(total_size);
     std::iota(sizes.begin(), sizes.end(), 2u);
     
