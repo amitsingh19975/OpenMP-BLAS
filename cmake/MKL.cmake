@@ -6,6 +6,7 @@ SET(MKL_INCLUDE_SEARCH_PATHS
 link_directories(${MKL_HOME}/lib)
 link_directories(/opt/intel/lib)
 
+
 FIND_PATH(MKL_INCLUDE_DIR NAMES 
     mkl_cblas.h PATHS ${MKL_INCLUDE_SEARCH_PATHS}
 )
