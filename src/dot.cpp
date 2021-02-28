@@ -398,13 +398,13 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 #define PLOT_ALL
 
 int main(){
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     std::vector<double> x;
-    // [[maybe_unused]]constexpr double max_value = 16382;
-    // amt::range(x, 32., max_value, 32., std::plus<>{});
-    [[maybe_unused]]constexpr double max_value = (1u<<20);
-    amt::range(x, 2., max_value, 1024., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 16382;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = (1u<<20);
+    // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     int res = 0;

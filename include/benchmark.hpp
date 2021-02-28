@@ -27,39 +27,28 @@ namespace amt{
     #error "Compiler is not supported"
 #endif
 
-namespace detail{
-    
-    bool approx_equal(float a, float b, float epsilon_factor = 10000.f ){
-        return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * (std::numeric_limits<float>::epsilon() * epsilon_factor));
-    }
-
-} // namespace detail
-
-
-template<std::size_t MaxIter = 10000000u, typename FnType, typename... FnArgs>
+template<std::size_t MaxIter = 100u, typename FnType, typename... FnArgs>
 constexpr auto benchmark(FnType&& fn, FnArgs&&... args) noexcept{
     double time{};
-    for(auto i = 1ul; i <= MaxIter; ++i){
-        double prev_time{time};
-        auto t = timer{};
+    auto t = timer{};
+    for(auto i = 0ul; i < MaxIter; ++i){
+        t.start();
         std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...);
-        time = t();
-        if( detail::approx_equal(static_cast<float>(prev_time), static_cast<float>(time)) ) break;
+        time += t.stop();
     }
-    return time;
+    return time / static_cast<double>(MaxIter);
 }
 
-template<std::size_t MaxIter = 10000000u, typename FnType, typename... FnArgs>
-constexpr auto benchmark_timer_as_arg(FnType&& fn, FnArgs&&... args) noexcept{
+template<std::size_t MaxIter = 100u, typename FnType, typename... FnArgs>
+constexpr double benchmark_timer_as_arg(FnType&& fn, FnArgs&&... args) noexcept{
     double time{};
-    for(auto i = 1ul; i <= MaxIter; ++i){
-        double prev_time{time};
-        auto t = timer{};
+    auto t = timer{};
+    for(auto i = 0ul; i < MaxIter; ++i){
+        t.start();
         std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t);
-        time = t();
-        if( detail::approx_equal(static_cast<float>(prev_time), static_cast<float>(time)) ) break;
+        time += t.stop();
     }
-    return time;
+    return time / static_cast<double>(MaxIter);
 }
 
 } // namespace amt
