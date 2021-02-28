@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <cassert>
-#include <timer.hpp>
+#include <benchmark.hpp>
 #include <metric.hpp>
 #include <dot.hpp>
 #include <boost/numeric/ublas/vector.hpp>
@@ -24,125 +24,76 @@ namespace ub = boost::numeric::ublas;
 
 
 template<typename ValueType>
-int ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
     std::string fn_name = std::string(__func__) 
         + (std::is_same_v<ValueType,float> ? "_float" : "_double");
     
     auto& metric_data = m[fn_name];
-    ValueType ret{};
+    constexpr auto bench_fn = [](auto const& v1, auto const& v2){
+        amt::no_opt(ub::inner_prod(v1,v2));
+    };
 
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::vector<ValueType> v1(sz,3.), v2(sz, 3.);
-                double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                ret += ub::inner_prod(v1,v2);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        ub::vector<ValueType> v1(sz), v2(sz);
+        double st = amt::benchmark(bench_fn, v1, v2);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 
 template<typename ValueType>
-int mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
         + (std::is_same_v<ValueType,float> ? "_float" : "_double");
     
     auto& metric_data = m[fn_name];
-    ValueType ret{};
+    constexpr auto bench_fn = [](auto&&... args){
+        if constexpr(std::is_same_v<ValueType,float>){
+            amt::no_opt(cblas_sdot(std::forward<decltype(args)>(args)...));
+        }else if constexpr(std::is_same_v<ValueType,double>){
+            amt::no_opt(cblas_ddot(std::forward<decltype(args)>(args)...));
+        }
+    };
 
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                if constexpr(std::is_same_v<ValueType,float>){
-                    ret = cblas_sdot(static_cast<MKL_INT>(sz),v1.data(), 1u, v2.data(), 1u);
-                }else if constexpr(std::is_same_v<ValueType,double>){
-                    ret = cblas_ddot(static_cast<MKL_INT>(sz),v1.data(), 1u, v2.data(), 1u);
-                }
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        double st = amt::benchmark(bench_fn, static_cast<MKL_INT>(sz),v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType>
-int openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
         + (std::is_same_v<ValueType,float> ? "_float" : "_double");
     
     auto& metric_data = m[fn_name];
-    ValueType ret{};
+    constexpr auto bench_fn = [](auto&&... args){
+        amt::no_opt(amt::blas::dot_prod(std::forward<decltype(args)>(args)...));
+    };
 
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                ret = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), 1, v2.data(), 1);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        double st = amt::benchmark(bench_fn, static_cast<blasint>(sz), v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 #endif
 
 template<typename ValueType>
-int ref_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    ValueType ret{};
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                amt::dot_prod_ref(ret, v1, v2, t);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        m.update_ref((ops / st));
-    }
-    return static_cast<int>(ret);
-}
-
-template<typename ValueType>
-int openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -151,23 +102,17 @@ int openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     auto& metric_data = m[fn_name];
     ValueType ret{};
 
+    constexpr auto bench_fn = [](auto& ret, auto&&... args){
+        amt::dot_prod(ret, std::forward<decltype(args)>(args)...);
+    };
+
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                amt::dot_prod(ret, v1, v2, std::nullopt, t);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        double st = amt::benchmark_timer_as_arg(bench_fn, ret, v1, v2, std::nullopt);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 
 template<std::size_t Start, std::size_t End, typename ValueType>
@@ -206,7 +151,7 @@ int static_tensor_same_layout(amt::metric<ValueType>& m){
 }
 
 template<typename ValueType>
-int blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string fn_name = std::string(__func__) 
@@ -214,32 +159,25 @@ int blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     
     auto& metric_data = m[fn_name];
     ValueType ret{};
+    constexpr auto bench_fn = [](auto&&... args){
+        if constexpr(std::is_same_v<ValueType,float>){
+            bli_sdotv(std::forward<decltype(args)>(args)...);
+        }else if constexpr(std::is_same_v<ValueType,double>){
+            bli_ddotv(std::forward<decltype(args)>(args)...);
+        }
+    };
 
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                if constexpr(std::is_same_v<ValueType,float>){
-                    bli_sdotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
-                }else{
-                    bli_ddotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
-                }
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        double st = amt::benchmark(bench_fn, BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 
 template<typename ValueType>
-int eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+void eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
@@ -248,25 +186,18 @@ int eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
         + (std::is_same_v<ValueType,float> ? "_float" : "_double");
     
     auto& metric_data = m[fn_name];
-    ValueType ret{};
+
+    constexpr auto bench_fn = [](auto const& v1, auto const& v2){
+        amt::no_opt(v1.dot(v2));
+    };
 
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         vector_type v1(sz), v2(sz);
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                ret += v1.dot(v2);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
+        double st = amt::benchmark(bench_fn, v1, v2);
         metric_data.update((ops / st));
     }
-    return static_cast<int>(ret);
 }
 
 template<typename ValueType, typename L>
@@ -280,6 +211,7 @@ int ref_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m)
     >;
 
     ValueType ret{};
+
 
     for(auto const& el : x){
         double const ops = 2. * el;
@@ -480,13 +412,13 @@ int main(){
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
         // res += ref_same_layout<value_type>(x,m);
-        res += ublas_dot_same_layout<value_type>(x,m);
-        res += openblas_same_layout<value_type>(x,m);
+        ublas_dot_same_layout<value_type>(x,m);
+        openblas_same_layout<value_type>(x,m);
         // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        res += blis_same_layout<value_type>(x,m);
-        res += eigen_same_layout<value_type>(x,m);
-        res += openmp_same_layout<value_type>(x,m);
-        res += mkl_same_layout<value_type>(x,m);
+        blis_same_layout<value_type>(x,m);
+        eigen_same_layout<value_type>(x,m);
+        openmp_same_layout<value_type>(x,m);
+        mkl_same_layout<value_type>(x,m);
         // std::cout<<m.tail();
     #else
         res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
