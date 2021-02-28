@@ -6,59 +6,12 @@
 #include <optional>
 #include <cache_manager.hpp>
 #include <cstdlib>
-
-#define AMT_INLINE __attribute__((always_inline))
-#define AMT_NO_OPT __attribute__ ((optnone))
+#include <macros.hpp>
 
 namespace amt {
 
     template<typename Out, typename In, typename SizeType>
-    AMT_NO_OPT void dot_prod_helper_ref(
-        Out* c,
-        In const* a,
-        In const* b, 
-        [[maybe_unused]] SizeType const n
-    ) noexcept
-    {
-        static_assert(std::is_same_v<Out,In>);
-        
-        using value_type = std::remove_pointer_t<Out>;
-        value_type sum = {0};
-        auto ai = a;
-        auto bi = b;
-        for(auto i = 0ul; i < n; ++i){
-            sum += *ai * *bi;
-            ++ai;
-            ++bi;
-        }
-
-        *c = sum;
-    }
-
-    // template<typename Out, typename In, typename SizeType>
-    // void dot_prod_helper_diff_layout_ref(
-    //     Out* c,
-    //     In const* a,
-    //     In const* b, 
-    //     [[maybe_unused]] SizeType const wb,
-    //     [[maybe_unused]] SizeType const n
-    // ) noexcept
-    // {
-    //     static_assert(std::is_same_v<Out,In>);
-        
-    //     using value_type = std::remove_pointer_t<Out>;
-    //     value_type sum = {0};
-
-    //     for(auto i = 0ul; i < n; ++i){
-    //         sum += (a[i] * b[i * wb]);
-    //     }
-
-    //     *c = sum;
-
-    // }
-
-    template<typename Out, typename In, typename SizeType>
-    AMT_INLINE void dot_prod_helper(
+    AMT_ALWAYS_INLINE void dot_prod_helper(
         Out* c,
         In const* a,
         In const* b,
@@ -119,7 +72,7 @@ namespace amt {
     }
 
     template<std::size_t N, typename Out, typename In>
-    AMT_INLINE void static_dot_prod_helper(
+    AMT_ALWAYS_INLINE void static_dot_prod_helper(
         Out* c,
         In const* a,
         In const* b
