@@ -469,10 +469,10 @@ int main(){
     using value_type = float;
     // using value_type = double;
     std::vector<double> x;
-    [[maybe_unused]]constexpr double max_value = 1024;
-    amt::range(x, 2., max_value, 1., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = (1u<<20);
-    // amt::range(x, 2., max_value, 1024., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 16382;
+    // amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = (1u<<20);
+    amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     int res = 0;
@@ -480,10 +480,10 @@ int main(){
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
         // res += ref_same_layout<value_type>(x,m);
-        // res += ublas_dot_same_layout<value_type>(x,m);
-        // res += openblas_same_layout<value_type>(x,m);
+        res += ublas_dot_same_layout<value_type>(x,m);
+        res += openblas_same_layout<value_type>(x,m);
         // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        // res += blis_same_layout<value_type>(x,m);
+        res += blis_same_layout<value_type>(x,m);
         res += eigen_same_layout<value_type>(x,m);
         res += openmp_same_layout<value_type>(x,m);
         res += mkl_same_layout<value_type>(x,m);

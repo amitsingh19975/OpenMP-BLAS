@@ -62,7 +62,7 @@ namespace amt {
         Out* c,
         In const* a,
         In const* b,
-        [[maybe_unused]] SizeType const n,
+        [[maybe_unused]] SizeType n,
         [[maybe_unused]] int max_threads
     ) noexcept
     {
@@ -74,7 +74,6 @@ namespace amt {
         [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] auto l2_size = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] auto l3_size = cache_manager::size(2) / size_in_bytes;
-        value_type sum = {0};
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
@@ -86,8 +85,21 @@ namespace amt {
             return sum;
         };
 
-        if( n >= l3_size ){
+        value_type sum {};
+
+        if( n < l1_size ){
+            sum = simd_loop(a, b, n);
+        }else if( n >= l1_size ){
             
+            auto q = static_cast<int>(n / l1_size);
+            auto num_threads = std::max(1, std::min(max_threads, q));
+            #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
+            for(auto i = 0ul; i < n; i += l1_size){
+                auto ib = std::min(l1_size, n - i);
+                sum += simd_loop(a + i, b + i, ib);
+            }
+
+        }else{
             #pragma omp parallel num_threads(max_threads) reduction(+:sum)
             {
                 for(auto i = 0ul; i < n; i += l2_size){
@@ -102,18 +114,7 @@ namespace amt {
                 }
             }
 
-        }else if( n >= l1_size ){
-            auto q = static_cast<int>(n / l1_size);
-            auto num_threads = std::max(1, std::min(max_threads, q));
-            #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
-            for(auto i = 0ul; i < n; i += l1_size){
-                auto ib = std::min(l1_size, n - i);
-                sum += simd_loop(a + i, b + i, ib);
-            }
-
-        }else{
-            sum = simd_loop(a, b, n);
-        }    
+        }
         *c = sum;
     }
 
