@@ -133,7 +133,7 @@ namespace amt{
                 );
             }
 
-            ylabel += "("+ pattern + " / existing implementation)";
+            ylabel += "( existing implementation / " + pattern +" )";
 
             auto norm = [](std::string name){
                 std::transform(name.begin(), name.end(), name.begin(), [](auto c){
@@ -144,12 +144,12 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,10.});
+            plt::ylim({0.,5.});
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (r / l);
+                    return (l/r);
                 });
                 moving_average(speed);
                 auto l = plt::scatter(x_coord, speed, 2);
@@ -185,7 +185,7 @@ namespace amt{
                 );
             }
 
-            ylabel += "("+ pattern + " / existing implementation)";
+            ylabel += "( existing implementation / " + pattern +" )";
 
             auto norm = [](std::string name){
                 std::transform(name.begin(), name.end(), name.begin(), [](auto c){
@@ -196,7 +196,7 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,10.});
+            plt::ylim({0.,5.});
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord(100ul);
             std::iota(x_coord.begin(), x_coord.end(), 1.);
@@ -205,11 +205,11 @@ namespace amt{
                 std::vector<double> speed(m_total);
                 std::vector<double> y(100);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (r / l);
+                    return (l/r);
                 });
 
                 for(auto i = 1ul; i < 100ul; i++){
-                    auto n = static_cast<std::size_t>(size) * i;
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * i)), m_total);
                     for(auto j = 0ul; j < n; ++j){
                         y[i] += speed[i + j];
                     }
@@ -275,8 +275,8 @@ namespace amt{
                 ss << '\t' << "Max GFlops: "<<v.max<<'\n';
                 if(pref){
                     auto patt_avg = (pref->agg / static_cast<double>(m_total));
-                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((pref->max / v.max))<<'\n';
-                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((patt_avg / avg))<<'\n';
+                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((v.max / pref->max))<<'\n';
+                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((avg / patt_avg))<<'\n';
                 }
                 ss << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
                 ss << '\t' << "Avg GFlops: "<<avg<<'\n';
