@@ -17,6 +17,7 @@ namespace amt{
     class metric{
         // Get FLOP per cycle from https://en.wikipedia.org/wiki/FLOPS
         static constexpr double peak_performance = 2.3 * 8. * (std::is_same_v<T, double> ? 16. : 32.); // peak_performance = freq * cores * FLOP per cycle
+        std::string const type_name = std::is_same_v<T, double> ? "Double-Precision" : "Single-Precision";
         struct flops_data{
             std::vector<double> plot{};
             double min{ peak_performance };
@@ -99,6 +100,10 @@ namespace amt{
                 return name;
             };
 
+            std::string const title( std::string("Performance for ") + type_name );
+            
+            plt::cla();
+            plt::title(title);
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
@@ -122,28 +127,33 @@ namespace amt{
                 return name;
             };
 
+            std::string const title( std::string("Performance for ") + type_name);
+            
+            plt::cla();
+            plt::title(title);
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord = plt::iota(0,100);
             std::vector<double> y(100);
+            
 
+            plt::hold(plt::on);
             for(auto&& [k,v] : m_data){
 
-                for(auto i = 1ul; i < 100ul; i++){
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
-                    for(auto j = 0ul; j < n; ++j){
-                        y[i] += v.plot[i + j];
-                    }
-                    y[i] /= static_cast<double>(n);
+                for(auto i = 0ul; i < 100ul; i++){
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total - 1u);
+                    y[i] = v.plot[n];
+                    // for(auto j = 0ul; j < n; ++j){
+                    //     y[i] += v.plot[i + j];
+                    // }
+                    // y[i] /= static_cast<double>(n);
                 }
-                
                 std::sort(y.begin(), y.end(), std::greater<>{});
-
+                
                 auto l = plt::scatter(x_coord, y, 2);
                 l->display_name(norm(k));
                 l->marker_face(true);
-                plt::hold(plt::on);
             }
             plt::hold(plt::off);
             plt::legend();
@@ -153,6 +163,9 @@ namespace amt{
         void plot_speedup(std::string pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
             namespace plt = matplot;
             flops_data const* pref = nullptr;
+
+            std::string const title( std::string("Speedup Performance for ") + type_name);
+            plt::title(title);
 
             auto sz = pattern.size();
             for(auto&& [k,v] : m_data){
@@ -181,9 +194,12 @@ namespace amt{
                 return name;
             };
 
+            plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             plt::ylim({0.,5.});
+            plt::hold(plt::on);
+
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
@@ -194,7 +210,6 @@ namespace amt{
                 auto l = plt::scatter(x_coord, speed, 2);
                 l->display_name(norm(k));
                 l->marker_face(true);
-                plt::hold(plt::on);
             }
 
             plt::hold(plt::off);
@@ -206,6 +221,9 @@ namespace amt{
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
+            std::string const title( std::string("Speedup Performance for ") + type_name);
+            plt::title(title);
+
             auto sz = pattern.size();
             for(auto&& [k,v] : m_data){
                 if(k.size() < sz) continue;
@@ -233,12 +251,14 @@ namespace amt{
                 return name;
             };
 
+            plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             plt::ylim({0.,3.});
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord = plt::iota(0,100);
             std::vector<double> y(100);
+            plt::hold(plt::on);
 
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
@@ -246,22 +266,28 @@ namespace amt{
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return (l/r);
                 });
+                
 
-                for(auto i = 1ul; i < 100ul; i++){
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
-                    for(auto j = 0ul; j < n; ++j){
-                        y[i] += speed[i + j];
-                    }
-                    y[i] /= static_cast<double>(n);
+                for(auto i = 0ul; i < 100ul; i++){
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total - 1u);
+                    y[i] = speed[n];
+                    // for(auto j = 0ul; j < n; ++j){
+                    //     y[i] += speed[i + j];
+                    // }
+                    // y[i] /= static_cast<double>(n);
                 }
                 
                 std::sort(y.begin(), y.end(), std::greater<>{});
 
-                auto l = plt::scatter(x_coord, y, 2);
+                auto l = plt::scatter(x_coord, y,2);
                 l->display_name(norm(k));
                 l->marker_face(true);
-                plt::hold(plt::on);
             }
+            // auto one_line = std::vector<double>(100,1);
+            // auto l = plt::plot(x_coord,one_line);
+            // l->line_width(2);
+            // l->display_name("reference line");
+            // l->marker_face(true);
 
             plt::hold(plt::off);
             plt::legend();
