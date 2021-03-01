@@ -26,7 +26,7 @@ namespace amt {
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
-        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
+        // [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
         [[maybe_unused]] auto const section_one_block = (number_of_el_l1 << 1);
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
@@ -62,8 +62,8 @@ namespace amt {
                     auto ai = a + i;
                     auto bi = b + i;
                     #pragma omp for schedule(dynamic)
-                    for(auto j = 0ul; j < ib; j += section_one_block){
-                        auto jb = std::min(section_one_block, ib - j);
+                    for(auto j = 0ul; j < ib; j += number_of_el_l1){
+                        auto jb = std::min(number_of_el_l1, ib - j);
                         sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
@@ -157,7 +157,8 @@ namespace amt {
         
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
-        auto nths = static_cast<int>(num_threads.value_or(omp_get_num_procs()));
+        auto const num_procs = omp_get_num_procs();
+        auto nths = static_cast<int>(num_threads.value_or(num_procs));
 
         if( NA != NB ){
             throw std::runtime_error(
