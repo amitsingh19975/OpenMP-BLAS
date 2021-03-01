@@ -40,7 +40,7 @@ namespace amt {
 
         value_type sum {};
 
-        if( n < l1_size ){
+        if( n < (l1_size<<1) ){
             sum = simd_loop(a, b, n);
         }else if( n >= l1_size ){
             
