@@ -112,6 +112,44 @@ namespace amt{
             plt::show();
         }
 
+        void plot_per(std::string_view xlabel = "Size(%)", std::string_view ylabel = "GFlops"){
+            namespace plt = matplot;
+
+            auto norm = [](std::string name){
+                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+                    return c == '_' ? ' ' : c;
+                });
+                return name;
+            };
+
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            double size = static_cast<double>(m_total) / 100.;
+            std::vector<double> x_coord = plt::iota(0,100);
+            std::vector<double> y(100);
+
+            for(auto&& [k,v] : m_data){
+
+                for(auto i = 1ul; i < 100ul; i++){
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
+                    for(auto j = 0ul; j < n; ++j){
+                        y[i] += v.plot[i + j];
+                    }
+                    y[i] /= static_cast<double>(n);
+                }
+                
+                std::sort(y.begin(), y.end(), std::greater<>{});
+
+                auto l = plt::scatter(x_coord, y, 2);
+                l->display_name(norm(k));
+                l->marker_face(true);
+                plt::hold(plt::on);
+            }
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
         void plot_speedup(std::string pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
             namespace plt = matplot;
             flops_data const* pref = nullptr;
@@ -197,25 +235,27 @@ namespace amt{
 
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,5.});
+            plt::ylim({0.,3.});
             double size = static_cast<double>(m_total) / 100.;
-            std::vector<double> x_coord(100ul);
-            std::iota(x_coord.begin(), x_coord.end(), 1.);
+            std::vector<double> x_coord = plt::iota(0,100);
+            std::vector<double> y(100);
+
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
-                std::vector<double> y(100);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return (l/r);
                 });
 
                 for(auto i = 1ul; i < 100ul; i++){
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * i)), m_total);
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
                     for(auto j = 0ul; j < n; ++j){
                         y[i] += speed[i + j];
                     }
                     y[i] /= static_cast<double>(n);
                 }
+                
+                std::sort(y.begin(), y.end(), std::greater<>{});
 
                 auto l = plt::scatter(x_coord, y, 2);
                 l->display_name(norm(k));
