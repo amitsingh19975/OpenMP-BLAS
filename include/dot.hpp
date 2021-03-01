@@ -24,9 +24,10 @@ namespace amt {
         using value_type = std::remove_pointer_t<Out>;
         [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
 
-        [[maybe_unused]] auto l1_size = cache_manager::size(0) / size_in_bytes;
-        [[maybe_unused]] auto l2_size = cache_manager::size(1) / size_in_bytes;
-        [[maybe_unused]] auto l3_size = cache_manager::size(2) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
+        [[maybe_unused]] auto const section_one_block = (number_of_el_l1 << 1);
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
@@ -40,28 +41,29 @@ namespace amt {
 
         value_type sum {};
 
-        if( n < (l1_size<<1) ){
+        if( n < section_one_block ){
             sum = simd_loop(a, b, n);
-        }else if( n >= l1_size ){
+        }else if( n >= number_of_el_l1 ){
             
-            auto q = static_cast<int>(n / l1_size);
+            auto q = static_cast<int>(n / number_of_el_l1);
+
             auto num_threads = std::max(1, std::min(max_threads, q));
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
-            for(auto i = 0ul; i < n; i += l1_size){
-                auto ib = std::min(l1_size, n - i);
+            for(auto i = 0ul; i < n; i += number_of_el_l1){
+                auto ib = std::min(number_of_el_l1, n - i);
                 sum += simd_loop(a + i, b + i, ib);
             }
 
         }else{
             #pragma omp parallel num_threads(max_threads) reduction(+:sum)
             {
-                for(auto i = 0ul; i < n; i += l2_size){
-                    auto ib = std::min(l2_size, n - i);
+                for(auto i = 0ul; i < n; i += number_of_el_l2){
+                    auto ib = std::min(number_of_el_l2, n - i);
                     auto ai = a + i;
                     auto bi = b + i;
                     #pragma omp for schedule(dynamic)
-                    for(auto j = 0ul; j < ib; j += l1_size){
-                        auto jb = std::min(l1_size, ib - j);
+                    for(auto j = 0ul; j < ib; j += section_one_block){
+                        auto jb = std::min(section_one_block, ib - j);
                         sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
