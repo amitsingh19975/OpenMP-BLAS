@@ -18,13 +18,12 @@
 #include <openblas.hpp>
 #include <range.hpp>
 
-constexpr static std::size_t max_iter = 100ul;
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 
 
-template<typename ValueType>
-void ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
+template<typename ValueType, std::size_t MaxIter = 100ul>
+void ublas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
     std::string fn_name = std::string(__func__) 
@@ -39,12 +38,12 @@ void ublas_dot_same_layout(std::vector<double> const& x, amt::metric<ValueType>&
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::vector<ValueType> v1(sz), v2(sz);
-        double st = amt::benchmark(bench_fn, v1, v2);
+        double st = amt::benchmark<MaxIter>(bench_fn, v1, v2);
         metric_data.update((ops / st));
     }
 }
 
-template<typename ValueType>
+template<typename ValueType, std::size_t MaxIter = 100ul>
 void mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -64,13 +63,13 @@ void mkl_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st = amt::benchmark(bench_fn, static_cast<MKL_INT>(sz),v1.data(), 1, v2.data(), 1);
+        double st = amt::benchmark<MaxIter>(bench_fn, static_cast<MKL_INT>(sz),v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
-template<typename ValueType>
+template<typename ValueType, std::size_t MaxIter = 100ul>
 void openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -86,13 +85,13 @@ void openblas_same_layout(std::vector<double> const& x, amt::metric<ValueType>& 
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st = amt::benchmark(bench_fn, static_cast<blasint>(sz), v1.data(), 1, v2.data(), 1);
+        double st = amt::benchmark<MaxIter>(bench_fn, static_cast<blasint>(sz), v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
 }
 #endif
 
-template<typename ValueType>
+template<typename ValueType, std::size_t MaxIter = 100ul>
 void openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -102,7 +101,7 @@ void openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m)
     auto& metric_data = m[fn_name];
     ValueType ret{};
 
-    constexpr auto bench_fn = [](auto& ret, auto&&... args){
+    constexpr auto bench_fn = [](ValueType& ret, auto&&... args){
         amt::dot_prod(ret, std::forward<decltype(args)>(args)...);
     };
 
@@ -110,47 +109,47 @@ void openmp_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m)
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st = amt::benchmark_timer_as_arg(bench_fn, ret, v1, v2, std::nullopt);
+        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, std::nullopt);
         metric_data.update((ops / st));
     }
 }
 
-template<std::size_t Start, std::size_t End, typename ValueType>
-int static_tensor_same_layout(amt::metric<ValueType>& m){
-    using namespace boost::mp11;
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+// template<std::size_t Start, std::size_t End, typename ValueType>
+// int static_tensor_same_layout(amt::metric<ValueType>& m){
+//     using namespace boost::mp11;
+//     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string fn_name = std::string(__func__) 
-        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
+//     std::string fn_name = std::string(__func__) 
+//         + (std::is_same_v<ValueType,float> ? "_float" : "_double");
     
-    auto& metric_data = m[fn_name];
-    ValueType ret{};
+//     auto& metric_data = m[fn_name];
+//     ValueType ret{};
 
-    using number_list = mp_iota_c<End>;
-    using range = mp_drop_c<number_list, std::max(1ul, Start) >;
+//     using number_list = mp_iota_c<End>;
+//     using range = mp_drop_c<number_list, std::max(1ul, Start) >;
 
-    mp_for_each<range>([&](auto I){
-        constexpr auto sz = decltype(I)::value;
-        double const ops = 2. * sz;
-        using extents_type = ub::static_extents<1ul, sz>;
-        using tensor_type = ub::static_tensor<ValueType,extents_type>;
-        tensor_type v1, v2;
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                amt::dot_prod(ret, v1, v2, t);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st));
-    });
-    return static_cast<int>(ret);
-}
+//     mp_for_each<range>([&](auto I){
+//         constexpr auto sz = decltype(I)::value;
+//         double const ops = 2. * sz;
+//         using extents_type = ub::static_extents<1ul, sz>;
+//         using tensor_type = ub::static_tensor<ValueType,extents_type>;
+//         tensor_type v1, v2;
+//         double st{};
+//         auto k = max_iter;
+//         while(k--){
+//             amt::timer t{};
+//             {   
+//                 amt::dot_prod(ret, v1, v2, t);
+//             }
+//             st += t();
+//         }
+//         st /= static_cast<double>(max_iter);
+//         metric_data.update((ops / st));
+//     });
+//     return static_cast<int>(ret);
+// }
 
-template<typename ValueType>
+template<typename ValueType, std::size_t MaxIter = 100ul>
 void blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -171,12 +170,12 @@ void blis_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st = amt::benchmark(bench_fn, BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
+        double st = amt::benchmark<MaxIter>(bench_fn, BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
         metric_data.update((ops / st));
     }
 }
 
-template<typename ValueType>
+template<typename ValueType, std::size_t MaxIter = 100ul>
 void eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
@@ -195,201 +194,9 @@ void eigen_same_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         vector_type v1(sz), v2(sz);
-        double st = amt::benchmark(bench_fn, v1, v2);
+        double st = amt::benchmark<MaxIter>(bench_fn, v1, v2);
         metric_data.update((ops / st));
     }
-}
-
-template<typename ValueType, typename L>
-int ref_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    using other_layout = std::conditional_t<
-        std::is_same_v<L,ub::layout::first_order>,
-        ub::layout::last_order,
-        ub::layout::first_order
-    >;
-
-    ValueType ret{};
-
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                amt::dot_prod_ref(ret, v1, v2, t);
-                ret += v1.dot(v2);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        m.update_ref((ops / st));
-    }
-    return static_cast<int>(ret);
-}
-
-template<typename ValueType, typename L>
-int tensor_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    using other_layout = std::conditional_t<
-        std::is_same_v<L,ub::layout::first_order>,
-        ub::layout::last_order,
-        ub::layout::first_order
-    >;
-
-    std::string fn_name = std::string(__func__) 
-        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
-        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
-    
-    auto& metric_data = m[fn_name];
-    ValueType ret{};
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                amt::dot_prod(ret, v1, v2, std::nullopt, t);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st));
-    }
-    return static_cast<int>(ret);
-}
-
-#ifdef AMT_BENCHMARK_OPENBLAS_HPP
-template<typename ValueType, typename L>
-int openblas_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    using other_layout = std::conditional_t<
-        std::is_same_v<L,ub::layout::first_order>,
-        ub::layout::last_order,
-        ub::layout::first_order
-    >;
-
-    std::string fn_name = std::string(__func__) 
-        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
-        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
-    
-    auto& metric_data = m[fn_name];
-    ValueType ret{};
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
-        auto w1 = static_cast<blasint>(v1.strides()[0] * v1.strides()[1]);
-        auto w2 = static_cast<blasint>(v2.strides()[0] * v2.strides()[1]);
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                ret = amt::blas::dot_prod(static_cast<blasint>(sz),v1.data(), w1, v2.data(), w2);
-                ret += v1.dot(v2);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st));
-    }
-    return static_cast<int>(ret);
-}
-#endif
-
-template<typename ValueType, typename L>
-int blis_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    using other_layout = std::conditional_t<
-        std::is_same_v<L,ub::layout::first_order>,
-        ub::layout::last_order,
-        ub::layout::first_order
-    >;
-
-    std::string fn_name = std::string(__func__) 
-        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
-        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
-    
-    auto& metric_data = m[fn_name];
-    ValueType ret{};
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType, L> v1(ub::extents<>{1ul, sz});
-        ub::dynamic_tensor<ValueType, other_layout> v2(ub::extents<>{1ul, sz});
-        auto w1 = static_cast<dim_t>(v1.strides()[0] * v1.strides()[1]);
-        auto w2 = static_cast<dim_t>(v2.strides()[0] * v2.strides()[1]);
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                if constexpr(std::is_same_v<ValueType,float>){
-                    bli_sdotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), w1, v2.data(), w2, &ret);
-                }else if constexpr(std::is_same_v<ValueType,double>){
-                    bli_ddotv(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), w1, v2.data(), w2, &ret);
-                }
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st));
-    }
-    return static_cast<int>(ret);
-}
-
-template<typename ValueType, typename L>
-int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& m){
-    using namespace Eigen;
-    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
-    
-    constexpr auto layout = (std::is_same_v<L,ub::layout::first_order> ? ColMajor : RowMajor);
-    constexpr auto other_layout = (std::is_same_v<L,ub::layout::first_order> ? RowMajor : ColMajor);
-
-    std::string fn_name = std::string(__func__) 
-        + (std::is_same_v<L,ub::layout::first_order> ? "_first_last" : "_last_first")
-        + (std::is_same_v<ValueType,float> ? "_float" : "_double");
-    
-    auto& metric_data = m[fn_name];
-    ValueType ret{};
-
-    for(auto const& el : x){
-        double const ops = 2. * el;
-        auto sz = static_cast<std::size_t>(el);
-        
-        Matrix<ValueType,-1,1,layout> v1(sz);
-        Matrix<ValueType,1,-1,other_layout> v2(sz);
-        double st{};
-        auto k = max_iter;
-        while(k--){
-            amt::timer t{};
-            {   
-                ret += v1.dot(v2);
-            }
-            st += t();
-        }
-        st /= static_cast<double>(max_iter);
-        metric_data.update((ops / st));
-    }
-    return static_cast<int>(ret);
 }
 
 // #define DIFFERENT_LAYOUT
@@ -398,49 +205,48 @@ int eigen_dot_diff_layout(std::vector<double> const& x, amt::metric<ValueType>& 
 #define PLOT_ALL
 
 int main(){
-    // using value_type = float;
-    using value_type = double;
+    using value_type = float;
+    // using value_type = double;
     std::vector<double> x;
+    [[maybe_unused]]constexpr std::size_t max_iter = 100ul;
     [[maybe_unused]]constexpr double max_value = 16382;
     amt::range(x, 32., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = (1u<<20);
     // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
-    int res = 0;
     auto m = amt::metric<value_type>(x.size());
     // exit(0);
     #ifndef DIFFERENT_LAYOUT
-        // res += ref_same_layout<value_type>(x,m);
-        ublas_dot_same_layout<value_type>(x,m);
-        openblas_same_layout<value_type>(x,m);
-        // res += static_tensor_same_layout<2ul, max_size, value_type>(m);
-        blis_same_layout<value_type>(x,m);
-        eigen_same_layout<value_type>(x,m);
-        openmp_same_layout<value_type>(x,m);
-        mkl_same_layout<value_type>(x,m);
+        ublas_same_layout<value_type,max_iter>(x,m);
+        openblas_same_layout<value_type,max_iter>(x,m);
+        blis_same_layout<value_type,max_iter>(x,m);
+        eigen_same_layout<value_type,max_iter>(x,m);
+        openmp_same_layout<value_type,max_iter>(x,m);
+        mkl_same_layout<value_type,max_iter>(x,m);
         // std::cout<<m.tail();
     #else
-        res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        res += openblas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        res += tensor_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        res += blis_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
-        res += eigen_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        // res += ref_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        // res += openblas_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        // res += tensor_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        // res += blis_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
+        // res += eigen_dot_diff_layout<value_type,ub::layout::first_order>(x,m);
 
     #endif
 
-    std::cout<<m.str("openmp")<<'\n';
+    // std::cout<<m.str("openmp")<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x);
+            m.plot_per();
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup("openmp",x);
+            // m.plot_speedup("openmp",x);
             m.plot_speedup_per("openmp");
         #endif
     #endif
-    
-    return res;
+    // m.raw();
+    return 0;
 
 }
