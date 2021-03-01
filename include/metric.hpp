@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <functional>
 #include <sstream>
+#include <fstream>
 
 namespace amt{
 
@@ -283,6 +284,18 @@ namespace amt{
                 ss << '\t' << "Avg Peak Utilization in %: "<< (avg / peak_performance) * 100. <<'\n' << '\n';
             }
             return ss.str();
+        }
+
+        void raw(std::string_view filename = "raw_data.txt") const{
+            std::ofstream f(filename.data());
+            for(auto&& [k,v] : m_data){
+                f << k << " ";
+                for(auto const& d : v.plot){
+                    f << d << ' ';
+                }
+                f << '\n';
+            }
+            f.close();
         }
 
         friend std::ostream& operator<<(std::ostream& os, metric const& m){
