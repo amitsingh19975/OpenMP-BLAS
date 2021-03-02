@@ -32,7 +32,7 @@ namespace amt{
             }
         };
     public:
-        using base_type = std::unordered_map<std::string,flops_data>;
+        using base_type = std::unordered_map<std::string_view,flops_data>;
         using size_type = std::size_t;
         metric(size_type total)
             : m_total(total)
@@ -52,7 +52,7 @@ namespace amt{
             }
         }
         
-        auto& operator[](std::string const& name){
+        auto& operator[](std::string_view name){
             return m_data[name];
         }
         
@@ -93,12 +93,12 @@ namespace amt{
         void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
 
-            auto norm = [](std::string name){
-                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-                    return c == '_' ? ' ' : c;
-                });
-                return name;
-            };
+            // auto norm = [](std::string name){
+            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+            //         return c == '_' ? ' ' : c;
+            //     });
+            //     return name;
+            // };
 
             std::string const title( std::string("Performance for ") + type_name );
             
@@ -108,7 +108,7 @@ namespace amt{
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
                 auto l = plt::scatter(x_coord, v.plot, 2);
-                l->display_name(norm(k));
+                l->display_name(k);
                 l->marker_face(true);
                 plt::hold(plt::on);
             }
@@ -120,12 +120,12 @@ namespace amt{
         void plot_per(std::string_view xlabel = "Size(%)", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
 
-            auto norm = [](std::string name){
-                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-                    return c == '_' ? ' ' : c;
-                });
-                return name;
-            };
+            // auto norm = [](std::string name){
+            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+            //         return c == '_' ? ' ' : c;
+            //     });
+            //     return name;
+            // };
 
             std::string const title( std::string("Performance for ") + type_name);
             
@@ -141,18 +141,19 @@ namespace amt{
             plt::hold(plt::on);
             for(auto&& [k,v] : m_data){
 
-                for(auto i = 0ul; i < 100ul; i++){
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total - 1u);
-                    y[i] = v.plot[n];
-                    // for(auto j = 0ul; j < n; ++j){
-                    //     y[i] += v.plot[i + j];
-                    // }
-                    // y[i] /= static_cast<double>(n);
+                for(auto i = 1ul; i < 100ul; i++){
+                    auto p = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i - 1))), m_total);
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
+                    y[i] = v.plot[p];
+                    for(auto j = p; j < n; ++j){
+                        y[i] += v.plot[j];
+                    }
+                    y[i] /= static_cast<double>(size);
                 }
                 std::sort(y.begin(), y.end(), std::greater<>{});
                 
                 auto l = plt::scatter(x_coord, y, 2);
-                l->display_name(norm(k));
+                l->display_name(k);
                 l->marker_face(true);
             }
             plt::hold(plt::off);
@@ -160,24 +161,22 @@ namespace amt{
             plt::show();
         }
 
-        void plot_speedup(std::string pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+        void plot_speedup(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
             std::string const title( std::string("Speedup Performance for ") + type_name);
             plt::title(title);
 
-            auto sz = pattern.size();
+            std::string name;
             for(auto&& [k,v] : m_data){
-                if(k.size() < sz) continue;
-                else if(k.size() == sz && (k == pattern)){
+                if(auto it = k.find(pattern); it != std::string::npos){
                     pref = std::addressof(v);
-                    break;
-                }else if(k.substr(0,sz) == pattern) {
-                    pref = std::addressof(v);
+                    name = std::string(k);
                     break;
                 }
             }
+
             if(pref == nullptr){
                 throw std::runtime_error(
                     "amt::metric::plot_speedup(std::string_view, std::vector<double> const&, std::string_view, std::string_view): "
@@ -185,14 +184,14 @@ namespace amt{
                 );
             }
 
-            ylabel += "( existing implementation / " + pattern +" )";
+            ylabel += "( existing implementation / " + name +" )";
 
-            auto norm = [](std::string name){
-                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-                    return c == '_' ? ' ' : c;
-                });
-                return name;
-            };
+            // auto norm = [](std::string name){
+            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
+            //         return c == '_' ? ' ' : c;
+            //     });
+            //     return name;
+            // };
 
             plt::cla();
             plt::xlabel(xlabel);
@@ -208,7 +207,7 @@ namespace amt{
                 });
                 moving_average(speed);
                 auto l = plt::scatter(x_coord, speed, 2);
-                l->display_name(norm(k));
+                l->display_name(k);
                 l->marker_face(true);
             }
 
@@ -217,21 +216,18 @@ namespace amt{
             plt::show();
         }
 
-        void plot_speedup_per(std::string pattern, std::string_view xlabel = "Size(%)", std::string ylabel = "SpeedUP") const{
+        void plot_speedup_per(std::string_view pattern, std::string_view xlabel = "Size(%)", std::string ylabel = "SpeedUP") const{
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
             std::string const title( std::string("Speedup Performance for ") + type_name);
             plt::title(title);
 
-            auto sz = pattern.size();
+            std::string name;
             for(auto&& [k,v] : m_data){
-                if(k.size() < sz) continue;
-                else if(k.size() == sz && (k == pattern)){
+                if(auto it = k.find(pattern); it != std::string::npos){
                     pref = std::addressof(v);
-                    break;
-                }else if(k.substr(0,sz) == pattern) {
-                    pref = std::addressof(v);
+                    name = std::string(k);
                     break;
                 }
             }
@@ -242,14 +238,7 @@ namespace amt{
                 );
             }
 
-            ylabel += "( existing implementation / " + pattern +" )";
-
-            auto norm = [](std::string name){
-                std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-                    return c == '_' ? ' ' : c;
-                });
-                return name;
-            };
+            ylabel += "( existing implementation / " + name +" )";
 
             plt::cla();
             plt::xlabel(xlabel);
@@ -268,19 +257,20 @@ namespace amt{
                 });
                 
 
-                for(auto i = 0ul; i < 100ul; i++){
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total - 1u);
-                    y[i] = speed[n];
-                    // for(auto j = 0ul; j < n; ++j){
-                    //     y[i] += speed[i + j];
-                    // }
-                    // y[i] /= static_cast<double>(n);
+                for(auto i = 1ul; i < 100ul; i++){
+                    auto p = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i - 1))), m_total);
+                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
+                    y[i] = speed[p];
+                    for(auto j = p; j < n; ++j){
+                        y[i] += speed[j];
+                    }
+                    y[i] /= static_cast<double>(size);
                 }
                 
                 std::sort(y.begin(), y.end(), std::greater<>{});
 
                 auto l = plt::scatter(x_coord, y,2);
-                l->display_name(norm(k));
+                l->display_name(k);
                 l->marker_face(true);
             }
             // auto one_line = std::vector<double>(100,1);
@@ -321,13 +311,8 @@ namespace amt{
 
             if (pattern.has_value()){
                 auto& name = pattern.value();
-                auto sz = name.size();
                 for(auto&& [k,v] : m_data){
-                    if(k.size() < sz) continue;
-                    else if(k.size() == sz && (k == name)){
-                        pref = std::addressof(v);
-                        break;
-                    }else if(k.substr(0,sz) == name) {
+                    if(auto it = k.find(name); it != std::string::npos){
                         pref = std::addressof(v);
                         break;
                     }
