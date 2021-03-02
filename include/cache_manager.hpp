@@ -80,7 +80,7 @@ namespace amt{
                 }
                 
                 if( sysctlbyname_helper("machdep.cpu.cache.L1_associativity", res[0].associativity) < 0 ){
-                    res[0].associativity = (res[1].associativity * 2);
+                    res[0].associativity = 0;
                 }
 
                 if( sysctlbyname_helper("machdep.cpu.cache.L3_associativity", res[2].associativity) < 0 ){
