@@ -45,7 +45,7 @@ namespace amt {
 
         if( n < section_one_block ){
             sum = simd_loop(a, b, n);
-        }else if( n >= section_one_block && n < number_of_el_l3 ){
+        }else if( n < number_of_el_l3 ){
             
             auto q = static_cast<int>(n / section_two_block);
 
