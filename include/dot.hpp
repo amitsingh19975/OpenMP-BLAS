@@ -26,8 +26,10 @@ namespace amt {
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
-        // [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
         [[maybe_unused]] auto const section_one_block = (number_of_el_l1 << 1);
+        [[maybe_unused]] auto const section_two_block = (number_of_el_l1 >> 1u);
+        [[maybe_unused]] auto const section_three_block = (number_of_el_l2 >> 1u);
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
@@ -43,14 +45,14 @@ namespace amt {
 
         if( n < section_one_block ){
             sum = simd_loop(a, b, n);
-        }else if( n >= number_of_el_l1 ){
+        }else if( n >= section_one_block && n < number_of_el_l3 ){
             
-            auto q = static_cast<int>(n / number_of_el_l1);
+            auto q = static_cast<int>(n / section_two_block);
 
             auto num_threads = std::max(1, std::min(max_threads, q));
             #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
-            for(auto i = 0ul; i < n; i += number_of_el_l1){
-                auto ib = std::min(number_of_el_l1, n - i);
+            for(auto i = 0ul; i < n; i += section_two_block){
+                auto ib = std::min(section_two_block, n - i);
                 sum += simd_loop(a + i, b + i, ib);
             }
 
@@ -62,8 +64,8 @@ namespace amt {
                     auto ai = a + i;
                     auto bi = b + i;
                     #pragma omp for schedule(dynamic)
-                    for(auto j = 0ul; j < ib; j += number_of_el_l1){
-                        auto jb = std::min(number_of_el_l1, ib - j);
+                    for(auto j = 0ul; j < ib; j += section_two_block){
+                        auto jb = std::min(section_two_block, ib - j);
                         sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
