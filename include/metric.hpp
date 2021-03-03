@@ -107,7 +107,10 @@ namespace amt{
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
-                auto l = plt::scatter(x_coord, v.plot, 2);
+                auto& speed = v.plot;
+                // auto speed = v.plot;
+                // moving_average(speed);
+                auto l = plt::scatter(x_coord, speed, 2);
                 l->display_name(k);
                 l->marker_face(true);
                 plt::hold(plt::on);
@@ -207,6 +210,54 @@ namespace amt{
                 });
                 moving_average(speed);
                 auto l = plt::scatter(x_coord, speed, 2);
+                l->display_name(k);
+                l->marker_face(true);
+            }
+
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
+        void plot_speedup_semilogy(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+            namespace plt = matplot;
+            flops_data const* pref = nullptr;
+
+            std::string const title( std::string("Speedup Performance for ") + type_name);
+            plt::title(title);
+
+            std::string name;
+            for(auto&& [k,v] : m_data){
+                if(auto it = k.find(pattern); it != std::string::npos){
+                    pref = std::addressof(v);
+                    name = std::string(k);
+                    break;
+                }
+            }
+
+            if(pref == nullptr){
+                throw std::runtime_error(
+                    "amt::metric::plot_speedup(std::string_view, std::vector<double> const&, std::string_view, std::string_view): "
+                    "unable to find pattern"
+                );
+            }
+
+            ylabel += "( existing implementation / " + name +" )";
+
+            plt::cla();
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            plt::ylim({0.,5.});
+            plt::hold(plt::on);
+
+            for(auto&& [k,v] : m_data){
+                if(std::addressof(v) == pref) continue;
+                std::vector<double> speed(m_total);
+                std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
+                    return (l/r);
+                });
+                moving_average(speed);
+                auto l = plt::semilogy(x_coord, speed);
                 l->display_name(k);
                 l->marker_face(true);
             }
