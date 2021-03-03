@@ -50,14 +50,17 @@ namespace amt {
             auto q = static_cast<int>(n / section_two_block);
 
             auto num_threads = std::max(1, std::min(max_threads, q));
-            #pragma omp parallel for schedule(static) reduction(+:sum) num_threads(num_threads)
+            omp_set_num_threads(num_threads);
+
+            #pragma omp parallel for schedule(static) reduction(+:sum)
             for(auto i = 0ul; i < n; i += section_two_block){
                 auto ib = std::min(section_two_block, n - i);
                 sum += simd_loop(a + i, b + i, ib);
             }
 
         }else{
-            #pragma omp parallel num_threads(max_threads) reduction(+:sum)
+
+            #pragma omp parallel reduction(+:sum)
             {
                 for(auto i = 0ul; i < n; i += number_of_el_l2){
                     auto ib = std::min(number_of_el_l2, n - i);
@@ -88,7 +91,7 @@ namespace amt {
         [[maybe_unused]] constexpr auto alignment = alignof(value_type);
         value_type sum = {0};
     
-        #pragma omp simd safelen(N)  aligned(a,b:alignment)
+        #pragma omp simd aligned(a,b:alignment)
         for(auto i = 0ul; i < N; ++i){
             sum += (a[i] * b[i]);
         }
@@ -159,8 +162,16 @@ namespace amt {
         
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
-        auto const num_procs = omp_get_num_procs();
-        auto nths = static_cast<int>(num_threads.value_or(num_procs));
+
+        auto max_num_threads = 1;
+        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
+            max_num_threads = std::atoi(omp_env_var);
+        }else{
+            max_num_threads = std::max(omp_get_num_procs(),omp_get_num_threads());
+        }
+        
+        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
+        omp_set_num_threads(nths);
 
         if( NA != NB ){
             throw std::runtime_error(
