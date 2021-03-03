@@ -32,9 +32,9 @@ namespace amt{
         using size_type = std::size_t;
 
         cache_type  type{cache_type::None};
-        byte_type   associativity{};
-        int_type    line_size{};
-        size_type   size{};
+        byte_type   associativity{1};
+        int_type    line_size{0};
+        size_type   size{0};
     };
 
     namespace detail{
@@ -76,15 +76,15 @@ namespace amt{
                 }
 
                 if( sysctlbyname_helper("machdep.cpu.cache.L2_associativity", res[1].associativity) < 0 ){
-                    res[1].associativity = 0;
+                    res[1].associativity = 1;
                 }
                 
                 if( sysctlbyname_helper("machdep.cpu.cache.L1_associativity", res[0].associativity) < 0 ){
-                    res[0].associativity = 0;
+                    res[0].associativity = 1;
                 }
 
                 if( sysctlbyname_helper("machdep.cpu.cache.L3_associativity", res[2].associativity) < 0 ){
-                    res[2].associativity = 0;
+                    res[2].associativity = 1;
                 }
 
                 if( sysctlbyname_helper("hw.l1dcachesize", res[0].size) < 0 ){
