@@ -1,3 +1,3 @@
 set(TEST_LIST
-    "dot_prod.cpp"
+    "test.dot_prod.cpp"
 )
