@@ -12,7 +12,7 @@ FIND_PATH(MKL_INCLUDE_DIR NAMES
 )
 
 SET(MKL_LIB 
-    mkl_intel_ilp64
+    mkl_intel_lp64
     mkl_intel_thread 
     mkl_core
     iomp5
