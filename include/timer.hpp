@@ -8,7 +8,7 @@ namespace amt{
     
     struct timer{
         
-        using clock_type = std::chrono::high_resolution_clock;
+        using clock_type = std::chrono::steady_clock;
         using base_type = decltype(clock_type::now());
 
         constexpr double operator()() noexcept{
