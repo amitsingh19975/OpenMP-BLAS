@@ -29,13 +29,14 @@ namespace amt {
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-        [[maybe_unused]] static auto const block1 = (number_of_el_l1 >> 1);
-        [[maybe_unused]] static auto const block2 = (number_of_el_l1 >> 1);
+        [[maybe_unused]] static auto const block1 = 64ul;
+        [[maybe_unused]] static auto const block2 = 64ul;
 
         constexpr auto simd_loop = [](Out* c, In const* a, In const* b, SizeType const n){
-            #pragma omp simd reduction(+:c[0:n])
+            auto cst = *b;
+            #pragma omp simd //reduction(+:c[0:n])
             for(auto i = 0ul; i < n; ++i){
-                c[i] += (a[i] * *b);
+                c[i] += (a[i] * cst);
             }
         };
 
@@ -43,26 +44,47 @@ namespace amt {
         auto ai = a;
         auto bi = b;
         auto ci = c;
-
-        // for(auto i = 0ul; i < nb; i += block1){
-        //     auto aj = ai;
-        //     auto bj = bi + i;
-        //     auto cj = ci + i * wc;
-        //     auto ib = std::min(block1, nb - i);
-
-        //     for(auto j = 0ul; j < na; j += block2){
-        //         auto aii = aj + j;
-        //         auto bii = bj;
-        //         auto cii = cj + j;
-        //         auto jb = std::min(block2, na - j);
-        //         for(auto ii = 0ul; ii < ib; ++ii){
-        //             simd_loop(cii + ii * wc, aii, bii + ii, jb);
+        constexpr auto max_bl = 256ul;
+        // if(na > nb){
+        //     #pragma omp parallel for if(na > max_bl)
+        //     for(auto i = 0ul; i < nb; ++i){
+        //         auto aj = ai;
+        //         auto bj = bi + i;
+        //         auto cj = ci + i * wc;
+        //         for(auto j = 0ul; j < na; j += block1){
+        //             auto ajj = aj + j;
+        //             auto bjj = bj;
+        //             auto cjj = cj + j;
+        //             auto jb = std::min(block2, na - j);
+        //             simd_loop(cjj, ajj, bjj, jb);
         //         }
         //     }
-            
+        // }else{
+
+        //     #pragma omp parallel for if(nb > max_bl)
+        //     for(auto i = 0ul; i < nb; i += block1){
+        //         auto aj = ai;
+        //         auto bj = bi + i;
+        //         auto cj = ci + i * wc;
+        //         auto ib = std::min(block1, nb - i);
+
+        //         for(auto j = 0ul; j < na; j += block1){
+        //             auto aii = aj + j;
+        //             auto bii = bj;
+        //             auto cii = cj + j;
+        //             auto jb = std::min(block1, na - j);
+        //             for(auto ii = 0ul; ii < ib; ++ii){
+        //                 simd_loop(cii + ii * wc, aii, bii + ii, jb);
+        //             }
+        //         }
+                
+        //     }
         // }
 
-        #pragma omp parallel for if(nb > 256)
+        auto nth = std::min(static_cast<int>(nb), max_threads);
+        omp_set_num_threads(nth);
+        
+        #pragma omp parallel for if(nb > max_bl)
         for(auto i = 0ul; i < nb; ++i){
             auto aj = ai;
             auto bj = bi + i;
@@ -106,7 +128,7 @@ namespace amt {
 
         if( !( boost::numeric::ublas::is_vector(na) && boost::numeric::ublas::is_vector(nb) ) ) {
             throw std::runtime_error(
-                "amt::dot_prod(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
+                "amt::outer_prod(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
                 "both tensor must be vector"
             );
         }
@@ -126,7 +148,7 @@ namespace amt {
         
         if( c.size(0) != NA || c.size(1) != NB ){
             throw std::runtime_error(
-                "amt::dot_prod(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
+                "amt::outer_prod(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
                 "dimension mismatch"
             );
         }
@@ -143,9 +165,8 @@ namespace amt {
         }
 
         if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
-
+        
         outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
-
 
         if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
 
