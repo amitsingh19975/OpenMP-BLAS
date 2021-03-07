@@ -18,8 +18,8 @@ if ( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_list.cmake" )
     add_executable( "${test_name}" "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_FILE}")
     target_link_libraries( "${test_name}" PRIVATE project_warnings project_options
                                     catch_main
-                                    ${OpenBLAS_LIB}
                                     ${OPENMP_LIB}
+                                    ${BLIS_LIB}
                                     Boost::filesystem
                         )
 
