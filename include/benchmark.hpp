@@ -31,9 +31,14 @@ template<std::size_t MaxIter = 100u, typename FnType, typename... FnArgs>
 constexpr auto benchmark(FnType&& fn, FnArgs&&... args) noexcept{
     double time{};
     auto t = timer{};
+    using ret_type = std::invoke_result_t<FnType,FnArgs...>;
     for(auto i = 0ul; i < MaxIter; ++i){
         t.start();
-        std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...);
+        if constexpr(std::is_same_v<ret_type,void>){
+            std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...);
+        }else{
+            no_opt(std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...));
+        }
         time += t.stop();
     }
     return time / static_cast<double>(MaxIter);
@@ -43,9 +48,14 @@ template<std::size_t MaxIter = 100u, typename FnType, typename... FnArgs>
 constexpr double benchmark_timer_as_arg(FnType&& fn, FnArgs&&... args) noexcept{
     double time{};
     auto t = timer{};
+    using ret_type = std::invoke_result_t<FnType,FnArgs...>;
     for(auto i = 0ul; i < MaxIter; ++i){
         t.start();
-        std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t);
+        if constexpr(std::is_same_v<ret_type,void>){
+            std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t);
+        }else{
+            no_opt(std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t));
+        }
         time += t.stop();
     }
     return time / static_cast<double>(MaxIter);
