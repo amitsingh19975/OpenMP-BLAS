@@ -17,7 +17,7 @@ function(set_project_arch_settings project_name)
                 endif()
                 
         else()
-                set(PROJECT_ARCH_FEATURE_OPTION "-march=native" -ffast-math)
+                set(PROJECT_ARCH_FEATURE_OPTION "-march=native" -ffast-math -m64)
         endif()
 
         target_compile_options(${project_name} INTERFACE ${PROJECT_ARCH_FEATURE_OPTION})
