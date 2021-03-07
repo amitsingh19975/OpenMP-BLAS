@@ -23,6 +23,10 @@ namespace amt{
             asm volatile("" : "+m,r"(val) : : "memory");
         #endif
     }
+    
+    AMT_ALWAYS_INLINE void clobber_mem() {
+       asm volatile("" : : : "memory");
+    }
 #else
     #error "Compiler is not supported"
 #endif
