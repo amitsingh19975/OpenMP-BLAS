@@ -23,6 +23,44 @@ namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
 
+// #define LRECT_MATRIX 1
+#define RRECT_MATRIX 1
+
+
+[[maybe_unused]] constexpr static std::size_t fixed_size = 1024ul;
+#if defined(LRECT_MATRIX)
+    #undef RRECT_MATRIX
+    #define RRECT_MATRIX 0
+#elif defined(RRECT_MATRIX)
+    #define LRECT_MATRIX 0
+#else
+    #define RRECT_MATRIX 0
+    #define LRECT_MATRIX 0
+#endif
+
+constexpr auto lset(std::size_t l) noexcept{
+    if constexpr(LRECT_MATRIX){
+        return fixed_size;
+    }else{
+        return l;
+    }
+}
+
+constexpr auto rset(std::size_t r) noexcept{
+    if constexpr(RRECT_MATRIX){
+        return fixed_size;
+    }else{
+        return r;
+    }
+}
+
+void check(bool cond, std::string_view mess = "") noexcept{
+    if(!cond){
+        std::cerr<<mess<<std::endl;
+        exit(1);
+    }
+}
+
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
 void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
@@ -31,20 +69,26 @@ void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     std::string_view fn_name = "Boost.ublas";
     
     auto& metric_data = m[fn_name];
-    constexpr auto bench_fn = [](auto& res, auto const& v1, auto const& v2){
+    constexpr auto bench_fn = [](auto& res, auto const& v1, auto const& v2) -> auto&{
         ub::noalias(res) = ub::outer_prod(v1,v2);
+        return res;
     };
 
+    auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::vector<ValueType> v1(sz);
-        ub::vector<ValueType> v2(sz);
-        ub::matrix<ValueType> res(sz,sz);
+        auto const M = lset(sz);
+        auto const N = rset(sz);
+        ub::vector<ValueType> v1(M);
+        ub::vector<ValueType> v2(N);
+        ub::matrix<ValueType> res(M,N);
 
         double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
         metric_data.update((ops / st));
     }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -63,24 +107,30 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         }else if constexpr(std::is_same_v<ValueType,double>){
             cblas_dger(Layout, m, n, alpha, x, incx, y, incy, a, lda);
         }
+        return a;
     };
-    
+
+    auto t = amt::timer{};  
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, sz},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{sz, sz});
         auto inc = static_cast<MKL_INT>(1);
-        auto M = static_cast<MKL_INT>(sz);
-        auto N = static_cast<MKL_INT>(sz);
-        auto const* aptr = v1.data();
-        auto const* bptr = v1.data();
-        auto cptr = res.data();
+        auto const M = static_cast<MKL_INT>(lset(sz));
+        auto const N = static_cast<MKL_INT>(rset(sz));
         auto one = ValueType(1);
+        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)}, one);
+        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)}, one);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        ub::dynamic_tensor<ValueType> res2(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        auto const* aptr = v1.data();
+        auto const* bptr = v2.data();
+        auto* cptr = res.data();
         auto lda = M;
-        double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, one, aptr, inc, bptr, inc, cptr, lda);
+        double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, ValueType(0.25), aptr, inc, bptr, inc, cptr, lda);
         metric_data.update((ops / st));
     }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
@@ -95,18 +145,25 @@ void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m
         amt::blas::outer_prod(std::forward<decltype(args)>(args)...);
     };
 
+    auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, sz});
-        ub::dynamic_tensor<ValueType> res(shape_t{sz, sz});
         auto inc = static_cast<blasint>(1);
-        auto M = static_cast<blasint>(sz);
-        auto N = static_cast<blasint>(sz);
+        auto const M = static_cast<blasint>(lset(sz));
+        auto const N = static_cast<blasint>(rset(sz));
+        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
+        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        auto aptr = v1.data();
+        auto bptr = v2.data();
+        auto cptr = res.data();
         auto lda = M;
-        double st = amt::benchmark<MaxIter>(bench_fn, amt::blas::ColMajor, M, N, ValueType{1}, v1.data(), inc, v1.data(), inc, res.data(), lda);
+        double st = amt::benchmark<MaxIter>(bench_fn, amt::blas::ColMajor, M, N, ValueType{1}, aptr, inc, bptr, inc, cptr, lda);
         metric_data.update((ops / st));
     }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 #endif
 
@@ -122,15 +179,22 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         amt::outer_prod(std::forward<decltype(args)>(args)...);
     };
 
+    auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, sz});
-        ub::dynamic_tensor<ValueType> res(shape_t{sz, sz});
+        auto const M = lset(sz);
+        auto const N = rset(sz);
+        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, M},1.);
+        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, N},1.);
+        ub::dynamic_tensor<ValueType> res(shape_t{M, N}, 0.);
 
-        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, res, v1, v1, std::nullopt);
+        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, res, v1, v2, std::nullopt);
+        amt::no_opt(res);
         metric_data.update((ops / st));
     }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -148,26 +212,35 @@ void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         }
     };
 
+    auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, sz},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{sz, sz});
         auto inc = static_cast<inc_t>(1);
         auto alpha = ValueType{1};
+        auto const M = static_cast<inc_t>(lset(sz));
+        auto const N = static_cast<inc_t>(rset(sz));
+        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
+        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
         auto rsa = static_cast<inc_t>(res.strides()[0]);
         auto csa = static_cast<inc_t>(res.strides()[1]);
+        auto aptr = v1.data();
+        auto bptr = v2.data();
+        auto cptr = res.data();
 
         double st = amt::benchmark<MaxIter>(bench_fn, 
             BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, 
-            static_cast<dim_t>(sz), static_cast<dim_t>(sz), 
+            M, N, 
             &alpha, 
-            v1.data(), inc,
-            v1.data(), inc, 
-            res.data(), rsa, csa
+            aptr, inc,
+            bptr, inc, 
+            cptr, rsa, csa
         );
         metric_data.update((ops / st));
     }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -185,15 +258,19 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         res.noalias() = v1 * v2.transpose();
     };
 
+    auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
         auto sz = static_cast<std::size_t>(el);
-        vector_type v1(sz), v2(sz);
-        Matrix<ValueType,-1,-1> res(sz,sz);
+        auto const M = lset(sz);
+        auto const N = rset(sz);
+        vector_type v1(M), v2(N);
+        Matrix<ValueType,-1,-1> res(M,N);
         double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
         metric_data.update((ops / st));
     }
-
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
 // #define DISABLE_PLOT
@@ -201,28 +278,29 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
 #define PLOT_ALL
 
 int main(){
-    Eigen::initParallel();
+    // Eigen::initParallel();
     using value_type = float;
     // using value_type = double;
     std::vector<double> x;
-    [[maybe_unused]]constexpr std::size_t max_iter = 1ul;
+    [[maybe_unused]]constexpr std::size_t max_iter = 10ul;
     [[maybe_unused]]constexpr double max_value = 4 * 1024;
     amt::range(x, 2., max_value, 32., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = (1u<<20);
-    // amt::range(x, 2., max_value, 1024., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 1<<16;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
-    mkl_outer_prod<value_type,max_iter>(x,m);
-    ublas_outer_prod<value_type,max_iter>(x,m);
+    // ublas_outer_prod<value_type,max_iter>(x,m);
     openblas_outer_prod<value_type,max_iter>(x,m);
     blis_outer_prod<value_type,max_iter>(x,m);
-    eigen_outer_prod<value_type,max_iter>(x,m);
+    // eigen_outer_prod<value_type,max_iter>(x,m);
+    mkl_outer_prod<value_type,max_iter>(x,m);
     openmp_outer_prod<value_type,max_iter>(x,m);
     // std::cout<<m.tail();
 
-    std::cout<<m.str()<<'\n';
+    std::string_view comp_name = "OpenMP";
+
+    std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x);
@@ -230,9 +308,9 @@ int main(){
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            // m.plot_speedup("OpenMP",x);
-            // m.plot_speedup_semilogy("OpenMP",x);
-            // m.plot_speedup_per("OpenMP");
+            m.plot_speedup<true>(comp_name,x);
+            // m.plot_speedup_semilogy(comp_name,x);
+            m.plot_speedup_per(comp_name);
         #endif
     #endif
     // m.raw();
