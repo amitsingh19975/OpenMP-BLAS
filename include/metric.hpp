@@ -95,7 +95,7 @@ namespace amt{
                 
         }
 
-        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
+        template<bool Smooth = false, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
@@ -113,9 +113,8 @@ namespace amt{
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             for(auto&& [k,v] : m_data){
-                auto& speed = v.plot;
-                // auto speed = v.plot;
-                // moving_average(speed);
+                auto speed = v.plot;
+                if constexpr(Smooth) moving_average(speed);
                 plt::line_handle l;
                 if constexpr(PT == PLOT_TYPE::SCATTER){
                     l = plt::scatter(x_coord, speed, Width);
@@ -186,7 +185,7 @@ namespace amt{
             plt::show();
         }
 
-        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
+        template<bool Smooth = true, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot_speedup(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
@@ -233,7 +232,7 @@ namespace amt{
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return (l/r);
                 });
-                moving_average(speed);
+                if constexpr(Smooth) moving_average(speed);
                 plt::line_handle l;
                 if constexpr(PT == PLOT_TYPE::SCATTER){
                     l = plt::scatter(x_coord, speed, Width);
@@ -250,6 +249,7 @@ namespace amt{
             plt::show();
         }
 
+        template<bool Smooth = false>
         void plot_speedup_semilogy(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
 
             namespace plt = matplot;
@@ -288,7 +288,7 @@ namespace amt{
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return (l/r);
                 });
-                moving_average(speed);
+                if constexpr(Smooth) moving_average(speed);
                 auto l = plt::semilogy(x_coord, speed);
                 l->display_name(k);
                 l->marker_face(true);
