@@ -100,5 +100,5 @@ TEMPLATE_TEST_CASE( "Rectangular Vector Vector Outer Product for Range[Start: 2,
                 REQUIRE(Approx(lres[i]) == rres[i]);
         }
     }
-    
+
 }
