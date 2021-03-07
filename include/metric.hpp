@@ -13,6 +13,11 @@
 
 namespace amt{
 
+    enum class PLOT_TYPE{
+        SCATTER = 0,
+        LINE,
+        SIZE
+    };
     template<typename T>
     class metric{
         // Get FLOP per cycle from https://en.wikipedia.org/wiki/FLOPS
@@ -90,9 +95,10 @@ namespace amt{
                 
         }
 
+        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
-
+            static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
             // auto norm = [](std::string name){
             //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
             //         return c == '_' ? ' ' : c;
@@ -110,7 +116,13 @@ namespace amt{
                 auto& speed = v.plot;
                 // auto speed = v.plot;
                 // moving_average(speed);
-                auto l = plt::scatter(x_coord, speed, 2);
+                plt::line_handle l;
+                if constexpr(PT == PLOT_TYPE::SCATTER){
+                    l = plt::scatter(x_coord, speed, Width);
+                }else if(PT == PLOT_TYPE::LINE){
+                    l = plt::plot(x_coord, speed);
+                    l->line_width(Width);
+                }
                 l->display_name(k);
                 l->marker_face(true);
                 plt::hold(plt::on);
@@ -120,7 +132,10 @@ namespace amt{
             plt::show();
         }
 
+        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot_per(std::string_view xlabel = "Size(%)", std::string_view ylabel = "GFlops"){
+            static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
+
             namespace plt = matplot;
 
             // auto norm = [](std::string name){
@@ -155,7 +170,14 @@ namespace amt{
                 }
                 std::sort(y.begin(), y.end(), std::greater<>{});
                 
-                auto l = plt::scatter(x_coord, y, 2);
+                plt::line_handle l;
+                if constexpr(PT == PLOT_TYPE::SCATTER){
+                    l = plt::scatter(x_coord, y, 2);
+                }else if(PT == PLOT_TYPE::LINE){
+                    l = plt::plot(x_coord, y);
+                    l->line_width(2);
+                }
+
                 l->display_name(k);
                 l->marker_face(true);
             }
@@ -164,7 +186,10 @@ namespace amt{
             plt::show();
         }
 
+        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot_speedup(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+            static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
+
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
@@ -209,7 +234,13 @@ namespace amt{
                     return (l/r);
                 });
                 moving_average(speed);
-                auto l = plt::scatter(x_coord, speed, 2);
+                plt::line_handle l;
+                if constexpr(PT == PLOT_TYPE::SCATTER){
+                    l = plt::scatter(x_coord, speed, Width);
+                }else if(PT == PLOT_TYPE::LINE){
+                    l = plt::plot(x_coord, speed);
+                    l->line_width(Width);
+                }
                 l->display_name(k);
                 l->marker_face(true);
             }
@@ -220,6 +251,7 @@ namespace amt{
         }
 
         void plot_speedup_semilogy(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
@@ -267,7 +299,10 @@ namespace amt{
             plt::show();
         }
 
+        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         void plot_speedup_per(std::string_view pattern, std::string_view xlabel = "Size(%)", std::string ylabel = "SpeedUP") const{
+            static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
+
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
@@ -320,7 +355,13 @@ namespace amt{
                 
                 std::sort(y.begin(), y.end(), std::greater<>{});
 
-                auto l = plt::scatter(x_coord, y,2);
+                plt::line_handle l;
+                if constexpr(PT == PLOT_TYPE::SCATTER){
+                    l = plt::scatter(x_coord, y, Width);
+                }else if(PT == PLOT_TYPE::LINE){
+                    l = plt::plot(x_coord, y);
+                    l->line_width(Width);
+                }
                 l->display_name(k);
                 l->marker_face(true);
             }
