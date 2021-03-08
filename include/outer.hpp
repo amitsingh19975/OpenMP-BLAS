@@ -7,6 +7,7 @@
 #include <cache_manager.hpp>
 #include <cstdlib>
 #include <macros.hpp>
+#include <x86intrin.h>
 
 namespace amt {
 
@@ -29,8 +30,8 @@ namespace amt {
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-        [[maybe_unused]] static auto const block1 = 64ul;
-        [[maybe_unused]] static auto const block2 = 64ul;
+        [[maybe_unused]] static auto const block1 = number_of_el_l2 >> 1;
+        [[maybe_unused]] static auto const block2 = number_of_el_l1 >> 1;
 
         constexpr auto simd_loop = [](Out* c, In const* a, In const* b, SizeType const n){
             auto cst = *b;
@@ -40,57 +41,70 @@ namespace amt {
             }
         };
 
+        auto nth = std::min(static_cast<int>(nb), max_threads);
+        omp_set_num_threads(nth);
         
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        constexpr auto max_bl = 256ul;
+        [[maybe_unused]] constexpr auto max_bl = 256ul;
         // if(na > nb){
-        //     #pragma omp parallel for if(na > max_bl)
-        //     for(auto i = 0ul; i < nb; ++i){
-        //         auto aj = ai;
-        //         auto bj = bi + i;
-        //         auto cj = ci + i * wc;
-        //         for(auto j = 0ul; j < na; j += block1){
-        //             auto ajj = aj + j;
-        //             auto bjj = bj;
-        //             auto cjj = cj + j;
-        //             auto jb = std::min(block2, na - j);
-        //             simd_loop(cjj, ajj, bjj, jb);
-        //         }
-        //     }
+            // #pragma omp parallel for
+            // for(auto i = 0ul; i < nb; ++i){
+            //     auto aj = ai;
+            //     auto bj = bi + i;
+            //     auto cj = ci + i * wc;
+            //     for(auto j = 0ul; j < na; j += block2){
+            //         auto ajj = aj + j;
+            //         auto bjj = bj;
+            //         auto cjj = cj + j;
+            //         auto jb = std::min(block2, na - j);
+            //         simd_loop(cjj, ajj, bjj, jb);
+            //     }
+            // }
         // }else{
 
-        //     #pragma omp parallel for if(nb > max_bl)
-        //     for(auto i = 0ul; i < nb; i += block1){
-        //         auto aj = ai;
-        //         auto bj = bi + i;
-        //         auto cj = ci + i * wc;
-        //         auto ib = std::min(block1, nb - i);
+            // #pragma omp parallel for if(nb > max_bl)
+            // for(auto i = 0ul; i < nb; i += block1){
+            //     auto aj = ai;
+            //     auto bj = bi + i;
+            //     auto cj = ci + i * wc;
+            //     auto ib = std::min(block1, nb - i);
 
-        //         for(auto j = 0ul; j < na; j += block1){
-        //             auto aii = aj + j;
-        //             auto bii = bj;
-        //             auto cii = cj + j;
-        //             auto jb = std::min(block1, na - j);
-        //             for(auto ii = 0ul; ii < ib; ++ii){
-        //                 simd_loop(cii + ii * wc, aii, bii + ii, jb);
-        //             }
-        //         }
+            //     for(auto j = 0ul; j < na; j += block2){
+            //         auto aii = aj + j;
+            //         auto bii = bj;
+            //         auto cii = cj + j;
+            //         auto jb = std::min(block2, na - j);
+            //         for(auto ii = 0ul; ii < ib; ++ii){
+            //             simd_loop(cii + ii * wc, aii, bii + ii, jb);
+            //         }
+            //     }
                 
-        //     }
+            // }
         // }
-
-        auto nth = std::min(static_cast<int>(nb), max_threads);
-        omp_set_num_threads(nth);
         
-        #pragma omp parallel for if(nb > max_bl)
-        for(auto i = 0ul; i < nb; ++i){
-            auto aj = ai;
-            auto bj = bi + i;
-            auto cj = ci + i * wc;
-            simd_loop(cj, aj, bj, na);
+        if( nb > number_of_el_l1 ){
+            #pragma omp parallel for if(nb > max_bl)
+            for(auto i = 0ul; i < nb; i += block1){
+                auto aj = ai;
+                auto bj = bi + i;
+                auto cj = ci + i * wc;
+                auto ib = std::min(block1, nb - i);
+                for(auto ii = 0ul; ii < ib; ++ii){
+                    simd_loop(cj + ii * wc, aj, bj + ii, na);
+                }
+            }
+        }else{
+            #pragma omp parallel for if(nb > max_bl)
+            for(auto i = 0ul; i < nb; ++i){
+                auto aj = ai;
+                auto bj = bi + i;
+                auto cj = ci + i * wc;
+                simd_loop(cj, aj, bj, na);
+            }
         }
+        
 
     }
 
