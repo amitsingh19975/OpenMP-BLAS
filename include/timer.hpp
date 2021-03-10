@@ -48,15 +48,15 @@ namespace amt{
         template<typename Unit = std::chrono::nanoseconds>
         std::string str() const{
             if constexpr( std::is_same_v< Unit, std::chrono::nanoseconds > ){
-                return std::to_string(nano()) + "ns";
+                return std::to_string(static_cast<std::size_t>(nano())) + "ns";
             }else if constexpr( std::is_same_v< Unit, std::chrono::microseconds > ){
-                return std::to_string(micro()) + "us";
+                return std::to_string(static_cast<std::size_t>(micro())) + "us";
             }else if constexpr( std::is_same_v< Unit, std::chrono::milliseconds > ){
-                return std::to_string(milli()) + "ms";
+                return std::to_string(static_cast<std::size_t>(milli())) + "ms";
             }else if constexpr( std::is_same_v< Unit, std::chrono::seconds > ){
-                return std::to_string(sec()) + "sec";
+                return std::to_string(static_cast<std::size_t>(sec())) + "sec";
             }else{
-                return std::to_string(min()) + "min";
+                return std::to_string(static_cast<std::size_t>(min())) + "min";
             }
         }
 
