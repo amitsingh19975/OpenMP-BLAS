@@ -23,35 +23,30 @@ namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
 
-// #define LRECT_MATRIX 1
-#define RRECT_MATRIX 1
 
+static std::size_t fixed_size = 1024ul;
+static bool is_lrect_matrix = false;
+static bool is_rrect_matrix = false;
 
-[[maybe_unused]] constexpr static std::size_t fixed_size = 1024ul;
-#if defined(LRECT_MATRIX)
-    #undef RRECT_MATRIX
-    #define RRECT_MATRIX 0
-#elif defined(RRECT_MATRIX)
-    #define LRECT_MATRIX 0
-#else
-    #define RRECT_MATRIX 0
-    #define LRECT_MATRIX 0
-#endif
-
-constexpr auto lset(std::size_t l) noexcept{
-    if constexpr(LRECT_MATRIX){
-        return fixed_size;
-    }else{
-        return l;
-    }
+auto lset(std::size_t l) noexcept{
+    return is_lrect_matrix ? fixed_size : l;
 }
 
-constexpr auto rset(std::size_t r) noexcept{
-    if constexpr(RRECT_MATRIX){
-        return fixed_size;
+auto rset(std::size_t r) noexcept{
+    return is_rrect_matrix ? fixed_size : r;
+}
+
+std::string xlable(std::string_view prefix = "Size"){
+    std::stringstream ss;
+    if(is_lrect_matrix){
+        ss << prefix << "[n]( m = " << fixed_size << " )";
+    }else if(is_rrect_matrix){
+        ss << prefix << "[m]( n = " << fixed_size << " )";
     }else{
-        return r;
+        ss << prefix << "( m = n )";
     }
+
+    return ss.str();
 }
 
 void check(bool cond, std::string_view mess = "") noexcept{
@@ -120,8 +115,7 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto one = ValueType(1);
         ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)}, one);
         ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)}, one);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
-        ub::dynamic_tensor<ValueType> res2(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto const* aptr = v1.data();
         auto const* bptr = v2.data();
         auto* cptr = res.data();
@@ -154,7 +148,7 @@ void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m
         auto const N = static_cast<blasint>(rset(sz));
         ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
         ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto aptr = v1.data();
         auto bptr = v2.data();
         auto cptr = res.data();
@@ -187,7 +181,7 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const N = rset(sz);
         ub::dynamic_tensor<ValueType> v1(shape_t{1ul, M},1.);
         ub::dynamic_tensor<ValueType> v2(shape_t{1ul, N},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{M, N}, 0.);
+        ub::dynamic_tensor<ValueType> res(shape_t{M, N});
 
         double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, res, v1, v2, std::nullopt);
         amt::no_opt(res);
@@ -222,7 +216,7 @@ void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const N = static_cast<inc_t>(rset(sz));
         ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
         ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 0.);
+        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto rsa = static_cast<inc_t>(res.strides()[0]);
         auto csa = static_cast<inc_t>(res.strides()[1]);
         auto aptr = v1.data();
@@ -278,11 +272,18 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
 #define PLOT_ALL
 
 int main(){
-    // Eigen::initParallel();
-    using value_type = float;
-    // using value_type = double;
+    Eigen::initParallel();
+    
+    // using value_type = float;
+    using value_type = double;
+    
     std::vector<double> x;
-    [[maybe_unused]]constexpr std::size_t max_iter = 10ul;
+
+    fixed_size = 1<<10;
+    // is_lrect_matrix = true;
+    // is_rrect_matrix = true;
+
+    [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
     [[maybe_unused]]constexpr double max_value = 4 * 1024;
     amt::range(x, 2., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<16;
@@ -291,7 +292,7 @@ int main(){
     auto m = amt::metric<value_type>(x.size());
 
     // ublas_outer_prod<value_type,max_iter>(x,m);
-    openblas_outer_prod<value_type,max_iter>(x,m);
+    // openblas_outer_prod<value_type,max_iter>(x,m);
     blis_outer_prod<value_type,max_iter>(x,m);
     // eigen_outer_prod<value_type,max_iter>(x,m);
     mkl_outer_prod<value_type,max_iter>(x,m);
@@ -299,18 +300,20 @@ int main(){
     // std::cout<<m.tail();
 
     std::string_view comp_name = "OpenMP";
+    auto size_xl = xlable();
+    auto size_per_xl = xlable("Size(%)");
 
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x);
-            m.plot_per();
+            m.plot(x, size_xl);
+            m.plot_per(size_per_xl);
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup<true>(comp_name,x);
+            m.plot_speedup<true>(comp_name,x, size_xl);
             // m.plot_speedup_semilogy(comp_name,x);
-            m.plot_speedup_per(comp_name);
+            m.plot_speedup_per(comp_name, size_per_xl);
         #endif
     #endif
     // m.raw();
