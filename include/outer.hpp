@@ -34,10 +34,10 @@ namespace amt {
         [[maybe_unused]] static auto const block = number_of_el_l1 >> 1;
 
         constexpr auto simd_loop = [](Out* c, In const* a, In const* b, SizeType const n){
-            auto cst = *b;
+            auto const cst = *b;
             #pragma omp simd
             for(auto i = 0ul; i < n; ++i){
-                c[i] += (a[i] * cst);
+                c[i] = (a[i] * cst);
             }
         };
 
