@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 #include <functional>
 #include <boost/numeric/ublas/tensor.hpp>
 #include <outer.hpp>
@@ -28,6 +29,13 @@ constexpr auto blis_ger(conj_t  conjx,
     }
 };
 
+template<typename TestType, typename Container>
+void rand_gen(Container& c){
+    std::generate(c.begin(), c.end(), [](){
+        return static_cast<TestType>(rand() % 100);
+    });
+}
+
 TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[Start: 2, End: 32, Step: 1]", "[first_order_outer_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
 
@@ -40,10 +48,12 @@ TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[St
 
     for(auto const& sz : sizes){
         VectorType<TestType> a(ub::extents<2>{1,sz});
+        VectorType<TestType> b(ub::extents<2>{1,sz});
         
         ub::dynamic_tensor<TestType> lres(ub::extents<>{sz, sz});
         ub::dynamic_tensor<TestType> rres(ub::extents<>{sz, sz});
-        std::iota(a.begin(), a.end(), 1);
+        rand_gen<TestType>(a);
+        rand_gen<TestType>(b);
         
         auto inc = static_cast<inc_t>(1);
         auto M = static_cast<inc_t>(sz);
@@ -52,9 +62,9 @@ TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[St
         auto rsa = static_cast<inc_t>(rres.strides()[0]);
         auto csa = static_cast<inc_t>(rres.strides()[1]);
         
-        blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, a.data(), inc, rres.data(), rsa, csa);
+        blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, b.data(), inc, rres.data(), rsa, csa);
         // amt::blas::outer_prod<TestType>(amt::blas::ColMajor, M, N, TestType{1}, a.data(), inc, a.data(), inc, rres.data(), M);
-        amt::outer_prod(lres, a, a, std::nullopt);
+        amt::outer_prod(lres, a, b, std::nullopt);
 
         for(auto i = 0ul; i < sz; ++i){
             for(auto j = 0ul; j < sz; ++j)
@@ -76,10 +86,12 @@ TEMPLATE_TEST_CASE( "Last Order Square Vector Vector Outer Product for Range[Sta
 
     for(auto const& sz : sizes){
         VectorType<TestType> a(ub::extents<2>{1,sz});
+        VectorType<TestType> b(ub::extents<2>{1,sz});
         
         ub::dynamic_tensor<TestType, ub::layout::last_order> lres(ub::extents<>{sz, sz});
         ub::dynamic_tensor<TestType, ub::layout::last_order> rres(ub::extents<>{sz, sz});
-        std::iota(a.begin(), a.end(), 1);
+        rand_gen<TestType>(a);
+        rand_gen<TestType>(b);
         
         auto inc = static_cast<inc_t>(1);
         auto M = static_cast<inc_t>(sz);
@@ -88,9 +100,9 @@ TEMPLATE_TEST_CASE( "Last Order Square Vector Vector Outer Product for Range[Sta
         auto rsa = static_cast<inc_t>(rres.strides()[0]);
         auto csa = static_cast<inc_t>(rres.strides()[1]);
         
-        blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, a.data(), inc, rres.data(), rsa, csa);
-        amt::outer_prod(lres, a, a, std::nullopt);
-
+        blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, b.data(), inc, rres.data(), rsa, csa);
+        amt::outer_prod(lres, a, b, std::nullopt);
+        
         for(auto i = 0ul; i < sz; ++i){
             for(auto j = 0ul; j < sz; ++j)
                 REQUIRE(Approx(lres(i,j)) == rres(i,j));
@@ -111,10 +123,10 @@ TEMPLATE_TEST_CASE( "First Order Rectangular Vector Vector Outer Product for Ran
 
     for(auto const& m : sizes){
         VectorType<TestType> a(ub::extents<2>{1,m});
-        std::iota(a.begin(), a.end(), 1);
+        rand_gen<TestType>(a);
         for(auto const& n : sizes){
             VectorType<TestType> b(ub::extents<2>{1,n});
-            std::iota(b.begin(), b.end(), 1);
+            rand_gen<TestType>(b);
             
             ub::dynamic_tensor<TestType> lres(ub::extents<>{m, n});
             ub::dynamic_tensor<TestType> rres(ub::extents<>{m, n});
@@ -154,10 +166,10 @@ TEMPLATE_TEST_CASE( "Last Order Rectangular Vector Vector Outer Product for Rang
 
     for(auto const& m : sizes){
         VectorType<TestType> a(ub::extents<2>{1,m});
-        std::iota(a.begin(), a.end(), 1);
+        rand_gen<TestType>(a);
         for(auto const& n : sizes){
             VectorType<TestType> b(ub::extents<2>{1,n});
-            std::iota(b.begin(), b.end(), 1);
+            rand_gen<TestType>(b);
             
             ub::dynamic_tensor<TestType, ub::layout::last_order> lres(ub::extents<>{m, n});
             ub::dynamic_tensor<TestType, ub::layout::last_order> rres(ub::extents<>{m, n});
