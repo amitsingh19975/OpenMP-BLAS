@@ -36,17 +36,14 @@ void rand_gen(Container& c){
     });
 }
 
-TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[Start: 2, End: 32, Step: 1]", "[first_order_outer_prod]", float, double ) {
+TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[Start: 2, End: 32 , Step: 1]", "[first_order_outer_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
 
-    constexpr std::size_t max_size = 1 << 5;
-    std::vector<std::size_t> sizes(max_size);
-    std::iota(sizes.begin(), sizes.end(), 2u);
+    constexpr std::size_t max_size = 32;
+    constexpr std::size_t start = 2;
+    constexpr std::size_t step = 1;
     
-    REQUIRE(sizes.size() == max_size);
-
-
-    for(auto const& sz : sizes){
+    for(auto sz = start; sz < max_size; sz += step){
         VectorType<TestType> a(ub::extents<2>{1,sz});
         VectorType<TestType> b(ub::extents<2>{1,sz});
         
@@ -77,14 +74,11 @@ TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[St
 TEMPLATE_TEST_CASE( "Last Order Square Vector Vector Outer Product for Range[Start: 2, End: 32, Step: 1]", "[last_order_outer_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
 
-    constexpr std::size_t max_size = 1 << 5;
-    std::vector<std::size_t> sizes(max_size);
-    std::iota(sizes.begin(), sizes.end(), 2u);
+    constexpr std::size_t max_size = 32;
+    constexpr std::size_t start = 2;
+    constexpr std::size_t step = 1;
     
-    REQUIRE(sizes.size() == max_size);
-
-
-    for(auto const& sz : sizes){
+    for(auto sz = start; sz < max_size; sz += step){
         VectorType<TestType> a(ub::extents<2>{1,sz});
         VectorType<TestType> b(ub::extents<2>{1,sz});
         
