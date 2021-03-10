@@ -11,7 +11,7 @@
 
 namespace amt {
 
-    template<typename LayoutType, typename Out, typename In, typename SizeType>
+    template<typename Out, typename In, typename SizeType>
     AMT_ALWAYS_INLINE void outer_prod_helper(
         Out* c,
         [[maybe_unused]] SizeType const wc,
@@ -50,49 +50,25 @@ namespace amt {
         auto ci = c;
         [[maybe_unused]] constexpr auto max_bl = 256ul;
 
-        if constexpr( std::is_same_v<LayoutType, ub::layout::first_order> ){
-            #pragma omp parallel firstprivate(ai,bi,ci,nb,na,block1,block2) if(nb > max_bl)
-            {
-                for(auto i = 0ul; i < nb; i += block1){
-                    auto aii = ai;
-                    auto bii = bi + i;
-                    auto cii = ci + i * wc;
-                    auto ib = std::min(block1, nb - i);
-                    #pragma omp for nowait 
-                    for(auto ii = 0ul; ii < ib; ++ii){
-                        auto aj = aii;
-                        auto bj = bii + ii;
-                        auto cj = cii + ii * wc;
-                        for(auto j = 0ul; j < na; j += block2){
-                            auto jb = std::min(block2, na - j);
-                            simd_loop(cj + j, aj + j, bj, jb);
-                        }
+        #pragma omp parallel firstprivate(ai,bi,ci,nb,na,block1,block2) if(nb > max_bl)
+        {
+            for(auto i = 0ul; i < nb; i += block1){
+                auto aii = ai;
+                auto bii = bi + i;
+                auto cii = ci + i * wc;
+                auto ib = std::min(block1, nb - i);
+                #pragma omp for nowait 
+                for(auto ii = 0ul; ii < ib; ++ii){
+                    auto aj = aii;
+                    auto bj = bii + ii;
+                    auto cj = cii + ii * wc;
+                    for(auto j = 0ul; j < na; j += block2){
+                        auto jb = std::min(block2, na - j);
+                        simd_loop(cj + j, aj + j, bj, jb);
                     }
                 }
             }
-        }else{
-            #pragma omp parallel firstprivate(ai,bi,ci,nb,na,block1,block2) if(na > max_bl)
-            {
-                for(auto i = 0ul; i < na; i += block1){
-                    auto aii = ai + i;
-                    auto bii = bi;
-                    auto cii = ci + i * wc;
-                    auto ib = std::min(block1, na - i);
-                    #pragma omp for nowait 
-                    for(auto ii = 0ul; ii < ib; ++ii){
-                        auto aj = aii + ii;
-                        auto bj = bii;
-                        auto cj = cii + ii * wc;
-                        for(auto j = 0ul; j < nb; j += block2){
-                            auto jb = std::min(block2, nb - j);
-                            simd_loop(cj + j, bj + j, aj, jb);
-                        }
-                    }
-                }
-            }
-
         }
-
 
     }
 
@@ -158,17 +134,17 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        std::size_t WC = 1ul;
         
-        if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
-            WC = c.strides()[1];
-        }else{
-            WC = c.strides()[0];
-        }
 
         if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
         
-        outer_prod_helper<out_layout_type>(cptr,WC,aptr,NA,bptr,NB,nths);
+        if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
+            auto const WC = c.strides()[1];
+            outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
+        }else{
+            auto const WC = c.strides()[0];
+            outer_prod_helper(cptr,WC,bptr,NB,aptr,NA,nths);
+        }
 
         if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
 
