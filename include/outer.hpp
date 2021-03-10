@@ -31,7 +31,7 @@ namespace amt {
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-        [[maybe_unused]] static auto const block1 = number_of_el_l2 / 3u;
+        [[maybe_unused]] static auto const block1 = number_of_el_l2 >> 1;
         [[maybe_unused]] static auto const block2 = number_of_el_l1 >> 1;
 
         constexpr auto simd_loop = [](Out* c, In const* a, In const* b, SizeType const n){
@@ -50,7 +50,7 @@ namespace amt {
         auto ci = c;
         [[maybe_unused]] constexpr auto max_bl = 256ul;
 
-        #pragma omp parallel firstprivate(ai,bi,ci,nb,na,block1,block2) if(nb > max_bl)
+        #pragma omp parallel if(nb > max_bl)
         {
             for(auto i = 0ul; i < nb; i += block1){
                 auto aii = ai;
