@@ -41,23 +41,17 @@ namespace amt {
             }
         };
 
-        auto nth = std::min(static_cast<int>(nb), max_threads);
-        omp_set_num_threads(nth);
-        
         auto ai = a;
         auto bi = b;
         auto ci = c;
         [[maybe_unused]] constexpr auto max_bl = 256ul;
 
-        #pragma omp parallel if(nb > max_bl)
-        {
-            #pragma omp for nowait 
-            for(auto i = 0ul; i < nb; ++i){
-                auto aj = ai;
-                auto bj = bi + i;
-                auto cj = ci + i * wc;
-                simd_loop(cj, aj, bj, na);
-            }
+        #pragma omp parallel for if(nb > max_bl)
+        for(auto i = 0ul; i < nb; ++i){
+            auto aj = ai;
+            auto bj = bi + i;
+            auto cj = ci + i * wc;
+            simd_loop(cj, aj, bj, na);
         }
 
     }
