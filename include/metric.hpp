@@ -18,6 +18,11 @@ namespace amt{
         LINE,
         SIZE
     };
+
+    constexpr double clamp(double val, double cutoff = 1e3) noexcept{
+        return val > cutoff ? 0. : val;
+    }
+
     template<typename T>
     class metric{
         // Get FLOP per cycle from https://en.wikipedia.org/wiki/FLOPS
@@ -211,7 +216,7 @@ namespace amt{
                 );
             }
 
-            ylabel += "( existing implementation / " + name +" )";
+            ylabel += "( "+ name +" / existing implementation  )";
 
             // auto norm = [](std::string name){
             //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
@@ -223,14 +228,14 @@ namespace amt{
             plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,5.});
+            // plt::ylim({0.,5.});
             plt::hold(plt::on);
 
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (l/r);
+                    return clamp(r / l, 50.);
                 });
                 if constexpr(Smooth) moving_average(speed);
                 plt::line_handle l;
@@ -243,7 +248,8 @@ namespace amt{
                 l->display_name(k);
                 l->marker_face(true);
             }
-
+            
+            plt::grid(plt::on);
             plt::hold(plt::off);
             plt::legend();
             plt::show();
@@ -274,26 +280,25 @@ namespace amt{
                 );
             }
 
-            ylabel += "( existing implementation / " + name +" )";
+            ylabel += "( "+ name +" / existing implementation  )";
 
             plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,5.});
             plt::hold(plt::on);
 
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (l/r);
+                    return r / l;
                 });
                 if constexpr(Smooth) moving_average(speed);
                 auto l = plt::semilogy(x_coord, speed);
                 l->display_name(k);
                 l->marker_face(true);
             }
-
+            plt::grid(plt::on);
             plt::hold(plt::off);
             plt::legend();
             plt::show();
@@ -324,12 +329,12 @@ namespace amt{
                 );
             }
 
-            ylabel += "( existing implementation / " + name +" )";
+            ylabel += "( "+ name +" / existing implementation  )";
 
             plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
-            plt::ylim({0.,3.});
+            // plt::ylim({0.,10.});
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord = plt::iota(0,100);
             std::vector<double> y(100);
@@ -339,7 +344,7 @@ namespace amt{
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return (l/r);
+                    return clamp(r / l, 50.);
                 });
                 
 
@@ -365,12 +370,8 @@ namespace amt{
                 l->display_name(k);
                 l->marker_face(true);
             }
-            // auto one_line = std::vector<double>(100,1);
-            // auto l = plt::plot(x_coord,one_line);
-            // l->line_width(2);
-            // l->display_name("reference line");
-            // l->marker_face(true);
 
+            plt::grid(plt::on);
             plt::hold(plt::off);
             plt::legend();
             plt::show();
@@ -419,8 +420,8 @@ namespace amt{
                 ss << '\t' << "Max GFlops: "<<v.max<<'\n';
                 if(pref){
                     auto patt_avg = (pref->agg / static_cast<double>(m_total));
-                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<((v.max / pref->max))<<'\n';
-                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<((avg / patt_avg))<<'\n';
+                    ss << '\t' << "Max SpeedUp with respect to "<<pattern.value()<<": "<<(pref->max / v.max)<<'\n';
+                    ss << '\t' << "Avg SpeedUp with respect to "<<pattern.value()<<": "<<(patt_avg / avg)<<'\n';
                 }
                 ss << '\t' << "Max Peak Utilization in %: "<< (v.max / peak_performance) * 100. <<'\n';
                 ss << '\t' << "Avg GFlops: "<<avg<<'\n';
