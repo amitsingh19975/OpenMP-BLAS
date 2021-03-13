@@ -19,7 +19,7 @@ namespace amt{
         SIZE
     };
 
-    constexpr double clamp(double val, double cutoff = 1e3) noexcept{
+    constexpr double clamp(double val, double cutoff = 15.) noexcept{
         return val > cutoff ? 0. : val;
     }
 
@@ -113,10 +113,12 @@ namespace amt{
 
             std::string const title( std::string("Performance for ") + type_name );
             
-            plt::cla();
-            plt::title(title);
+                        plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
+            plt::title(title);
+            plt::hold(plt::on);
+            
             for(auto&& [k,v] : m_data){
                 auto speed = v.plot;
                 if constexpr(Smooth) moving_average(speed);
@@ -129,7 +131,6 @@ namespace amt{
                 }
                 l->display_name(k);
                 l->marker_face(true);
-                plt::hold(plt::on);
             }
             plt::hold(plt::off);
             plt::legend();
@@ -137,30 +138,25 @@ namespace amt{
         }
 
         template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        void plot_per(std::string_view xlabel = "Size(%)", std::string_view ylabel = "GFlops"){
+        void plot_per(std::string xlabel = "% (Percentage) of ", std::string_view ylabel = "GFlops"){
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
             namespace plt = matplot;
-
-            // auto norm = [](std::string name){
-            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-            //         return c == '_' ? ' ' : c;
-            //     });
-            //     return name;
-            // };
+            xlabel += std::to_string(m_total) + " tests";
 
             std::string const title( std::string("Performance for ") + type_name);
             
-            plt::cla();
-            plt::title(title);
+                        plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
+            plt::title(title);
+            plt::hold(plt::on);
+
             double size = static_cast<double>(m_total) / 100.;
             std::vector<double> x_coord = plt::iota(0,100);
             std::vector<double> y(100);
             
 
-            plt::hold(plt::on);
             for(auto&& [k,v] : m_data){
 
                 for(auto i = 1ul; i < 100ul; i++){
@@ -218,13 +214,6 @@ namespace amt{
 
             ylabel += "( "+ name +" / existing implementation  )";
 
-            // auto norm = [](std::string name){
-            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-            //         return c == '_' ? ' ' : c;
-            //     });
-            //     return name;
-            // };
-
             plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
@@ -235,7 +224,7 @@ namespace amt{
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return clamp(r / l, 50.);
+                    return clamp(r / l);
                 });
                 if constexpr(Smooth) moving_average(speed);
                 plt::line_handle l;
@@ -291,7 +280,7 @@ namespace amt{
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return r / l;
+                    return clamp(r / l);
                 });
                 if constexpr(Smooth) moving_average(speed);
                 auto l = plt::semilogy(x_coord, speed);
@@ -304,8 +293,9 @@ namespace amt{
             plt::show();
         }
 
-        template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        void plot_speedup_per(std::string_view pattern, std::string_view xlabel = "Size(%)", std::string ylabel = "SpeedUP") const{
+        template<bool InterPoint = false, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
+        auto plot_speedup_per(std::string_view pattern, std::string xlabel = "% (Percentage) of ", std::string ylabel = "SpeedUP") const
+        {
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
             namespace plt = matplot;
@@ -330,6 +320,7 @@ namespace amt{
             }
 
             ylabel += "( "+ name +" / existing implementation  )";
+            xlabel += std::to_string(m_total) + " tests";
 
             plt::cla();
             plt::xlabel(xlabel);
@@ -340,13 +331,14 @@ namespace amt{
             std::vector<double> y(100);
             plt::hold(plt::on);
 
+            std::unordered_map<std::string_view, std::pair<std::size_t,std::size_t>> inter_res;
+
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return clamp(r / l, 50.);
+                    return clamp(r / l);
                 });
-                
 
                 for(auto i = 1ul; i < 100ul; i++){
                     auto p = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i - 1))), m_total);
@@ -359,6 +351,19 @@ namespace amt{
                 }
                 
                 std::sort(y.begin(), y.end(), std::greater<>{});
+
+                if constexpr(InterPoint){
+                    std::size_t val_1{};
+                    std::size_t val_2{};
+
+                    for(auto i = 0ul; i < y.size(); ++i){
+                        auto el = y[i];
+                        if(el >= 1.) val_1 = i;
+                        if(el >= 2.) val_2 = i;
+                    }
+                    
+                    inter_res[k] = {val_1, val_2};
+                }
 
                 plt::line_handle l;
                 if constexpr(PT == PLOT_TYPE::SCATTER){
@@ -375,6 +380,8 @@ namespace amt{
             plt::hold(plt::off);
             plt::legend();
             plt::show();
+            
+            return inter_res;
         }
 
         std::string head(std::size_t n = 5) const {

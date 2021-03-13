@@ -17,6 +17,7 @@
 #include <boost/mp11/algorithm.hpp>
 #include <openblas.hpp>
 #include <range.hpp>
+#include <utils.hpp>
 
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
@@ -92,7 +93,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void openmp_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "experimental::boost(OpenMP)";
+    std::string_view fn_name = "Boost.ublas.tensor";
     
     auto& metric_data = m[fn_name];
     ValueType ret{};
@@ -170,7 +171,7 @@ int main(){
     // using value_type = double;
     std::vector<double> x;
     [[maybe_unused]]constexpr std::size_t max_iter = 100ul;
-    [[maybe_unused]]constexpr double max_value = 32 * 1024;
+    [[maybe_unused]]constexpr double max_value = 16382;
     amt::range(x, 32., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = (1u<<20);
     // amt::range(x, 2., max_value, 1024., std::plus<>{});
@@ -186,7 +187,9 @@ int main(){
     mkl_dot_prod<value_type,max_iter>(x,m);
     // std::cout<<m.tail();
 
-    std::cout<<m.str("OpenMP")<<'\n';
+    constexpr std::string_view comp_name = "tensor";
+
+    std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x);
@@ -194,11 +197,12 @@ int main(){
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup("OpenMP",x);
-            // m.plot_speedup_semilogy("OpenMP",x);
-            m.plot_speedup_per("OpenMP");
+            m.plot_speedup(comp_name,x);
+            auto inter_pts = m.plot_speedup_per<true>(comp_name);
+            m.plot_speedup_semilogy<true>(comp_name,x);
         #endif
     #endif
+    amt::show_intersection_pts(std::cout,inter_pts);
     // m.raw();
     return 0;
 
