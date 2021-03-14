@@ -19,15 +19,15 @@ namespace amt{
         SIZE
     };
 
-    constexpr double clamp(double val, double cutoff = 15.) noexcept{
-        return val > cutoff ? 0. : val;
+    constexpr double clamp(double val, double cutoff = 6.) noexcept{
+        return std::min(cutoff,val);
     }
 
     template<typename T>
     class metric{
         // Get FLOP per cycle from https://en.wikipedia.org/wiki/FLOPS
         static constexpr double peak_performance = 2.3 * 8. * (std::is_same_v<T, double> ? 16. : 32.); // peak_performance = freq * cores * FLOP per cycle
-        std::string const type_name = std::is_same_v<T, double> ? "Double-Precision" : "Single-Precision";
+        std::string const type_name = std::is_same_v<T, double> ? "[Double-Precision]" : "[Single-Precision]";
         struct flops_data{
             std::vector<double> plot{};
             double min{ peak_performance };
@@ -101,19 +101,13 @@ namespace amt{
         }
 
         template<bool Smooth = false, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        void plot(std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
+        void plot(std::vector<double> const& x_coord, std::string title, std::string_view xlabel = "Size", std::string_view ylabel = "GFlops"){
             namespace plt = matplot;
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
-            // auto norm = [](std::string name){
-            //     std::transform(name.begin(), name.end(), name.begin(), [](auto c){
-            //         return c == '_' ? ' ' : c;
-            //     });
-            //     return name;
-            // };
 
-            std::string const title( std::string("Performance for ") + type_name );
+            title += type_name ;
             
-                        plt::cla();
+            plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             plt::title(title);
@@ -138,15 +132,14 @@ namespace amt{
         }
 
         template<PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        void plot_per(std::string xlabel = "% (Percentage) of ", std::string_view ylabel = "GFlops"){
+        void plot_per(std::string title, std::string xlabel = "Percentage[%] of ", std::string_view ylabel = "GFlops"){
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
             namespace plt = matplot;
             xlabel += std::to_string(m_total) + " tests";
-
-            std::string const title( std::string("Performance for ") + type_name);
+            title += type_name;
             
-                        plt::cla();
+            plt::cla();
             plt::xlabel(xlabel);
             plt::ylabel(ylabel);
             plt::title(title);
@@ -187,13 +180,13 @@ namespace amt{
         }
 
         template<bool Smooth = true, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        void plot_speedup(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+        void plot_speedup(std::string_view pattern, std::vector<double> const& x_coord, std::string title, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP") const{
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
-            std::string const title( std::string("Speedup Performance for ") + type_name);
+            title += type_name;
             plt::title(title);
 
             std::string name;
@@ -211,8 +204,6 @@ namespace amt{
                     "unable to find pattern"
                 );
             }
-
-            ylabel += "( "+ name +" / existing implementation  )";
 
             plt::cla();
             plt::xlabel(xlabel);
@@ -245,12 +236,12 @@ namespace amt{
         }
 
         template<bool Smooth = false>
-        void plot_speedup_semilogy(std::string_view pattern, std::vector<double> const& x_coord, std::string_view xlabel = "Size", std::string ylabel = "SpeedUP") const{
+        void plot_speedup_semilogy(std::string_view pattern, std::vector<double> const& x_coord, std::string title, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP") const{
 
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
-            std::string const title( std::string("Speedup Performance for ") + type_name);
+            title += type_name;
             plt::title(title);
 
             std::string name;
@@ -269,7 +260,6 @@ namespace amt{
                 );
             }
 
-            ylabel += "( "+ name +" / existing implementation  )";
 
             plt::cla();
             plt::xlabel(xlabel);
@@ -294,15 +284,14 @@ namespace amt{
         }
 
         template<bool InterPoint = false, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
-        auto plot_speedup_per(std::string_view pattern, std::string xlabel = "% (Percentage) of ", std::string ylabel = "SpeedUP") const
+        auto plot_speedup_per(std::string_view pattern, std::string title, std::string xlabel = "Percentage[%] of ", std::string_view ylabel = "SpeedUP") const
         {
             static_assert(static_cast<int>(PT) >= 0 && static_cast<int>(PT) < static_cast<int>(PLOT_TYPE::SIZE));
 
             namespace plt = matplot;
             flops_data const* pref = nullptr;
 
-            std::string const title( std::string("Speedup Performance for ") + type_name);
-            plt::title(title);
+            plt::title(title + type_name);
 
             std::string name;
             for(auto&& [k,v] : m_data){
@@ -319,7 +308,6 @@ namespace amt{
                 );
             }
 
-            ylabel += "( "+ name +" / existing implementation  )";
             xlabel += std::to_string(m_total) + " tests";
 
             plt::cla();
