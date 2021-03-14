@@ -166,11 +166,20 @@ void eigen_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 #define PLOT_ALL
+#define SIZE_KiB
+
+#ifdef SIZE_KiB
+    #define SIZE_SUFFIX "[KiB]"
+    constexpr double size_conv(double val) noexcept{ return val / 1024. ;}
+#else
+    #define SIZE_SUFFIX "[MiB]"
+    constexpr double size_conv(double val) noexcept{ return val / ( 1024. * 1024. ); }
+#endif
 
 int main(){
     
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     std::vector<double> x;
     [[maybe_unused]]constexpr std::size_t max_iter = 100ul;
     // [[maybe_unused]]constexpr double max_value = 16382;
@@ -191,17 +200,22 @@ int main(){
 
     constexpr std::string_view comp_name = "tensor";
 
+    constexpr std::string_view plot_xlable = "Size " SIZE_SUFFIX;
+    std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
+        return size_conv(sz);
+    });
+
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x, "Performance of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            m.plot(x, "Performance of Boost.uBLAS.Tensor for the dot-operation [iter=100]", plot_xlable);
             m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]", plot_xlable);
             auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
-            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]", plot_xlable);
         #endif
     #endif
     amt::show_intersection_pts(std::cout,inter_pts);
