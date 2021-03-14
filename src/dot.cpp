@@ -72,6 +72,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void openblas_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
+    openblas_set_num_threads(omp_get_max_threads());
     std::string_view fn_name = "OpenBlas";
     
     auto& metric_data = m[fn_name];
@@ -143,7 +144,8 @@ void eigen_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     std::string_view fn_name = "Eigen";
-    // Eigen::setNbThreads(16);
+    Eigen::initParallel();
+    Eigen::setNbThreads(omp_get_max_threads());
     
     auto& metric_data = m[fn_name];
 
@@ -166,15 +168,15 @@ void eigen_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
 #define PLOT_ALL
 
 int main(){
-    Eigen::initParallel();
+    
     using value_type = float;
     // using value_type = double;
     std::vector<double> x;
     [[maybe_unused]]constexpr std::size_t max_iter = 100ul;
-    [[maybe_unused]]constexpr double max_value = 16382;
-    amt::range(x, 32., max_value, 32., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = (1u<<20);
-    // amt::range(x, 2., max_value, 1024., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 16382;
+    // amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = (1u<<20);
+    amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
@@ -192,14 +194,14 @@ int main(){
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x);
-            m.plot_per();
+            m.plot(x, "Performance of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup(comp_name,x);
-            auto inter_pts = m.plot_speedup_per<true>(comp_name);
-            m.plot_speedup_semilogy<true>(comp_name,x);
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
         #endif
     #endif
     amt::show_intersection_pts(std::cout,inter_pts);
