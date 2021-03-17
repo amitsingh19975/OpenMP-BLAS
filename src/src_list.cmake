@@ -3,5 +3,6 @@ set(
     # "mtm.cpp"
     "outer.cpp"
     "dot.cpp"
-    "main.cpp"
+    "dot_tuning.cpp"
+    # "main.cpp"
 )

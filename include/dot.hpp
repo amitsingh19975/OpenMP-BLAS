@@ -10,29 +10,26 @@
 
 namespace amt {
 
-    template<typename Out, typename In, typename SizeType>
+    template<bool Serial = false, typename Out, typename In, typename SizeType>
     AMT_ALWAYS_INLINE void dot_prod_helper_tuning_param(
         Out* c,
         In const* a,
         In const* b,
         [[maybe_unused]] SizeType n,
         [[maybe_unused]] int max_threads,
-        SizeType const block1,
-        SizeType const block2,
-        SizeType const block3
+        [[maybe_unused]] SizeType const block1,
+        [[maybe_unused]] SizeType const block2,
+        [[maybe_unused]] SizeType const block3
     ) noexcept
     {
         static_assert(std::is_same_v<Out,In>);
         
         using value_type = std::remove_pointer_t<Out>;
-        // [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
+        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-        [[maybe_unused]] static auto const section_one_block = block1;
-        [[maybe_unused]] static auto const section_two_block = block2;
-        [[maybe_unused]] static auto const section_three_block = block3;
 
         constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
             auto sum = value_type{};
@@ -45,18 +42,19 @@ namespace amt {
 
         value_type sum {};
 
-        if( n < section_one_block ){
+        if( n < block1 ){
             sum = simd_loop(a, b, n);
         }else if( n < number_of_el_l3 ){
-            
-            auto q = static_cast<int>(n / section_two_block);
+
+
+            auto q = static_cast<int>(n / block2);
             auto num_threads = std::max(1, std::min(max_threads, q));
             
             omp_set_num_threads(num_threads);
 
             #pragma omp parallel for schedule(static) reduction(+:sum)
-            for(auto i = 0ul; i < n; i += section_two_block){
-                auto ib = std::min(section_two_block, n - i);
+            for(auto i = 0ul; i < n; i += block2){
+                auto ib = std::min(block2, n - i);
                 sum += simd_loop(a + i, b + i, ib);
             }
 
@@ -64,13 +62,13 @@ namespace amt {
 
             #pragma omp parallel reduction(+:sum)
             {
-                for(auto i = 0ul; i < n; i += number_of_el_l2){
-                    auto ib = std::min(number_of_el_l2, n - i);
+                for(auto i = 0ul; i < n; i += block3){
+                    auto ib = std::min(block3, n - i);
                     auto ai = a + i;
                     auto bi = b + i;
                     #pragma omp for schedule(dynamic)
-                    for(auto j = 0ul; j < ib; j += section_two_block){
-                        auto jb = std::min(section_two_block, ib - j);
+                    for(auto j = 0ul; j < ib; j += block2){
+                        auto jb = std::min(block2, ib - j);
                         sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
@@ -80,7 +78,7 @@ namespace amt {
         *c = sum;
     }
 
-    template<bool TuningFlag = false, typename Out, typename E1, typename E2, typename... Timer>
+    template<typename Out, typename E1, typename E2, typename... Timer>
     constexpr void dot_prod_tuning_param(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
@@ -88,7 +86,7 @@ namespace amt {
         std::size_t const b1,
         std::size_t const b2,
         std::size_t const b3,
-        std::optional<std::size_t> num_threads = std::nullopt,
+        std::optional<std::size_t> num_threads,
         Timer&... t
     )
     {
@@ -197,8 +195,8 @@ namespace amt {
 
             #pragma omp parallel reduction(+:sum)
             {
-                for(auto i = 0ul; i < n; i += number_of_el_l2){
-                    auto ib = std::min(number_of_el_l2, n - i);
+                for(auto i = 0ul; i < n; i += section_three_block){
+                    auto ib = std::min(section_three_block, n - i);
                     auto ai = a + i;
                     auto bi = b + i;
                     #pragma omp for schedule(dynamic)

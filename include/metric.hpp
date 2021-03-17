@@ -19,7 +19,7 @@ namespace amt{
         SIZE
     };
 
-    constexpr double clamp(double val, double cutoff = 6.) noexcept{
+    constexpr double clamp(double val, double cutoff = 12.) noexcept{
         return std::min(cutoff,val);
     }
 
