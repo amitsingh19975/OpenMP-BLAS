@@ -11,7 +11,7 @@
 
 namespace amt {
 
-    template<typename Out, typename In, typename SizeType>
+    template<std::size_t MinSize = 256ul, typename Out, typename In, typename SizeType>
     AMT_ALWAYS_INLINE void outer_prod_helper(
         Out* c,
         [[maybe_unused]] SizeType const wc,
@@ -24,29 +24,20 @@ namespace amt {
     {
         static_assert(std::is_same_v<Out,In>);
         namespace ub = boost::numeric::ublas;
-
-        using value_type = Out;
-        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
-
-        [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
-        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
-        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-        [[maybe_unused]] static auto const block = number_of_el_l1 >> 1;
-
-        constexpr auto simd_loop = [](Out* c, In const* a, In const* b, SizeType const n){
+        
+        constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
             auto const cst = *b;
             #pragma omp simd
             for(auto i = 0ul; i < n; ++i){
-                c[i] = (a[i] * cst);
+                c[i] += (a[i] * cst);
             }
         };
 
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        [[maybe_unused]] constexpr auto max_bl = 256ul;
-
-        #pragma omp parallel for if(nb > max_bl)
+        
+        #pragma omp parallel for if(nb > MinSize)
         for(auto i = 0ul; i < nb; ++i){
             auto aj = ai;
             auto bj = bi + i;

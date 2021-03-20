@@ -18,6 +18,7 @@
 #include <boost/mp11/algorithm.hpp>
 #include <openblas.hpp>
 #include <range.hpp>
+#include <utils.hpp>
 
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
@@ -61,7 +62,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
-    std::string_view fn_name = "Boost.ublas";
+    constexpr std::string_view fn_name = "Boost.ublas";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](auto& res, auto const& v1, auto const& v2) -> auto&{
@@ -90,7 +91,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "intel MKL";
+    constexpr std::string_view fn_name = "intel MKL";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](const CBLAS_LAYOUT Layout, const MKL_INT m, const MKL_INT n, 
@@ -120,7 +121,7 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const* bptr = v2.data();
         auto* cptr = res.data();
         auto lda = M;
-        double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, ValueType(0.25), aptr, inc, bptr, inc, cptr, lda);
+        double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, ValueType(1), aptr, inc, bptr, inc, cptr, lda);
         metric_data.update((ops / st));
     }
     t.stop();
@@ -132,7 +133,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "OpenBlas";
+    constexpr std::string_view fn_name = "OpenBlas";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](auto&&... args){
@@ -165,7 +166,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "experimental::boost(OpenMP)";
+    constexpr std::string_view fn_name = "Boost.ublas.tensor";
     
     auto& metric_data = m[fn_name];
 
@@ -195,7 +196,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "Blis";
+    constexpr std::string_view fn_name = "Blis";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](auto&&... args){
@@ -243,8 +244,9 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    std::string_view fn_name = "Eigen";
-    // Eigen::setNbThreads(16);
+    constexpr std::string_view fn_name = "Eigen";
+    Eigen::initParallel();
+    Eigen::setNbThreads(omp_get_max_threads());
     
     auto& metric_data = m[fn_name];
 
@@ -267,55 +269,81 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
 }
 
+
+void show_cache_info(std::ostream& os){
+    os  << "\n\tL1: " << (amt::cache_manager::size(0) / 1024ul) << "KiB\n"
+        << "\tL2: " << (amt::cache_manager::size(1) / 1024ul) << "KiB\n"
+        << "\tL3: " << (amt::cache_manager::size(2) / (1024ul * 1024ul)) << "MiB\n";
+}
+
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 #define PLOT_ALL
+#define SIZE_KiB
+
+
+#ifdef SIZE_KiB
+    #define SIZE_SUFFIX "[KiB]"
+    constexpr double size_conv(double val) noexcept{ return val / 1024. ;}
+#else
+    #define SIZE_SUFFIX "[MiB]"
+    constexpr double size_conv(double val) noexcept{ return val / ( 1024. * 1024. ); }
+#endif
+
 
 int main(){
-    Eigen::initParallel();
     
-    // using value_type = float;
-    using value_type = double;
+    show_cache_info(std::cout);
+
+    using value_type = float;
+    // using value_type = double;
     
     std::vector<double> x;
 
-    fixed_size = 1<<10;
+    fixed_size = 1<<11;
     // is_lrect_matrix = true;
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 4 * 1024;
-    amt::range(x, 2., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 16382;//4 * 1024;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<16;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
-    // ublas_outer_prod<value_type,max_iter>(x,m);
-    // openblas_outer_prod<value_type,max_iter>(x,m);
+    ublas_outer_prod<value_type,max_iter>(x,m);
+    openblas_outer_prod<value_type,max_iter>(x,m);
     blis_outer_prod<value_type,max_iter>(x,m);
-    // eigen_outer_prod<value_type,max_iter>(x,m);
     mkl_outer_prod<value_type,max_iter>(x,m);
     openmp_outer_prod<value_type,max_iter>(x,m);
+    eigen_outer_prod<value_type,max_iter>(x,m);
     // std::cout<<m.tail();
 
-    std::string_view comp_name = "OpenMP";
-    auto size_xl = xlable();
-    auto size_per_xl = xlable("Size(%)");
+    constexpr std::string_view comp_name = "tensor";
 
+    constexpr std::string_view plot_xlable = "Size [n = m]" SIZE_SUFFIX;
+    std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
+        double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
+        // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
+        return size_conv(lsz);
+    });
+
+    // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x, size_xl);
-            m.plot_per(size_per_xl);
+            m.plot(x, "Performance of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
+            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the outer-operation [iter=4]");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup<true>(comp_name,x, size_xl);
-            // m.plot_speedup_semilogy(comp_name,x);
-            m.plot_speedup_per(comp_name, size_per_xl);
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
+            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
         #endif
     #endif
+    amt::show_intersection_pts(std::cout,inter_pts);
     // m.raw();
     return 0;
 
