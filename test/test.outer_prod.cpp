@@ -7,7 +7,7 @@
 #include <outer.hpp>
 #include <iostream>
 #include <blis.h>
-
+#include "test_utils.hpp"
 
 template<typename T, typename L = boost::numeric::ublas::layout::first_order>
 using VectorType = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
@@ -28,13 +28,6 @@ constexpr auto blis_ger(conj_t  conjx,
         bli_dger(conjx, conjy, m, n, alpha, x, incx, y, incy, a, rsa, csa);
     }
 };
-
-template<typename TestType, typename Container>
-void rand_gen(Container& c){
-    std::generate(c.begin(), c.end(), [](){
-        return static_cast<TestType>(rand() % 100);
-    });
-}
 
 TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[Start: 2, End: 32 , Step: 1]", "[first_order_outer_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
