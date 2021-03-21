@@ -24,6 +24,7 @@ namespace amt {
     {
         static_assert(std::is_same_v<Out,In>);
         namespace ub = boost::numeric::ublas;
+        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(In);
         
         constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
             auto const cst = *b;
@@ -33,10 +34,15 @@ namespace amt {
             }
         };
 
+
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        
+
+        auto NA = static_cast<int>(na);
+        auto num_ths = (static_cast<int>(number_of_el_l2) - NA) / NA;
+        auto ths = std::max(1, std::min(max_threads,num_ths));
+        omp_set_num_threads(ths);
         #pragma omp parallel for if(nb > MinSize)
         for(auto i = 0ul; i < nb; ++i){
             auto aj = ai;
@@ -44,7 +50,7 @@ namespace amt {
             auto cj = ci + i * wc;
             simd_loop(cj, aj, bj, na);
         }
-
+        
     }
 
     template<typename Out, typename E1, typename E2, typename... Timer>
