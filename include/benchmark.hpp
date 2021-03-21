@@ -48,23 +48,6 @@ constexpr auto benchmark(FnType&& fn, FnArgs&&... args) noexcept{
     return time / static_cast<double>(MaxIter);
 }
 
-template<std::size_t MaxIter = 100u, typename FnType, typename... FnArgs>
-constexpr double benchmark_timer_as_arg(FnType&& fn, FnArgs&&... args) noexcept{
-    double time{};
-    auto t = timer{};
-    using ret_type = std::invoke_result_t<FnType,FnArgs...>;
-    for(auto i = 0ul; i < MaxIter; ++i){
-        t.start();
-        if constexpr(std::is_same_v<ret_type,void>){
-            std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t);
-        }else{
-            no_opt(std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)..., t));
-        }
-        time += t.stop();
-    }
-    return time / static_cast<double>(MaxIter);
-}
-
 } // namespace amt
 
 
