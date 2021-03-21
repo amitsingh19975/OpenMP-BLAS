@@ -84,7 +84,7 @@ void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -125,7 +125,7 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
@@ -158,7 +158,7 @@ void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 #endif
 
@@ -189,7 +189,7 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -235,7 +235,7 @@ void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
@@ -266,7 +266,7 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         metric_data.update((ops / st));
     }
     t.stop();
-    std::cerr<<fn_name<<" has completed! ( "<<t.milli_str()<<" )"<<std::endl;
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
 
 
@@ -295,8 +295,8 @@ int main(){
     
     show_cache_info(std::cout);
 
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     
     std::vector<double> x;
 
@@ -305,19 +305,19 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 16382;//4 * 1024;
-    amt::range(x, 32., max_value, 32., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = 1<<16;
-    // amt::range(x, 2., max_value, 2., std::multiplies<>{});
+    // [[maybe_unused]]constexpr double max_value = 16382;//8 * 1024;
+    // amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 1<<16;
+    amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
-    ublas_outer_prod<value_type,max_iter>(x,m);
-    openblas_outer_prod<value_type,max_iter>(x,m);
+    // ublas_outer_prod<value_type,max_iter>(x,m);
+    // openblas_outer_prod<value_type,max_iter>(x,m);
     blis_outer_prod<value_type,max_iter>(x,m);
     mkl_outer_prod<value_type,max_iter>(x,m);
     openmp_outer_prod<value_type,max_iter>(x,m);
-    eigen_outer_prod<value_type,max_iter>(x,m);
+    // eigen_outer_prod<value_type,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
@@ -341,9 +341,9 @@ int main(){
             m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
             auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]");
             m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
+            amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
-    amt::show_intersection_pts(std::cout,inter_pts);
     // m.raw();
     return 0;
 

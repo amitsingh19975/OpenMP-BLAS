@@ -216,9 +216,9 @@ int main(){
             m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]", plot_xlable);
             auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]");
             m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the dot-operation [iter=100]", plot_xlable);
+            amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
-    amt::show_intersection_pts(std::cout,inter_pts);
     // m.raw();
     return 0;
 
