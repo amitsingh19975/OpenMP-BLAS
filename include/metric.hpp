@@ -10,6 +10,7 @@
 #include <functional>
 #include <sstream>
 #include <fstream>
+#include <utils.hpp>
 
 namespace amt{
 
@@ -319,11 +320,12 @@ namespace amt{
             std::vector<double> y(100);
             plt::hold(plt::on);
 
-            std::unordered_map<std::string_view, std::pair<std::size_t,std::size_t>> inter_res;
+
+            std::unordered_map<std::string_view, std::pair<speed_t,speed_t>> inter_res;
 
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
-                std::vector<double> speed(m_total);
+                std::vector<double> speed(m_total), speedD(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return clamp(r / l);
                 });
@@ -336,21 +338,25 @@ namespace amt{
                         y[i] += speed[j];
                     }
                     y[i] /= static_cast<double>(size);
+                    speedD[i] = 1 / y[i];
+                    // if(std::fpclassify(speedD[i]) != FP_NORMAL) speedD[i] = 0.;
                 }
-                
+
                 std::sort(y.begin(), y.end(), std::greater<>{});
+                std::sort(speedD.begin(), speedD.end(), std::greater<>{});
 
                 if constexpr(InterPoint){
-                    std::size_t val_1{};
-                    std::size_t val_2{};
+                    speed_t up, down;
 
                     for(auto i = 0ul; i < y.size(); ++i){
-                        auto el = y[i];
-                        if(el >= 1.) val_1 = i;
-                        if(el >= 2.) val_2 = i;
+                        auto up_el = y[i];
+                        auto down_el = speedD[i];
+                        if(up_el >= 1.) up.one = i;
+                        if(up_el >= 2.) up.two = i;
+                        if(down_el >= 1.) down.one = i;
+                        if(down_el >= 2.) down.two = i;
                     }
-                    
-                    inter_res[k] = {val_1, val_2};
+                    inter_res[k] = {up, down};
                 }
 
                 plt::line_handle l;

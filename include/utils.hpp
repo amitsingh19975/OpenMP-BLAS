@@ -7,14 +7,19 @@
 #include <tuple>
 
 namespace amt{
+
+    struct speed_t{
+        std::size_t one{};
+        std::size_t two{};
+    };
     
     void show_intersection_pts(std::ostream& os, 
-        std::unordered_map<std::string_view, std::pair<std::size_t,std::size_t> > const& pts
+        std::unordered_map<std::string_view, std::pair<speed_t,speed_t> > const& pts
     ){
         os <<"\n---------Intersection Points---------\n";
         for(auto const& [k,v] : pts){
-            auto [one,two] = v;
-            os << k << ": [ ( 1 => " << one <<" ), ( 2 => "<< two <<" ) ]\n";
+            auto [up,down] = v;
+            os << k << ": [ ( 1 => U: " << up.one<<", D: "<<down.one <<" ), ( 2 => U: "<< up.two<<", D: "<<down.two <<" ) ]\n";
         }
         os <<'\n';
     }
