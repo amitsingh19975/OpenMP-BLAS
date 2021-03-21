@@ -93,8 +93,14 @@ namespace amt{
             return this->operator()();
         }
 
-        friend std::ostream& operator<<(std::ostream& os, timer& t){
-            return os << t();
+        friend std::ostream& operator<<(std::ostream& os, timer const& t){
+            std::size_t time = static_cast<std::size_t>(t.milli());
+            std::size_t milli = time % 1000;
+            std::size_t sec = time / 1000;
+            std::size_t min = sec / 60;
+            sec %= 60;
+            
+            return os << min << ":" << sec << ":" <<milli ;
         }
 
     private:
