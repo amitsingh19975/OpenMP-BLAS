@@ -168,10 +168,6 @@ void openmp_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     
     auto& metric_data = m[fn_name];
 
-    constexpr auto bench_fn = [](auto&&... args){
-        amt::mtv(std::forward<decltype(args)>(args)...);
-    };
-
     auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
@@ -181,8 +177,8 @@ void openmp_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
         ub::dynamic_tensor<ValueType> A(shape_t{M, N},1.);
         ub::dynamic_tensor<ValueType> v(shape_t{1ul, N},1.);
         ub::dynamic_tensor<ValueType> res(shape_t{N});
-
-        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, res, A, v, std::nullopt);
+        auto bench_fn = amt::mtv(res, A, v, std::nullopt);
+        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
         metric_data.update((ops / st));
     }

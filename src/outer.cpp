@@ -170,10 +170,6 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     
     auto& metric_data = m[fn_name];
 
-    constexpr auto bench_fn = [](auto&&... args){
-        amt::outer_prod(std::forward<decltype(args)>(args)...);
-    };
-
     auto t = amt::timer{};
     for(auto const& el : x){
         double const ops = el * el;
@@ -183,8 +179,9 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         ub::dynamic_tensor<ValueType> v1(shape_t{1ul, M},1.);
         ub::dynamic_tensor<ValueType> v2(shape_t{1ul, N},1.);
         ub::dynamic_tensor<ValueType> res(shape_t{M, N});
-
-        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, res, v1, v2, std::nullopt);
+    
+        auto bench_fn = amt::outer_prod(res,v1,v2,std::nullopt);
+        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
         metric_data.update((ops / st));
     }

@@ -99,15 +99,12 @@ void openmp_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     auto& metric_data = m[fn_name];
     ValueType ret{};
 
-    constexpr auto bench_fn = [](ValueType& ret, auto&&... args){
-        amt::dot_prod(ret, std::forward<decltype(args)>(args)...);
-    };
-
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
         ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
-        double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, std::nullopt);
+        auto bench_fn = amt::dot_prod(ret,v1,v2,std::nullopt);
+        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         metric_data.update((ops / st));
     }
 }
@@ -182,10 +179,10 @@ int main(){
     using value_type = double;
     std::vector<double> x;
     [[maybe_unused]]constexpr std::size_t max_iter = 100ul;
-    // [[maybe_unused]]constexpr double max_value = 16382;
-    // amt::range(x, 32., max_value, 32., std::plus<>{});
-    [[maybe_unused]]constexpr double max_value = (1u<<20);
-    amt::range(x, 2., max_value, 1024., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 16382;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = (1u<<20);
+    // amt::range(x, 2., max_value, 1024., std::plus<>{});
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());

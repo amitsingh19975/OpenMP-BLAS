@@ -40,13 +40,12 @@ namespace amt {
         
     }
 
-    template<typename Out, typename E1, typename E2, typename... Timer>
-    constexpr void mtv(
+    template<typename Out, typename E1, typename E2>
+    constexpr auto mtv(
         boost::numeric::ublas::tensor_core<Out>& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_threads,
-        Timer&... t
+        std::optional<std::size_t> num_threads
     )
     {
         using out_type          = boost::numeric::ublas::tensor_core<Out>;
@@ -63,12 +62,6 @@ namespace amt {
             "both tensor type and result type must be of same value_type"
         );
 
-        static_assert(
-            sizeof...(Timer) <= 1u,
-            "there can only be one profiler"
-        );
-        
-        std::tuple<Timer&...> timer(t...);
         auto const& na = a.extents();
         auto const& nb = b.extents();
         auto const& nc = c.extents();
@@ -104,18 +97,17 @@ namespace amt {
         auto const* bptr = b.data();
         auto* cptr = c.data();
         
-
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
-        
         if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
             auto const WA = a.strides()[1];
-            mtv_helper(cptr,aptr,WA,na[0],bptr,NB,nths);
+            return [NA=na[0],cptr,aptr,WA,bptr,NB,nths]{
+                mtv_helper(cptr,aptr,WA,NA,bptr,NB,nths);
+            };
         }else{
             auto const WA = a.strides()[0];
-            mtv_helper(cptr,aptr,WA,na[0],bptr,NB,nths);
+            return [NA=na[0],cptr,aptr,WA,bptr,NB,nths]{
+                mtv_helper(cptr,aptr,WA,na[0],bptr,NB,nths);
+            };
         }
-
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
 
     }
 

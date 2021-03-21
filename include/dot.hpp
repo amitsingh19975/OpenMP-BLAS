@@ -78,16 +78,15 @@ namespace amt {
         *c = sum;
     }
 
-    template<typename Out, typename E1, typename E2, typename... Timer>
-    constexpr void dot_prod_tuning_param(
+    template<typename Out, typename E1, typename E2>
+    constexpr auto dot_prod_tuning_param(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
         std::size_t const b1,
         std::size_t const b2,
         std::size_t const b3,
-        std::optional<std::size_t> num_threads,
-        Timer&... t
+        std::optional<std::size_t> num_threads
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
@@ -99,12 +98,6 @@ namespace amt {
             "both tensor type and result type must be of same value_type"
         );
 
-        static_assert(
-            sizeof...(Timer) <= 1u,
-            "there can only be one profiler"
-        );
-        
-        std::tuple<Timer&...> timer(t...);
         auto const& na = a.extents();
         auto const& nb = b.extents();
 
@@ -136,11 +129,10 @@ namespace amt {
         }
         auto const* aptr = a.data();
         auto const* bptr = b.data();
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
-    
-        dot_prod_helper_tuning_param(&c,aptr,bptr,NA,nths,b1,b2,b3);
 
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
+        return [&c,aptr,bptr,NA,nths,b1,b2,b3]{
+            dot_prod_helper_tuning_param(&c,aptr,bptr,NA,nths,b1,b2,b3);
+        };
 
     }
 
@@ -211,13 +203,12 @@ namespace amt {
         *c = sum;
     }
 
-    template<bool TuningFlag = false, typename Out, typename E1, typename E2, typename... Timer>
-    constexpr void dot_prod(
+    template<bool TuningFlag = false, typename Out, typename E1, typename E2>
+    constexpr auto dot_prod(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_threads,
-        Timer&... t
+        std::optional<std::size_t> num_threads
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
@@ -229,12 +220,6 @@ namespace amt {
             "both tensor type and result type must be of same value_type"
         );
 
-        static_assert(
-            sizeof...(Timer) <= 1u,
-            "there can only be one profiler"
-        );
-        
-        std::tuple<Timer&...> timer(t...);
         auto const& na = a.extents();
         auto const& nb = b.extents();
 
@@ -266,11 +251,10 @@ namespace amt {
         }
         auto const* aptr = a.data();
         auto const* bptr = b.data();
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
     
-        dot_prod_helper(&c,aptr,bptr,NA,nths);
-
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
+        return [&c,aptr,bptr,NA,nths]{
+            dot_prod_helper(&c,aptr,bptr,NA,nths);
+        };
 
     }
 

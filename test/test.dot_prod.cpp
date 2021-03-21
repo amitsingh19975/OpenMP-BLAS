@@ -24,7 +24,7 @@ TEMPLATE_TEST_CASE( "Vector Vector Inner Product for Range[Start: 2, End: 2^17, 
         std::iota(a.begin(), a.end(), 1);
         TestType my_res{};
         auto openblas_res = amt::blas::dot_prod<TestType>(static_cast<blasint>(s), a.data(), 1, a.data(), 1);
-        amt::dot_prod(my_res, a, a, std::nullopt);
+        amt::dot_prod(my_res, a, a, std::nullopt)();
         REQUIRE(Approx(my_res) == openblas_res);
     }
     

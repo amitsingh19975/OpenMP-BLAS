@@ -52,13 +52,12 @@ namespace amt {
         
     }
 
-    template<typename Out, typename E1, typename E2, typename... Timer>
-    constexpr void outer_prod(
+    template<typename Out, typename E1, typename E2>
+    constexpr auto outer_prod(
         boost::numeric::ublas::tensor_core<Out>& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_threads,
-        Timer&... t
+        std::optional<std::size_t> num_threads
     )
     {
         using out_type          = boost::numeric::ublas::tensor_core<Out>;
@@ -75,12 +74,6 @@ namespace amt {
             "both tensor type and result type must be of same value_type"
         );
 
-        static_assert(
-            sizeof...(Timer) <= 1u,
-            "there can only be one profiler"
-        );
-        
-        std::tuple<Timer&...> timer(t...);
         auto const& na = a.extents();
         auto const& nb = b.extents();
 
@@ -115,18 +108,18 @@ namespace amt {
         auto const* bptr = b.data();
         auto* cptr = c.data();
         
-
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).start();
         
         if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
             auto const WC = c.strides()[1];
-            outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
+            return [cptr,WC,aptr,NA,bptr,NB,nths]{
+                outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
+            };
         }else{
             auto const WC = c.strides()[0];
-            outer_prod_helper(cptr,WC,bptr,NB,aptr,NA,nths);
+            return [cptr,WC,aptr,NA,bptr,NB,nths]{
+                outer_prod_helper(cptr,WC,bptr,NB,aptr,NA,nths);
+            };
         }
-
-        if constexpr(sizeof...(Timer) > 0u) std::get<0>(timer).stop();
 
     }
 

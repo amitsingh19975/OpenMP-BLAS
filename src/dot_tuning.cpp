@@ -55,17 +55,14 @@ void openmp_dot_prod(std::size_t N, std::size_t B1, std::size_t B2, std::size_t 
     auto& metric_data = m[fn_name];
     ValueType ret{};
 
-    constexpr auto bench_fn = [](ValueType& ret, auto&&... args){
-        amt::dot_prod_tuning_param(ret,std::forward<decltype(args)>(args)...);
-    };
-
     if constexpr(BPos < 0){
         for(auto const& el : x){
             auto sz = static_cast<std::size_t>(el);
             ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz});
             auto v2 = v1;
             double const ops = 2. * el;
-            double st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, B1, B2, B3, std::nullopt);
+            auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, B1, B2, B3, std::nullopt);
+            double st = amt::benchmark<MaxIter>(std::move(bench_fn));
             metric_data.update((ops / st));
         }
     }else{
@@ -76,11 +73,14 @@ void openmp_dot_prod(std::size_t N, std::size_t B1, std::size_t B2, std::size_t 
             auto sz = static_cast<std::size_t>(el);
             double st{};
             if constexpr( BPos == 0 ){
-                st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, sz, B2, B3, std::nullopt);
+                auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, sz, B2, B3, std::nullopt);
+                st = amt::benchmark<MaxIter>(std::move(bench_fn));
             }else if constexpr( BPos == 1 ){
-                st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, B1, sz, B3, std::nullopt);
+                auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, B1, sz, B3, std::nullopt);
+                st = amt::benchmark<MaxIter>(std::move(bench_fn));
             }else{
-                st = amt::benchmark_timer_as_arg<MaxIter>(bench_fn, ret, v1, v2, B1, B2, sz, std::nullopt);
+                auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, B1, B2, sz, std::nullopt);
+                st = amt::benchmark<MaxIter>(std::move(bench_fn));
             }
             metric_data.update((ops / st));
         }

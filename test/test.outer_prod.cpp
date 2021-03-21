@@ -61,7 +61,7 @@ TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[St
         
         blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, b.data(), inc, rres.data(), rsa, csa);
         // amt::blas::outer_prod<TestType>(amt::blas::ColMajor, M, N, TestType{1}, a.data(), inc, a.data(), inc, rres.data(), M);
-        amt::outer_prod(lres, a, b, std::nullopt);
+        amt::outer_prod(lres, a, b, std::nullopt)();
 
         for(auto i = 0ul; i < sz; ++i){
             for(auto j = 0ul; j < sz; ++j)
@@ -95,7 +95,7 @@ TEMPLATE_TEST_CASE( "Last Order Square Vector Vector Outer Product for Range[Sta
         auto csa = static_cast<inc_t>(rres.strides()[1]);
         
         blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, a.data(), inc, b.data(), inc, rres.data(), rsa, csa);
-        amt::outer_prod(lres, a, b, std::nullopt);
+        amt::outer_prod(lres, a, b, std::nullopt)();
         
         for(auto i = 0ul; i < sz; ++i){
             for(auto j = 0ul; j < sz; ++j)
@@ -137,7 +137,7 @@ TEMPLATE_TEST_CASE( "First Order Rectangular Vector Vector Outer Product for Ran
             
             blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, aptr, inc, bptr, inc, cptr, rsa, csa);
             // amt::blas::outer_prod<TestType>(amt::blas::ColMajor, M, N, TestType{1}, a.data(), inc, b.data(), inc, rres.data(), M);
-            amt::outer_prod(lres, a, b, std::nullopt);
+            amt::outer_prod(lres, a, b, std::nullopt)();
 
             for(auto i = 0ul; i < m; ++i){
                 for(auto j = 0ul; j < n; ++j)
@@ -180,7 +180,7 @@ TEMPLATE_TEST_CASE( "Last Order Rectangular Vector Vector Outer Product for Rang
             
             blis_ger(BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, M, N, &alpha, aptr, inc, bptr, inc, cptr, rsa, csa);
             // amt::blas::outer_prod<TestType>(amt::blas::ColMajor, M, N, TestType{1}, a.data(), inc, b.data(), inc, rres.data(), M);
-            amt::outer_prod(lres, a, b, std::nullopt);
+            amt::outer_prod(lres, a, b, std::nullopt)();
 
             for(auto i = 0ul; i < m; ++i){
                 for(auto j = 0ul; j < n; ++j)
