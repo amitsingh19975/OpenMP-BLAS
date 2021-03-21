@@ -24,15 +24,6 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
         namespace ub = boost::numeric::ublas;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(In);
-        
-        [[maybe_unused]] constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
-            auto const cst = *b;
-            #pragma omp simd
-            for(auto i = 0ul; i < n; ++i){
-                c[i] += (a[i] * cst);
-            }
-        };
-
 
         (void)c;
         (void)a;
