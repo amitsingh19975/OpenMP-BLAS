@@ -7,7 +7,6 @@
 #include <cache_manager.hpp>
 #include <cstdlib>
 #include <macros.hpp>
-#include <x86intrin.h>
 
 namespace amt {
 
