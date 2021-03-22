@@ -31,7 +31,7 @@ constexpr auto blis_gemv(
     }
 };
 
-TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Range[Start: 2, End: 512, Step: 1]", "[first_order_mtv_range]", float, double ) {
+TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Range[Start: 2, End: 512, Step: 1]", "[first_order_vtm_range]", float, double ) {
     namespace ub = boost::numeric::ublas;
     constexpr auto MinSize = 2ul;
     constexpr auto MaxSize = 512ul;
@@ -58,7 +58,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Range[Start: 2, End: 
         auto cptr = lres.data();
 
         blis_gemv( 
-            BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+            BLIS_TRANSPOSE, BLIS_NO_CONJUGATE, 
             M, N, 
             &alpha, 
             aptr, rsa, csa,
@@ -67,7 +67,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Range[Start: 2, End: 
             cptr, inc
         );
 
-        amt::mtv(rres,A,v,std::nullopt)();
+        amt::vtm(rres,A,v,std::nullopt)();
 
         auto rptr = rres.data();
         auto lptr = cptr;
@@ -79,7 +79,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Range[Start: 2, End: 
     
 }
 
-TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Range[Start: 2, End: 512, Step: 1]", "[last_order_mtv_range]", float, double ) {
+TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Range[Start: 2, End: 512, Step: 1]", "[last_order_vtm_range]", float, double ) {
     namespace ub = boost::numeric::ublas;
     using layout_type = ub::layout::last_order;
 
@@ -108,7 +108,7 @@ TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Range[Start: 2, End: 5
         auto cptr = lres.data();
 
         blis_gemv( 
-            BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+            BLIS_TRANSPOSE, BLIS_NO_CONJUGATE, 
             M, N, 
             &alpha, 
             aptr, rsa, csa,
@@ -117,7 +117,7 @@ TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Range[Start: 2, End: 5
             cptr, inc
         );
 
-        amt::mtv(rres,A,v,std::nullopt)();
+        amt::vtm(rres,A,v,std::nullopt)();
 
         auto rptr = rres.data();
         auto lptr = cptr;
@@ -129,7 +129,7 @@ TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Range[Start: 2, End: 5
     
 }
 
-TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Size 32Kib", "[first_order_mtv_large]", float, double ) {
+TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Size 32Kib", "[first_order_vtm_large]", float, double ) {
     namespace ub = boost::numeric::ublas;
     constexpr auto sz = 32 * 1024ul;
     auto A = tensor_t<TestType>(shape_t{sz,sz});
@@ -152,7 +152,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Size 32Kib", "[first_
     auto cptr = lres.data();
 
     blis_gemv( 
-        BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+        BLIS_TRANSPOSE, BLIS_NO_CONJUGATE, 
         M, N, 
         &alpha, 
         aptr, rsa, csa,
@@ -161,7 +161,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Size 32Kib", "[first_
         cptr, inc
     );
 
-    amt::mtv(rres,A,v,std::nullopt)();
+    amt::vtm(rres,A,v,std::nullopt)();
 
     auto rptr = rres.data();
     auto lptr = cptr;
@@ -171,7 +171,7 @@ TEMPLATE_TEST_CASE( "First Order Matrix Vector Product for Size 32Kib", "[first_
     
 }
 
-TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Size 32Kib", "[last_order_mtv_large]", float, double ) {
+TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Size 32Kib", "[last_order_vtm_large]", float, double ) {
     namespace ub = boost::numeric::ublas;
     using layout_type = ub::layout::last_order;
 
@@ -196,7 +196,7 @@ TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Size 32Kib", "[last_or
     auto cptr = lres.data();
 
     blis_gemv( 
-        BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+        BLIS_TRANSPOSE, BLIS_NO_CONJUGATE, 
         M, N, 
         &alpha, 
         aptr, rsa, csa,
@@ -205,7 +205,7 @@ TEMPLATE_TEST_CASE( "Last Order Matrix Vector Product for Size 32Kib", "[last_or
         cptr, inc
     );
 
-    amt::mtv(rres,A,v,std::nullopt)();
+    amt::vtm(rres,A,v,std::nullopt)();
 
     auto rptr = rres.data();
     auto lptr = cptr;
