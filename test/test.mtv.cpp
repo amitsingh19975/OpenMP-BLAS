@@ -31,10 +31,10 @@ constexpr auto blis_gemv(
     }
 };
 
-TEMPLATE_TEST_CASE( "Matrix Vector Product for Range[Start: 2, End: 32, Step: 1]", "[dot_prod]", float, double ) {
+TEMPLATE_TEST_CASE( "Matrix Vector Product for Range[Start: 2, End: 512, Step: 1]", "[dot_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
     constexpr auto MinSize = 2ul;
-    constexpr auto MaxSize = 32ul;
+    constexpr auto MaxSize = 512ul;
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
@@ -67,7 +67,7 @@ TEMPLATE_TEST_CASE( "Matrix Vector Product for Range[Start: 2, End: 32, Step: 1]
             cptr, inc
         );
 
-        amt::mtv(rres,A,v,std::nullopt);
+        amt::mtv(rres,A,v,std::nullopt)();
 
         auto rptr = rres.data();
         auto lptr = cptr;
@@ -75,6 +75,48 @@ TEMPLATE_TEST_CASE( "Matrix Vector Product for Range[Start: 2, End: 32, Step: 1]
             REQUIRE(Approx(*rptr) == *lptr);
         }
         
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "Matrix Vector Product for Size 32Kib", "[dot_prod]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto sz = 32 * 1024ul;
+    auto A = tensor_t<TestType>(shape_t{sz,sz});
+    auto v = tensor_t<TestType>(shape_t{1,sz});
+
+    rand_gen<TestType>(A);
+    rand_gen<TestType>(v);
+
+    auto lres = tensor_t<TestType>(shape_t{1,sz});
+    auto rres = tensor_t<TestType>(shape_t{1,sz});
+
+    auto inc = static_cast<inc_t>(1);
+    auto M = static_cast<dim_t>(sz);
+    auto N = static_cast<dim_t>(sz);
+    auto alpha = TestType(1);
+    auto rsa = static_cast<inc_t>(A.strides()[0]);
+    auto csa = static_cast<inc_t>(A.strides()[1]);
+    auto aptr = A.data();
+    auto bptr = v.data();
+    auto cptr = lres.data();
+
+    blis_gemv( 
+        BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+        M, N, 
+        &alpha, 
+        aptr, rsa, csa,
+        bptr, inc,
+        &alpha,
+        cptr, inc
+    );
+
+    amt::mtv(rres,A,v,std::nullopt)();
+
+    auto rptr = rres.data();
+    auto lptr = cptr;
+    for(auto i = 0ul; i < sz; ++i, ++rptr, ++lptr){
+        REQUIRE(Approx(*rptr) == *lptr);
     }
     
 }
