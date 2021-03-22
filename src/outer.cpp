@@ -133,6 +133,7 @@ template<typename ValueType, std::size_t MaxIter = 100ul>
 void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
+    openblas_set_num_threads(omp_get_max_threads());
     constexpr std::string_view fn_name = "OpenBlas";
     
     auto& metric_data = m[fn_name];
@@ -302,15 +303,15 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    // [[maybe_unused]]constexpr double max_value = 16382;//8 * 1024;
-    // amt::range(x, 32., max_value, 32., std::plus<>{});
-    [[maybe_unused]]constexpr double max_value = 1<<16;
-    amt::range(x, 2., max_value, 2., std::multiplies<>{});
+    [[maybe_unused]]constexpr double max_value = 4 * 1024;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 1<<16;
+    // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
     // ublas_outer_prod<value_type,max_iter>(x,m);
-    // openblas_outer_prod<value_type,max_iter>(x,m);
+    openblas_outer_prod<value_type,max_iter>(x,m);
     blis_outer_prod<value_type,max_iter>(x,m);
     mkl_outer_prod<value_type,max_iter>(x,m);
     openmp_outer_prod<value_type,max_iter>(x,m);
