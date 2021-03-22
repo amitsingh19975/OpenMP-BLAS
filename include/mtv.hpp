@@ -50,8 +50,11 @@ namespace amt {
         auto ai = a;
         auto bi = b;
         auto ci = c;
+
+        // auto ths = std::min(max_threads, static_cast<int>(std::max(1ul, na / block)));
+        // omp_set_num_threads(ths);
         
-        #pragma omp parallel if (na > block)
+        #pragma omp parallel //if (na > small_block)
         {
             #pragma omp for nowait schedule(dynamic)
             for(auto i = 0ul; i < na; i += block){
@@ -84,7 +87,7 @@ namespace amt {
         using value_type1       = typename tensor_type1::value_type;
         using value_type2       = typename tensor_type2::value_type;
         using out_value_type    = typename out_type::value_type;
-        using out_layout_type   = typename out_type::layout_type;
+        // using out_layout_type   = typename out_type::layout_type;
         
         static_assert(
             std::is_same_v< value_type1, value_type2 > && 
@@ -127,17 +130,17 @@ namespace amt {
         auto const* bptr = b.data();
         auto* cptr = c.data();
         
-        if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
+        // if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
             auto const WA = a.strides()[1];
             return [NA=na[0],cptr,aptr,WA,bptr,NB,nths]{
                 mtv_helper(cptr,aptr,WA,NA,bptr,NB,nths);
             };
-        }else{
-            auto const WA = a.strides()[0];
-            return [NA=na[0],cptr,aptr,WA,bptr,NB,nths]{
-                mtv_helper(cptr,aptr,WA,na[0],bptr,NB,nths);
-            };
-        }
+        // }else{
+        //     auto const WA = a.strides()[0];
+        //     return [NA=na[0],cptr,aptr,WA,bptr,NB,nths]{
+        //         mtv_helper(cptr,aptr,WA,na[0],bptr,NB,nths);
+        //     };
+        // }
 
     }
 
