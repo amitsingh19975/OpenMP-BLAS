@@ -10,7 +10,17 @@
 
 namespace amt {
 
-    template<std::size_t MinSize = 256ul, typename Out, typename In, typename SizeType>
+    constexpr auto sqrt_pow_of_two(std::size_t N) noexcept{
+        std::size_t p = 0;
+        N >>= 1;
+        while(N) {
+            N >>= 1;
+            ++p;
+        }
+        return 1u << (p >> 1);
+    }
+
+    template<typename Out, typename In, typename SizeType>
     AMT_ALWAYS_INLINE void mtv_helper(
         Out* c,
         In const* a,
@@ -23,11 +33,40 @@ namespace amt {
     {
         static_assert(std::is_same_v<Out,In>);
         namespace ub = boost::numeric::ublas;
-        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(In);
+        [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(In);
+        [[maybe_unused]] static SizeType const small_block = sqrt_pow_of_two(number_of_el_l1);
+        
+        [[maybe_unused]] SizeType const halfL1 = number_of_el_l1 >> 1;
+        [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? halfL1 : small_block);
 
-        (void)c;
-        (void)a;
-        (void)b;
+        constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
+            auto const cst = *b;
+            #pragma omp simd
+            for(auto i = 0ul; i < n; ++i){
+                c[i] += a[i] * cst;
+            }
+        };
+
+        auto ai = a;
+        auto bi = b;
+        auto ci = c;
+        
+        #pragma omp parallel if (na > block)
+        {
+            #pragma omp for nowait schedule(dynamic)
+            for(auto i = 0ul; i < na; i += block){
+                auto aj = ai + i;
+                auto bj = bi;
+                auto cj = ci + i;
+                auto ib = std::min(block,na-i);
+                for(auto j = 0ul; j < nb; ++j){
+                    auto ak = aj + j * wa;
+                    auto bk = bj + j;
+                    auto ck = cj;
+                    simd_loop(ck, ak, bk, ib);
+                }
+            }
+        }
         
     }
 
