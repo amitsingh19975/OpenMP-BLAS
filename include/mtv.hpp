@@ -52,20 +52,17 @@ namespace amt {
         auto bi = b;
         auto ci = c;
 
-        #pragma omp parallel
-        {
-            #pragma omp for nowait schedule(dynamic)
-            for(auto i = 0ul; i < na; i += block){
-                auto aj = ai + i;
-                auto bj = bi;
-                auto cj = ci + i;
-                auto ib = std::min(block,na-i);
-                for(auto j = 0ul; j < nb; ++j){
-                    auto ak = aj + j * wa;
-                    auto bk = bj + j;
-                    auto ck = cj;
-                    simd_loop(ck, ak, bk, ib);
-                }
+        #pragma omp parallel for schedule(dynamic) if (na > small_block)
+        for(auto i = 0ul; i < na; i += block){
+            auto aj = ai + i;
+            auto bj = bi;
+            auto cj = ci + i;
+            auto ib = std::min(block,na-i);
+            for(auto j = 0ul; j < nb; ++j){
+                auto ak = aj + j * wa;
+                auto bk = bj + j;
+                auto ck = cj;
+                simd_loop(ck, ak, bk, ib);
             }
         }
         
@@ -98,7 +95,7 @@ namespace amt {
         auto bi = b;
         auto ci = c;
 
-        #pragma omp parallel for schedule(static)
+        #pragma omp parallel for schedule(static) if(na > 256)
         for(auto i = 0ul; i < na; ++i){
             auto aj = ai + i * wa;
             auto bj = bi;
@@ -164,11 +161,10 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto WA = a.strides()[1];
+        auto WA = a.strides()[0];
         auto NA = na[0];
         
         if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) WA = a.strides()[1];
-        else WA = a.strides()[0];
 
         return [NA,cptr,aptr,WA,bptr,NB,nths]{
             mtv_helper(cptr,aptr,WA,NA,bptr,NB,nths, layout_type{});
