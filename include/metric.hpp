@@ -91,12 +91,13 @@ namespace amt{
         }
 
         void moving_average(std::vector<double>& x, std::size_t n = 5ul) const noexcept{
-            if(x.size() < n) return;
-            for(auto i = n; i < x.size(); ++i){
-                for(auto j = 1ul; j < n; ++j){
-                    x[i] += x[i - j];
+            auto N = x.size();
+            for(auto i = 0ul; i < N; i += n){
+                auto ib = std::min(n, N - i);
+                for(auto j = 1ul; j < ib; ++j){
+                    x[i] += x[i + j];
                 }
-                x[i] /= static_cast<double>(n);
+                x[i] /= static_cast<double>(ib);
             }
                 
         }
@@ -157,10 +158,12 @@ namespace amt{
                     auto p = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i - 1))), m_total);
                     auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
                     y[i] = v.plot[p];
+                    auto count = 1.;
                     for(auto j = p; j < n; ++j){
                         y[i] += v.plot[j];
+                        ++count;
                     }
-                    y[i] /= static_cast<double>(size);
+                    y[i] /= count;
                 }
                 std::sort(y.begin(), y.end(), std::greater<>{});
                 
@@ -190,11 +193,9 @@ namespace amt{
             title += type_name;
             plt::title(title);
 
-            std::string name;
             for(auto&& [k,v] : m_data){
                 if(auto it = k.find(pattern); it != std::string::npos){
                     pref = std::addressof(v);
-                    name = std::string(k);
                     break;
                 }
             }
@@ -212,9 +213,10 @@ namespace amt{
             // plt::ylim({0.,5.});
             plt::hold(plt::on);
 
+            std::vector<double> speed(m_total);
+
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
-                std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return clamp(r / l);
                 });
@@ -244,12 +246,11 @@ namespace amt{
 
             title += type_name;
             plt::title(title);
+            
 
-            std::string name;
             for(auto&& [k,v] : m_data){
                 if(auto it = k.find(pattern); it != std::string::npos){
                     pref = std::addressof(v);
-                    name = std::string(k);
                     break;
                 }
             }
@@ -267,9 +268,11 @@ namespace amt{
             plt::ylabel(ylabel);
             plt::hold(plt::on);
 
+            std::vector<double> speed(m_total);
+
+
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
-                std::vector<double> speed(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return clamp(r / l);
                 });
@@ -294,11 +297,9 @@ namespace amt{
 
             plt::title(title + type_name);
 
-            std::string name;
             for(auto&& [k,v] : m_data){
                 if(auto it = k.find(pattern); it != std::string::npos){
                     pref = std::addressof(v);
-                    name = std::string(k);
                     break;
                 }
             }
@@ -316,37 +317,44 @@ namespace amt{
             plt::ylabel(ylabel);
             // plt::ylim({0.,10.});
             double size = static_cast<double>(m_total) / 100.;
-            std::vector<double> x_coord = plt::iota(0,100);
-            std::vector<double> y(100);
+            auto x_coord = plt::iota(0,100);
+            std::vector<double> y(100), speedD(100);
             plt::hold(plt::on);
 
 
             std::unordered_map<std::string_view, std::pair<speed_t,speed_t>> inter_res;
 
-            for(auto&& [k,v] : m_data){
+            std::vector<double> speed(m_total);
+
+            for(auto const& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
-                std::vector<double> speed(m_total), speedD(m_total);
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
                     return clamp(r / l);
                 });
 
+                y[0] = speed[0];
+                speedD[0] = 1./y[0];
+                speedD[0] = (std::fpclassify(speedD[0]) != FP_NORMAL ? 0. : speedD[0]);
+
                 for(auto i = 1ul; i < 100ul; i++){
-                    auto p = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i - 1))), m_total);
-                    auto n = std::min(static_cast<std::size_t>(std::ceil(size * static_cast<double>(i))), m_total);
+                    auto p = std::min(static_cast<std::size_t>(size * static_cast<double>(i - 1)), m_total);
+                    auto n = std::min(static_cast<std::size_t>(size * static_cast<double>(i)), m_total);
                     y[i] = speed[p];
-                    for(auto j = p; j < n; ++j){
-                        y[i] += speed[j];
+                    auto count = 1.;
+                    while(p < n){
+                        y[i] += speed[p++];
+                        ++count;
                     }
-                    y[i] /= static_cast<double>(size);
+                    y[i] /= count;
                     speedD[i] = 1 / y[i];
-                    // if(std::fpclassify(speedD[i]) != FP_NORMAL) speedD[i] = 0.;
+                    if(std::fpclassify(speedD[i]) != FP_NORMAL) speedD[i] = 0.;
                 }
 
                 std::sort(y.begin(), y.end(), std::greater<>{});
                 std::sort(speedD.begin(), speedD.end(), std::greater<>{});
 
                 if constexpr(InterPoint){
-                    speed_t up, down;
+                    auto& [up,down] = inter_res[k];
 
                     for(auto i = 0ul; i < y.size(); ++i){
                         auto up_el = y[i];
@@ -356,7 +364,6 @@ namespace amt{
                         if(down_el >= 1.) down.one = i;
                         if(down_el >= 2.) down.two = i;
                     }
-                    inter_res[k] = {up, down};
                 }
 
                 plt::line_handle l;
