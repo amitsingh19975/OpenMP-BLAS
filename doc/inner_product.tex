@@ -1,1 +1,128 @@
-\chapter{Inner Product}
+\chapter{Vector-Vector Inner Product}
+
+This operation takes the equal length of the 
+sequence and gives the algebraic sum of the product of the corresponding entries.
+
+Let $x$ and $y$ be the vectors of length $n$, then 
+\begin{equation}
+    x \cdot y = \sum_{i=0}^{n}(x_i \times y_i)
+    \label{equ:dot_prod}
+\end{equation}
+
+\begin{equation}
+    y \cdot x = x \cdot y
+    \label{equ:dot_prod_comm}
+\end{equation}
+
+Equation \ref{equ:dot_prod_comm} can be easily proven using equation \ref{equ:dot_prod}.
+
+\[y \cdot x = \sum_{i=0}^{n}(y_i \times x_i)\]
+
+We know that multiplication on a scalar is commutative. Using this fact, we can say
+\[y \cdot x = \sum_{i=0}^{n}(x_i \times y_i)\]
+
+From the equation \ref{equ:dot_prod}
+\[y \cdot x = x \cdot y\]
+
+\section{Calculating Number of Operations}
+
+Using equation \ref{equ:dot_prod}, we fill the below table
+
+\begin{tabular}{|c|c|}
+    \hline
+    \textbf{Name} & \textbf{Number} \\
+    \hline
+    Multiplication & $n$ \\
+    \hline
+    Addition & $n - 1$ \\
+    \hline
+\end{tabular}
+
+Total Number of Operations $=$ Number of Multiplication $+$ Number of Addition
+
+Total Number of Operations $= n + (n - 1)$
+
+Total Number of Operations $= 2n - 1$
+
+\section{Algorithm}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \SetKwFunction{SIMDFn}{simd\_loop}
+    \SetKwProg{Fn}{Function}{:}{end}
+
+    \tcp{$a$ is the pointer to the first vector}
+    \tcp{$b$ is the pointer to the second vector}
+    \tcp{$n$ is the length of the vectors}
+    \Fn{\SIMDFn($a$, $b$, $n$)}{
+        \assignln{sum}{0}
+
+        \openmp{simd reduction(+:$sum$)}
+        \For{\assign{i}{0} \KwTo $n$ \KwBy 1}{
+            \assignln{sum}{sum + a[i] \times b[i]}
+        }
+        \KwRet{$sum$}
+    }
+    \caption{Inner Product SIMD Function}
+\end{algorithm}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \KwIn{$c$, $a$, $b$, $max\_threads$, $n$}
+    \tcp{$a$ and $b$ are pointer to the vectors}
+    \tcp{$c$ is the pointer to the output}
+    \tcp{$n$ is the size of the vectors}
+    \tcp{$max\_threads$ is the user provided thread count}
+
+    \Begin{
+        \assignln{number\_el\_L_1}{ \lfloor \frac{S_{L_1}}{S_{data}} \rfloor}
+        \assignln{number\_el\_L_2}{\lfloor \frac{S_{L_2}}{S_{data}} \rfloor}
+        \assignln{block_1}{2 \times number\_el\_L_1}
+        \assignln{block_2}{\lfloor \frac{number\_el\_L_1}{2} \rfloor}
+        \assignln{block_3}{\lfloor \frac{number\_el\_L_2}{2} \rfloor}
+        \assignln{sum}{0}
+
+        $omp\_set\_num\_threads(max\_threads)$
+
+        \If{$n < block_1$}{
+            \assignln{sum}{simd\_loop(a,b,n)}
+        }
+        \ElseIf{$n < block_3$}{
+            \assignln{min\_threads}{\lfloor \frac{n}{block_2} \rfloor}
+            \assignln{num\_threads}{max(1, max(min\_threads,max\_threads))}
+
+            $omp\_set\_num\_threads(num\_threads)$
+
+            \openmp{parallel for schedule(static) \textbackslash\ }
+            \textbf{reduction(+:$sum$)}\\
+            \For{\assign{i}{0} \KwTo n \KwBy $block_2$}{
+                \assign{ib}{min( block_2, n - i  )}
+                \assign{sum}{sum + simd\_loop(a + i,b + i,ib)}
+            }
+            
+        }
+        \Else{
+            \openmp{parallel reduction(+:$sum$)}
+            \Begin{
+                
+                \For{\assign{i}{0} \KwTo $ n $ \KwBy $block_3$}{
+                    \assignln{ib}{min( block_3,\ n - i )}
+                    \assignln{ai}{a + i}
+                    \assignln{bi}{b + i}
+                    
+                    \openmp{for schedule(dynamic)}
+                    \For{\assign{j}{0} \KwTo $ ib $ \KwBy $block_2$}{
+                        \assignln{jb}{min( block_2,ib - j)}
+                        \assign{sum}{sum + simd\_loop(ai + j,bi + j,jb)}
+                    }
+                }
+                
+            }
+        }
+        \assign{c}{sum}
+    }
+
+    \caption{Dot Product}
+\end{algorithm}
+
+
