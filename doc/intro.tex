@@ -1,0 +1,21 @@
+\chapter{Introduction}
+
+Linear algebra is a vital tool in the toolbox for various applications, 
+from solving a simple equation to the art of Deep Learning algorithm or 
+Genomics. The impact can felt across modern-day inventions or day to day 
+life. Many tried to optimize these routines by hand-coding them in the assembly 
+or the compiler intrinsics to squeeze every bit of performance out of the CPU; 
+some chip manufacturers provide library specific to their chip. A few high-quality 
+libraries, such as \textbf{Intel's MKL}, \textbf{OpenBLAS}, \textbf{Flame's Blis}, 
+\textbf{Eigen}, and more, each one has one common problem, 
+they are architecture-specific. They need to be hand-tuned for each different architecture.
+
+There three ways to implement the routines and each one has its shortcomings:
+\begin{enumerate}
+    \item Hand code them in assembly and try to optimize them for each architecture.
+    \item Use the compiler intrinsics.
+    \item Simply code them and let the compiler optimize.
+\end{enumerate}
+
+\section{Hand-tuned Assembly}
+

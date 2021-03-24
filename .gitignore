@@ -2,3 +2,7 @@ dark/
 .vscode/
 .DS_Store
 build/
+*
+!doc/
+!doc/assets
+!doc/*.tex
