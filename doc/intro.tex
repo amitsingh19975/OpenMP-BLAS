@@ -19,3 +19,212 @@ There three ways to implement the routines and each one has its shortcomings:
 
 \section{Hand-tuned Assembly}
 
+Hand-coded assembly gives high performance due to more control over registers, 
+caches, and instructions used, but that comes with its issues, 
+which we exchange for performance:
+
+\begin{itemize}
+    \item Need a deep understanding of the architecture
+    \item Maintenance of the code
+    \item It violates the DRY principle because we need to implement 
+        the same algorithm for a different architecture
+    \item Development time is high
+    \item Debugging is hard
+    \item Unreadable code
+    \item Sometimes lead to micro-optimization or worst performance than the compiler
+\end{itemize}
+
+\textbf{Intel's MKL}, \textbf{OpenBLAS} and \textbf{Flame's Blis} comes under this category
+
+
+\section{Compiler Intrinsics}
+
+The compiler intrinsics is one layer above the assembly, 
+and we lose control over which register to use. 
+If an intrinsic has multiple representations, then we 
+do not know which instruction will emit. 
+There are the following issues with this approach:
+
+\begin{itemize}
+    \item Need the knowledge of intrinsic
+    \item Maintenance of the code much better than assembly but not great
+    \item DRY principle achieved with little abstraction
+    \item Development time is better than assembly but not great
+    \item Debugging is still hard
+    \item Unreadable code if not careful
+    \item May lead to micro-optimization or worst performance than the compiler
+\end{itemize}
+
+\textbf{Eigen} uses the compiler intrinsics, and they fixed and avoided some of the above problems with the right abstraction.
+
+\section{Compiler Dependent Optimization}
+
+The compiler has many tools for optimizing code: loop-unrolling, \\
+auto-vectorization, inlining functions, etc. We will rely on code vectorization heavily, 
+but auto-vectorization may or may not be applied if the compiler can 
+infer enough information from the code. To avoid unreliable auto-vectorization, 
+we will use \textbf{OpenMP} for explicit vectorization, an open standard and supported by powerful compilers. 
+The main issues are:
+
+\begin{itemize}
+    \item Performance depends on the compiler
+    \item No control over vector instructions or registers
+    \item Auto-vectorization may fail
+\end{itemize}
+
+\textbf{Boost.uBLAS} depends on the auto-vectorization, 
+which does not guarantee the code will vectorize.
+
+\section{BLAS Routines}
+
+There are four BLAS routines that we will implement using \textbf{OpenMP}, 
+which uses explicit vectorization and parallelization using threads. 
+Each routine has its chapter, and there we go much deeper with performance metrics.
+
+\begin{enumerate}
+    \item Vector-Vector Inner Product (\textbf{?dot})
+    \item Vector-Vector Outer Product (\textbf{?ger})
+    \item Matrix-Vector Product or Vector-Matrix Product (\textbf{?gemv})
+    \item Matrix-Matrix Product (\textbf{?gemm})
+\end{enumerate}
+
+\section{Machine Model}
+
+The machine model that we will follow is similar to the model defined in the 
+\citep{BLIS}, which takes modern hardware into mind. Such as vector registers 
+and a memory hierarchy with multiple levels of set-associative data caches. 
+However, we will ignore vector registers because we let the \textbf{OpenMP} handle 
+the registers, and we do not have any control over them. However, 
+we will add multiple cores where each core has at least one cache level 
+that not shared among the other cores.
+The only parameter we need to put all our energy in is the cache hierarchy and 
+how we can optimize the cache misses.
+
+All the data caches are set-associative and we can characterize them based 
+on the four parameter defined bellow:
+
+\(C_{L_i}\): cache line of the \(i^{th}\) level
+
+\(W_{L_i}\): associative degree of the \(i^{th}\) level
+
+\(N_{L_i}\): Number of sets in the \(i^{th}\) level
+
+\(S_{L_i}\): size of the \(i^{th}\) level in Bytes
+
+\begin{equation}
+    S_{L_i} = C_{L_i}W_{L_i}N_{L_i}
+    \label{equ:cache_size}
+\end{equation}
+
+Let the $S_{data}$ be the width of the type in Bytes.
+
+We are assuming that the cache replacement policy for all cache levels is 
+\textbf{LRU}, which also assumed in the \citep{BLIS} and the cache 
+line is same for all the cache levels. For most of the case, 
+we will try to avoid the associative so that we could derive 
+a simple equation containing the cache size only from the equation \ref{equ:cache_size}.
+
+\section{Performance Metrics}
+
+\subsection{FLOPS}
+
+It represents the number of floating-point operations that a processor can perform per second. 
+The higher the Flops are, the faster it achieves the floating-point specific operations, 
+but we should not depend on the flops all the time because it might be deceiving. 
+Moreover, it does not paint the whole picture.
+
+\begin{equation}
+    FLOPS = \frac{Number\ of\ Operation}{Time\ taken}
+    \label{equ:flops}
+\end{equation}
+
+\subsection{Speedup}
+
+The speedup tells us how much performance we were able to get when compared to 
+the existing implementation. If it is more significant than one, 
+then reference implementation performs better than the existing implementation; 
+otherwise, if it is less than one, reference implementation performs worse 
+than the existing implementation.
+
+\begin{equation}
+    Speedup = \frac{Flops_{reference}}{Flops_{existing}}
+    \label{equ:speedup}
+\end{equation}
+
+\subsection{Speed-down}
+
+The speed down is the inverse of the speedup, and if it is below one, 
+then we performing better than the existing implementation; 
+otherwise, we are performing worse.
+
+\begin{equation}
+    Speeddown = \frac{Flops_{existing}}{Flops_{reference}}
+    \label{equ:speeddown}
+\end{equation}
+
+\subsection{Peak Utilization}
+
+This tells us how much CPU we are utilizing for floating-point operations when 
+the CPU can compute X amount of floating-point operations.
+
+\begin{equation}
+    Peak\ Utilization = \frac{Flops}{Peak\ Performance} \times 100
+    \label{equ:peak_util}
+\end{equation}
+
+\section{System Information}
+
+\begin{tabular}{|l | l|}
+    \hline
+    Processor & 2.3 GHz 8-Core Intel Core i9 \\
+    \hline
+    Architecture & x86 \\
+    \hline
+    L1 Cache & 8-way, 32KiB \\
+    \hline
+    L2 Cache & 4-way, 256KiB \\
+    \hline
+    L3 Cache & 16-way, 16MiB \\
+    \hline
+    Cache Line & 64B \\
+    \hline
+    Single-Precision(FP32) & 32 FLOPs per cycle per core \\
+    \hline
+    Double-Precision(FP64) & 16 FLOPs per cycle per core\\
+    \hline
+\end{tabular}
+
+Peak Utilization found using the formula defined on the \citep{wiki:FLOPS}
+
+\begin{equation}
+    Peak\ Utilization = Frequency \times Cores \times \frac{FLOPS}{Cycle}
+\end{equation}
+
+\[Peak\ Utilization_{FP32} = 588.8\ GFLOPS\]
+\[Peak\ Utilization_{FP64} = 294.4\ GFLOPS\]
+
+\section{Compiler Information}
+
+\begin{tabular}{|l | l|}
+    \hline
+    Compiler & Apple clang version 12.0.0 (clang-1200.0.32.29) \\
+    \hline
+    Compiler Flags & -march=native -ffast-math -Xclang -fopenmp -O3 \\
+    \hline
+    C++ Standard & 20 \\
+    \hline
+\end{tabular}
+
+\section{library Version}
+
+\begin{tabular}{|l | l|}
+    \hline
+    Intel MKL & 2020.0.1 \\
+    \hline
+    Eigen & 3.3.9 \\
+    \hline
+    OpenBLAS & 0.3.13 \\
+    \hline
+    BLIS & 0.8.0 \\
+    \hline
+\end{tabular}
