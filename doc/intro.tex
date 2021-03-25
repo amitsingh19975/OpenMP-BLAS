@@ -113,7 +113,7 @@ on the four parameter defined bellow:
 
 \begin{equation}
     S_{L_i} = C_{L_i}W_{L_i}N_{L_i}
-    \label{equ:cache_size}
+    \label{eqcache_size}
 \end{equation}
 
 Let the $S_{data}$ be the width of the type in Bytes.
@@ -122,7 +122,7 @@ We are assuming that the cache replacement policy for all cache levels is
 \textbf{LRU}, which also assumed in the \citep{BLIS} and the cache 
 line is same for all the cache levels. For most of the case, 
 we will try to avoid the associative so that we could derive 
-a simple equation containing the cache size only from the equation \ref{equ:cache_size}.
+a simple equation containing the cache size only from the equation \ref{eqcache_size}.
 
 \section{Performance Metrics}
 
@@ -135,7 +135,7 @@ Moreover, it does not paint the whole picture.
 
 \begin{equation}
     FLOPS = \frac{Number\ of\ Operation}{Time\ taken}
-    \label{equ:flops}
+    \label{eqflops}
 \end{equation}
 
 \subsection{Speedup}
@@ -148,7 +148,7 @@ than the existing implementation.
 
 \begin{equation}
     Speedup = \frac{Flops_{reference}}{Flops_{existing}}
-    \label{equ:speedup}
+    \label{eqspeedup}
 \end{equation}
 
 \subsection{Speed-down}
@@ -159,7 +159,7 @@ otherwise, we are performing worse.
 
 \begin{equation}
     Speeddown = \frac{Flops_{existing}}{Flops_{reference}}
-    \label{equ:speeddown}
+    \label{eqspeeddown}
 \end{equation}
 
 \subsection{Peak Utilization}
@@ -169,7 +169,7 @@ the CPU can compute X amount of floating-point operations.
 
 \begin{equation}
     Peak\ Utilization = \frac{Flops}{Peak\ Performance} \times 100
-    \label{equ:peak_util}
+    \label{eqpeak_util}
 \end{equation}
 
 \section{System Information}
