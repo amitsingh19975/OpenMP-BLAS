@@ -125,4 +125,227 @@ Total Number of Operations $= 2n - 1$
     \caption{Dot Product}
 \end{algorithm}
 
+The algorithm fragmented into three sections, and each part represents cache hierarchy.
 
+\subsection{The First Section}
+
+This section handles the data when the vector's length is less than the $S_{L_1}$. 
+Here, we do not touch the threads because the overhead incurred is significant 
+to paralysis the performance, and we get the worst performance compared with no 
+thread or other libraries. When the whole data can fit in the $L_1$ cache, 
+it is best not to use threads. We move to the next section when the cache 
+misses large enough to compensate for the thread overhead.
+
+According to the \textbf{Amdahl's Law}, we know
+
+\begin{equation}
+    Speedup_N = \frac{1}{ p + \frac{1 - p}{N} } - O_N
+    \label{equ:amdahls_law}
+\end{equation}
+$p$ is the proportion of execution time for code that is not parallelizable, where $p \in [0,1]$ \\
+$1 - p$ is the proportion of execution time for code that is parallelizable \\
+$N$ is the number of processor cores or number of threads, where $N \in Z_{\ne 0}$ \\
+$O_N$ is the overhead incurred due to the $N$ thread
+
+Using the equation \ref{equ:amdahls_law}  for $N = 1$, we know the $Speedup_1 = 1$ since 
+the program is already running on the thread, and we do not need to spawn another thread. 
+Therefore the thread overhead incurred is none ( $O_1 = 0$ ).
+
+In order to perform better than the single-threaded program, 
+we need the $Speedup_N$ to exceed the $Speedup_1$ and $N > 1$. 
+We can now get the lower bound using the fact and the 
+relationship between the vectors' length and the thread overhead.
+\[Speedup_N > Speedup_1\]
+
+From the equation \ref{equ:amdahls_law}, we get
+\[\frac{1}{ p + \frac{1 - p}{N} } - O_N > 1\]
+\begin{align*}
+O_N &< \frac{1}{ p + \frac{1 - p}{N} } - 1\\
+O_N &< \frac{N}{ Np + 1 - p } - 1\\
+O_N &< \frac{N}{ 1 + p(N - 1) } - 1\\
+O_N &< \frac{(N - 1) - p(N - 1)}{ 1 + p(N - 1) }\\
+O_N &< \frac{(N - 1)(1 - p)}{ 1 + p(N - 1) }\\
+O_N &< \frac{1 - p}{ \frac{1}{(N - 1)} + p }
+\end{align*}
+
+Let $\frac{1}{N-1}$ be $C_N$ and $C_N \leq 1$, where $N > 1$
+\begin{equation}
+    O_N < \frac{1 - p}{ C_N + p }
+    \label{eq:prop_overhead}
+\end{equation}
+
+We know $p \in [0,1]$. Now, we get
+\[0 \leq \frac{1 - p}{ C_N + p } \leq \frac{1}{C_N}\]
+\[0 \leq O_N < \frac{1}{C_N}\]
+\[0 \leq O_N < N - 1\]
+
+Therefore, $O_N \in [0,N-1)$. We can theorise that $p$ must be a function of Block ($B_1$).
+\begin{align*}
+    p &\propto B_1\\
+    p &= kB_1
+\end{align*}
+where $k$ is the proportionality constant. Now, replace $p$ in the equation \ref{eq:prop_overhead}
+\begin{align*}
+    O_N &< \frac{1}{ \frac{C_N + kB_1}{1 - kB_1} }\\
+\end{align*}
+
+As we $B_1$ increase then $1 - kB_1$ decrease and $C_N + kB_1$ also increase, which over all decrease
+the overhead ($O_N$)
+
+\begin{tikzpicture}
+    \begin{axis}[
+        title = {Thread Overhead},
+        axis lines = left,
+        xlabel={$p$ [ $N = 16$ ]},
+        ylabel=$O_N$,
+    ]
+
+    \addplot[
+        domain=0:1,
+        color=red,
+        fill=red!20,
+    ]{((1-x)/((1 / 15) + x))} \closedcycle;
+    
+    \end{axis}
+\end{tikzpicture}
+
+The $B_1$'s lower bound found to be the number of elements that can be fit inside 
+the $L_1$ cache through the experimental data. This phenomenon happens because 
+the vectors' elements cannot fit inside the cache, and cache misses increase, 
+dominating the thread overhead.
+
+\[B_1 \geq \frac{S_{L_1}}{S_{data}}\]
+
+However, the optimal block size for this section found to be twice 
+the vectors' elements that can put inside the cache.
+
+\begin{equation}
+    B_1 = \frac{2S_{L_1}}{S_{data}}
+    \label{eq:dot_block1}
+\end{equation}
+
+\textbf{Experimental Data for $B_1$}
+
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_float.png} }}%
+    \label{fig:Stuning_block1}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_double.png} }}%
+    \label{fig:Dtuning_block1}
+\end{figure}
+
+\begin{tabular}{l|c|c|}
+    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+    \hline
+    \textbf{Lower Bound} & 8192 (8K) & 4096 (4K)\\
+    \hline
+    \textbf{Optimal} & 16384 (16K) & 8192 (8K)\\
+    \hline
+\end{tabular}
+
+\subsection{The Second Section}
+
+Here, the cache misses is large enough to dominate the thread overhead, 
+and the thread can provide speedup more significant than a single thread. 
+To quench the data demand for each thread, we fit both vectors' elements 
+inside the $L_1$ cache, and the accumulator always is inside the register—the 
+whole $L_1$ cache used for vectors. The advantage of the threads come in handy 
+because most of the CPU architecture provides a private $L_1$ cache, which 
+owned by each core, and as the inner product is an independent operation, 
+no two elements are dependent on each other for the result. 
+Each private $L_1$ cache can fetch a different part of the sequence 
+and run in parallel without waiting for the result to come from another thread, 
+because of which there is no need to invalidate the cache. Once the data comes 
+inside the $L_1$ cache, it will compute a fragment of the sequence and keeps 
+the accumulated result in the register and then fetch another part. 
+In the end, it will combine all the partial results into one final result.
+
+\[S_{L_1} = S_{data}(Block\ of\ the\ first\ vector + Block\ of\ the\ second\ vector)\]
+
+From the equation \ref{equ:dot_prod}, we can infer that the block of both vectors must
+be equal to give the optimal block size.
+
+\[B_2 = Block\ of\ the\ first\ vector = Block\ of\ the\ second\ vector\]
+
+\begin{align*}
+    S_{L_1} &= S_{data}(B_2 + B_2)\\
+    S_{L_1} &= 2S_{data}B_2\\
+\end{align*}
+
+\begin{equation}
+    B_2 = \frac{S_{L_1}}{2S_{data}}
+    \label{eq:dot_block2}
+\end{equation}
+
+\newpage
+\textbf{Experimental Data for $B_2$}
+
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_float.png} }}%
+    \label{fig:Stuning_block2}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_double.png} }}%
+    \label{fig:Dtuning_block2}
+\end{figure}
+
+\begin{tabular}{l|c|c|}
+    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+    \hline
+    \textbf{Theoretical Optimal} & 4096 (4K) & 2048 (2K)\\
+    \hline
+    \textbf{Experimental Optimal} & 4096 (4K) & 2048 (2K)\\
+    \hline
+\end{tabular}
+
+\subsection{The Third Section}
+
+Here, once the data starts to exceed the $L_2$ cache or even $L_3$ cache, 
+we use the CPU architecture's prefetch feature. 
+This section may or may not affect some architecture; 
+if the $L_2$ cache is also private for different cores, 
+it will prefetch the data and fill it, and when it goes 
+inside the loop, which utilizes the threads will fetch 
+the data into the L1 cache from the $L_2$ cache. 
+If the $L_2$ shared among all the cores, the gain might be 
+minimal or see no gain in speedup. With the same logic 
+we used to derive equation \ref{eq:dot_block2}, we can use it here also.
+
+\[S_{L_2} = S_{data}(Block\ of\ the\ first\ vector + Block\ of\ the\ second\ vector)\]
+
+From the equation \ref{equ:dot_prod}, we can infer that the block of both vectors must
+be equal to give the optimal block size.
+
+\[B_3 = Block\ of\ the\ first\ vector = Block\ of\ the\ second\ vector\]
+
+\begin{align*}
+    S_{L_2} &= S_{data}(B_3 + B_3)\\
+    S_{L_2} &= 2S_{data}B_3\\
+\end{align*}
+
+\begin{equation}
+    B_3 = \frac{S_{L_2}}{2S_{data}}
+    \label{eq:dot_block3}
+\end{equation}
+
+\newpage
+\textbf{Experimental Data for $B_2$}
+
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_float.png} }}%
+    \label{fig:Stuning_block2}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_double.png} }}%
+    \label{fig:Dtuning_block2}
+\end{figure}
+
+\begin{tabular}{l|c|c|}
+    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+    \hline
+    \textbf{Theoretical Optimal} & 32768 (32K) & 16384 (16K)\\
+    \hline
+    \textbf{Experimental Optimal} & $\geq$ 30K and $\leq$ 40K & $\geq$ 16K and $\leq$ 20K\\
+    \hline
+\end{tabular}
