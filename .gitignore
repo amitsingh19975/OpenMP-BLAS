@@ -6,3 +6,5 @@ build/
 !doc/
 !doc/assets
 !doc/*.tex
+!doc/*.bib
+!doc/*.pdf
