@@ -229,10 +229,10 @@ the vectors' elements that can put inside the cache.
 \begin{figure}[htb]
     \centering
     \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_float.png} }}%
-    \label{fig:Stuning_block1}
+    \label{fig:dot_Stuning_block1}
     \qquad
     \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_double.png} }}%
-    \label{fig:Dtuning_block1}
+    \label{fig:dot_Dtuning_block1}
 \end{figure}
 
 \begin{tabular}{l|c|c|}
@@ -284,10 +284,10 @@ be equal to give the optimal block size.
 \begin{figure}[htb]
     \centering
     \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_float.png} }}%
-    \label{fig:Stuning_block2}
+    \label{fig:dot_Stuning_block2}
     \qquad
     \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_double.png} }}%
-    \label{fig:Dtuning_block2}
+    \label{fig:dot_Dtuning_block2}
 \end{figure}
 
 \begin{tabular}{l|c|c|}
@@ -335,10 +335,10 @@ be equal to give the optimal block size.
 \begin{figure}[htb]
     \centering
     \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_float.png} }}%
-    \label{fig:Stuning_block2}
+    \label{fig:dot_Stuning_block3}
     \qquad
     \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_double.png} }}%
-    \label{fig:Dtuning_block2}
+    \label{fig:dot_Dtuning_block3}
 \end{figure}
 
 \begin{tabular}{l|c|c|}
@@ -349,3 +349,399 @@ be equal to give the optimal block size.
     \textbf{Experimental Optimal} & $\geq$ 30K and $\leq$ 40K & $\geq$ 16K and $\leq$ 20K\\
     \hline
 \end{tabular}
+
+\section{Performance Plots and Speedup Summary}
+
+\subsection{Range[Start: $2$, End: $2^{20}$, Step: $1024$]}
+
+\subsubsection{Performance measurements of ?dot implementations}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize.png} }}%
+    \label{fig:dot_Sgflop220}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize.png} }}%
+    \label{fig:dot_Dgflop220}
+\end{figure}
+
+\newpage
+\subsubsection{Sorted performance measurements of ?dot implementations}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize_per.png} }}%
+    \label{fig:dot_Sgflop_per220}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize_per.png} }}%
+    \label{fig:dot_Dgflop_per220}
+\end{figure}
+
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup(openmp).png} }}%
+    \label{fig:dot_Sspeedup220}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup(openmp).png} }}%
+    \label{fig:dot_Dspeedup220}
+\end{figure}
+
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup_log10(openmp).png} }}%
+    \label{fig:dot_Sspeedup_log10220}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup_log10(openmp).png} }}%
+    \label{fig:dot_Dspeedup_log10220}
+\end{figure}
+
+\newpage
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup_per(openmp).png} }}%
+    \label{fig:dot_Sspeedup_per220}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup_per(openmp).png} }}%
+    \label{fig:dot_Dspeedup_per220}
+\end{figure}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup Summary For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $99$ & $96$ \\
+        \hline
+        OpenBLAS    & $98$ & $95$ \\
+        \hline
+        Eigen       & $99$ & $96$ \\
+        \hline
+        Blis        & $98$ & $96$ \\
+        \hline
+        Intel's MKL & $62$ & $0$ \\
+        \hline
+    \end{tabular}
+    \newline
+    \vspace*{1 cm}
+    \newline
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $0$ & $0$ \\
+        \hline
+        OpenBLAS    & $0$ & $0$ \\
+        \hline
+        Eigen       & $0$ & $0$ \\
+        \hline
+        Blis        & $0$ & $0$ \\
+        \hline
+        Intel's MKL & $35$ & $0$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup Summary For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $99$ & $97$ \\
+        \hline
+        OpenBLAS    & $99$ & $75$ \\
+        \hline
+        Eigen       & $99$ & $97$ \\
+        \hline
+        Blis        & $99$ & $98$ \\
+        \hline
+        Intel's MKL & $88$ & $1$ \\
+        \hline
+    \end{tabular}
+    \newline
+    \vspace*{1 cm}
+    \newline
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $0$ & $0$ \\
+        \hline
+        OpenBLAS    & $0$ & $0$ \\
+        \hline
+        Eigen       & $0$ & $0$ \\
+        \hline
+        Blis        & $0$ & $0$ \\
+        \hline
+        Intel's MKL & $9$ & $0$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\newpage
+\subsection{Range[Start: $32$, End: $16382$, Step: $32$]}
+
+\subsubsection{Performance measurements of ?dot implementations}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize.png} }}%
+    \label{fig:dot_Sgflop16382}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize.png} }}%
+    \label{fig:dot_Dgflop16382}
+\end{figure}
+
+\newpage
+\subsubsection{Sorted performance measurements of ?dot implementations}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize_per.png} }}%
+    \label{fig:dot_Sgflop_per16382}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize_per.png} }}%
+    \label{fig:dot_Dgflop_per16382}
+\end{figure}
+
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup(openmp).png} }}%
+    \label{fig:dot_Sspeedup16382}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup(openmp).png} }}%
+    \label{fig:dot_Dspeedup16382}
+\end{figure}
+
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup_log10(openmp).png} }}%
+    \label{fig:dot_Sspeedup_log1016382}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup_log10(openmp).png} }}%
+    \label{fig:dot_Dspeedup_log1016382}
+\end{figure}
+
+\newpage
+\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
+\begin{figure}[htb]
+    \centering
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup_per(openmp).png} }}%
+    \label{fig:dot_Sspeedup_per16382}
+    \qquad
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup_per(openmp).png} }}%
+    \label{fig:dot_Dspeedup_per16382}
+\end{figure}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup Summary For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $99$ & $7$ \\
+        \hline
+        OpenBLAS    & $97$ & $6$ \\
+        \hline
+        Eigen       & $99$ & $13$ \\
+        \hline
+        Blis        & $98$ & $1$ \\
+        \hline
+        Intel's MKL & $94$ & $5$ \\
+        \hline
+    \end{tabular}
+    \newline
+    \vspace*{1 cm}
+    \newline
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $0$ & $0$ \\
+        \hline
+        OpenBLAS    & $1$ & $0$ \\
+        \hline
+        Eigen       & $0$ & $0$ \\
+        \hline
+        Blis        & $0$ & $0$ \\
+        \hline
+        Intel's MKL & $3$ & $0$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup Summary For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $99$ & $97$ \\
+        \hline
+        OpenBLAS    & $99$ & $38$ \\
+        \hline
+        Eigen       & $99$ & $6$ \\
+        \hline
+        Blis        & $99$ & $3$ \\
+        \hline
+        Intel's MKL & $71$ & $2$ \\
+        \hline
+    \end{tabular}
+    \newline
+    \vspace*{1 cm}
+    \newline
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
+        \hline
+        Boost.uBLAS & $0$ & $0$ \\
+        \hline
+        OpenBLAS    & $3$ & $0$ \\
+        \hline
+        Eigen       & $0$ & $0$ \\
+        \hline
+        Blis        & $0$ & $0$ \\
+        \hline
+        Intel's MKL & $26$ & $0$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\newpage
+\section{Performance Metrics}
+
+\subsection*{Range[Start: $2$, End: $2^{20}$, Step: $1024$]}
+
+\begin{table}[ht]
+    \centering
+    \caption{GFLOPS For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS.Tensor  & $85.9582$ & $54.7368$ \\
+        \hline
+        Boost.uBLAS         & $20.4992$ & $13.2452$ \\
+        \hline
+        Intel's MKL         & $99.87$ & $58.5317$ \\
+        \hline
+        OpenBLAS            & $36.2821$ & $15.7624$ \\
+        \hline
+        Blis                & $40.9594$ & $15.7895$ \\
+        \hline
+        Eigen               & $29.0721$ & $13.0817$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{GFLOPS For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS.Tensor  & $48.9481$ & $23.7548$ \\
+        \hline
+        Boost.uBLAS         & $11.586$ & $5.58147$ \\
+        \hline
+        Intel's MKL         & $54.1943$ & $25.1467$ \\
+        \hline
+        OpenBLAS            & $15.5243$ & $10.1211$ \\
+        \hline
+        Blis                & $9.18747$ & $6.43665$ \\
+        \hline
+        Eigen               & $9.7007$ & $5.45126$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Utilization[\%] For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS.Tensor  & $14.5989$ & $9.29634$ \\
+        \hline
+        Boost.uBLAS         & $3.48153$ & $2.24953$ \\
+        \hline
+        Intel's MKL         & $16.9616$ & $9.94085$ \\
+        \hline
+        OpenBLAS            & $6.16204$ & $2.67703$ \\
+        \hline
+        Blis                & $6.95641$ & $2.68164$ \\
+        \hline
+        Eigen               & $4.93751$ & $2.22176$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Utilization[\%] For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS.Tensor  & $16.6264$ & $8.06888$ \\
+        \hline
+        Boost.uBLAS         & $3.93547$ & $3.93547$ \\
+        \hline
+        Intel's MKL         & $18.4084$ & $8.54167$ \\
+        \hline
+        OpenBLAS            & $5.27318$ & $3.43787$ \\
+        \hline
+        Blis                & $3.12074$ & $2.18636$ \\
+        \hline
+        Eigen               & $3.29507$ & $1.85165$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup(Boost.uBLAS.Tensor) For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS         & $3.08878$ & $8.6454$ \\
+        \hline
+        Intel's MKL         & $0.931885$ & $0.971519$ \\
+        \hline
+        OpenBLAS            & $1.76191$ & $2.88331$ \\
+        \hline
+        Blis                & $2.21467$ & $2.83157$ \\
+        \hline
+        Eigen               & $2.8202$ & $7.68346$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup(Boost.uBLAS.Tensor) For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max GFLOPS} & \textbf{Average GFLOPS}\\
+        \hline
+        Boost.uBLAS         & $5.58372$ & $4.4268$ \\
+        \hline
+        Intel's MKL         & $0.95572$ & $1.00273$ \\
+        \hline
+        OpenBLAS            & $2.57905$ & $2.4175$ \\
+        \hline
+        Blis                & $5.12564$ & $3.82981$ \\
+        \hline
+        Eigen               & $6.42996$ & $4.38639$ \\
+        \hline
+    \end{tabular}
+\end{table}
