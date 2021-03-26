@@ -34,6 +34,30 @@ $
     \label{eq:mtv}
 \end{equation}
 
+$
+Av = 
+\begin{bmatrix}
+    a_{00}  & a_{01}    & \dots     & a_{0n}\\
+    a_{10}  & a_{11}    & \dots     & a_{1n}\\
+    \vdots  & \vdots    & \ddots    & \vdots\\
+    a_{m0}  & a_{m1}    & \dots     & a_{mn}\\
+\end{bmatrix}
+\begin{bmatrix}
+    x_0\\
+    x_1\\
+    \vdots\\
+    x_n\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+    \sum_{i=0}^na_{0i}x_i\\
+    \sum_{i=0}^na_{1i}x_i\\
+    \vdots\\
+    \sum_{i=0}^na_{mi}x_i\\
+\end{bmatrix}
+$
+
+\vspace*{0.5 cm}
 The vector times matrix can calculated by taking the transpose on the both sides.
 \begin{align*}
     y^T &= (Ax + y)^T\\
@@ -49,3 +73,28 @@ If $A$ is column-major then $A^T$ is row-major and vice-versa.
     y = xA^T + y
     \label{eq:vtm}
 \end{equation}
+
+\clearpage
+\section{Calculating Number of Operations}
+
+Using equation \ref{eq:org_outer_prod}, we fill the below table
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Name} & \textbf{Number} \\
+        \hline
+        Multiplication & $m$ or $n$\\
+        \hline
+        Addition & $m-1$ or $n-1$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Total Number of Operations $=$ ($n$ or $m$) $\times$ (Number of Multiplication $+$ Number of Addition)
+
+Total Number of Operations $= n \times (m - 1 + m)$ or $m \times (n - 1 + n)$
+
+Total Number of Operations $= n \times (2m - 1)$ or $m \times (2n - 1)$
+
