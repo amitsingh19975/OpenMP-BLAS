@@ -79,6 +79,30 @@ their position and transpose self-cancellation operation.
 
 If $A$ is a column-major then $A^T$ is must be row-major and vice-versa.
 
+\clearpage
+\section{Calculating Number of Operations}
+
+Using equation \ref{eq:org_outer_prod}, we fill the below table
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Name} & \textbf{Number} \\
+        \hline
+        Multiplication & $n \times m$ \\
+        \hline
+        Addition & $0$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Total Number of Operations $=$ Number of Multiplication $+$ Number of Addition
+
+Total Number of Operations $= n \times m + 0$
+
+Total Number of Operations $= n \times m$
+
 \section{Algorithm}
 
 \begin{figure}[htb]
