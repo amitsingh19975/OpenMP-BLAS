@@ -45,15 +45,18 @@ From the equation \ref{eqdot_prod}
 
 Using equation \ref{eqdot_prod}, we fill the below table
 
-\begin{tabular}{|c|c|}
-    \hline
-    \textbf{Name} & \textbf{Number} \\
-    \hline
-    Multiplication & $n$ \\
-    \hline
-    Addition & $n - 1$ \\
-    \hline
-\end{tabular}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Name} & \textbf{Number} \\
+        \hline
+        Multiplication & $n$ \\
+        \hline
+        Addition & $n - 1$ \\
+        \hline
+    \end{tabular}
+\end{table}
 
 Total Number of Operations $=$ Number of Multiplication $+$ Number of Addition
 
@@ -245,21 +248,24 @@ the vectors' elements that can put inside the cache.
 
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_float.png} }}%
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_one_float.png} }}%
     \label{fig:dot_Stuning_block1}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_one_double.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_one_double.png} }}%
     \label{fig:dot_Dtuning_block1}
 \end{figure}
 
-\begin{tabular}{l|c|c|}
-    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
-    \hline
-    \textbf{Lower Bound} & 8192 (8K) & 4096 (4K)\\
-    \hline
-    \textbf{Optimal} & 16384 (16K) & 8192 (8K)\\
-    \hline
-\end{tabular}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{l|c|c|}
+        & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+        \hline
+        \textbf{Lower Bound} & 8192 (8K) & 4096 (4K)\\
+        \hline
+        \textbf{Optimal} & 16384 (16K) & 8192 (8K)\\
+        \hline
+    \end{tabular}
+\end{table}
 
 \subsection{The Second Section}
 
@@ -300,21 +306,24 @@ be equal to give the optimal block size.
 
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_float.png} }}%
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_two_float.png} }}%
     \label{fig:dot_Stuning_block2}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_two_double.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_two_double.png} }}%
     \label{fig:dot_Dtuning_block2}
 \end{figure}
 
-\begin{tabular}{l|c|c|}
-    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
-    \hline
-    \textbf{Theoretical Optimal} & 4096 (4K) & 2048 (2K)\\
-    \hline
-    \textbf{Experimental Optimal} & 4096 (4K) & 2048 (2K)\\
-    \hline
-\end{tabular}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{l|c|c|}
+        & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+        \hline
+        \textbf{Theoretical Optimal} & 4096 (4K) & 2048 (2K)\\
+        \hline
+        \textbf{Experimental Optimal} & 4096 (4K) & 2048 (2K)\\
+        \hline
+    \end{tabular}
+\end{table}
 
 \subsection{The Third Section}
 
@@ -351,75 +360,78 @@ be equal to give the optimal block size.
 
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_float.png} }}%
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_three_float.png} }}%
     \label{fig:dot_Stuning_block3}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/tuning_block_three_double.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/tuning_block_three_double.png} }}%
     \label{fig:dot_Dtuning_block3}
 \end{figure}
 
-\begin{tabular}{l|c|c|}
-    & \textbf{Block[Single]} & \textbf{Block[Double]}\\
-    \hline
-    \textbf{Theoretical Optimal} & 32768 (32K) & 16384 (16K)\\
-    \hline
-    \textbf{Experimental Optimal} & $\geq$ 30K and $\leq$ 40K & $\geq$ 16K and $\leq$ 20K\\
-    \hline
-\end{tabular}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{l|c|c|}
+        & \textbf{Block[Single]} & \textbf{Block[Double]}\\
+        \hline
+        \textbf{Theoretical Optimal} & 32768 (32K) & 16384 (16K)\\
+        \hline
+        \textbf{Experimental Optimal} & $\geq$ 30K and $\leq$ 40K & $\geq$ 16K and $\leq$ 20K\\
+        \hline
+    \end{tabular}
+\end{table}
 
 \section{Performance Plots and Speedup Summary}
 
 \subsection{Range[Start: $2$, End: $2^{20}$, Step: $1024$]}
 
-\subsubsection{Performance measurements of ?dot implementations}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize.png} }}%
+    \caption*{Performance measurements of ?dot implementations}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize.png} }}%
     \label{fig:dot_Sgflop220}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize.png} }}%
     \label{fig:dot_Dgflop220}
 \end{figure}
 
 \newpage
-\subsubsection{Sorted performance measurements of ?dot implementations}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize_per.png} }}%
+    \caption*{Sorted performance measurements of ?dot implementations}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/float_GflopsVsSize_per.png} }}%
     \label{fig:dot_Sgflop_per220}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize_per.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/double_GflopsVsSize_per.png} }}%
     \label{fig:dot_Dgflop_per220}
 \end{figure}
 
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/float_Speedup(openmp).png} }}%
     \label{fig:dot_Sspeedup220}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/double_Speedup(openmp).png} }}%
     \label{fig:dot_Dspeedup220}
 \end{figure}
 
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup_log10(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/float_Speedup_log10(openmp).png} }}%
     \label{fig:dot_Sspeedup_log10220}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup_log10(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/double_Speedup_log10(openmp).png} }}%
     \label{fig:dot_Dspeedup_log10220}
 \end{figure}
 
 \newpage
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/float_Speedup_per(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/float_Speedup_per(openmp).png} }}%
     \label{fig:dot_Sspeedup_per220}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_2^20/double_Speedup_per(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_2^20/double_Speedup_per(openmp).png} }}%
     \label{fig:dot_Dspeedup_per220}
 \end{figure}
 
@@ -441,9 +453,7 @@ be equal to give the optimal block size.
         Intel's MKL & $62$ & $0$ \\
         \hline
     \end{tabular}
-    \newline
-    \vspace*{1 cm}
-    \newline
+
     \begin{tabular}{|l|c|c|}
         \hline
         \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
@@ -479,9 +489,7 @@ be equal to give the optimal block size.
         Intel's MKL & $88$ & $1$ \\
         \hline
     \end{tabular}
-    \newline
-    \vspace*{1 cm}
-    \newline
+
     \begin{tabular}{|l|c|c|}
         \hline
         \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
@@ -499,58 +507,59 @@ be equal to give the optimal block size.
     \end{tabular}
 \end{table}
 
-\newpage
-\subsection{Range[Start: $32$, End: $16382$, Step: $32$]}
 
-\subsubsection{Performance measurements of ?dot implementations}
+\clearpage
+
+\subsection{Range[Start: $32$, End: $16382$, Step: $32$]}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize.png} }}%
+    \caption*{Performance measurements of ?dot implementations}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize.png} }}%
     \label{fig:dot_Sgflop16382}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize.png} }}%
     \label{fig:dot_Dgflop16382}
 \end{figure}
 
 \newpage
-\subsubsection{Sorted performance measurements of ?dot implementations}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize_per.png} }}%
+    \caption*{Sorted performance measurements of ?dot implementations}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/float_GflopsVsSize_per.png} }}%
     \label{fig:dot_Sgflop_per16382}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize_per.png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/double_GflopsVsSize_per.png} }}%
     \label{fig:dot_Dgflop_per16382}
 \end{figure}
 
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/float_Speedup(openmp).png} }}%
     \label{fig:dot_Sspeedup16382}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/double_Speedup(openmp).png} }}%
     \label{fig:dot_Dspeedup16382}
 \end{figure}
 
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup_log10(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation [semilogy]}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/float_Speedup_log10(openmp).png} }}%
     \label{fig:dot_Sspeedup_log1016382}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup_log10(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/double_Speedup_log10(openmp).png} }}%
     \label{fig:dot_Dspeedup_log1016382}
 \end{figure}
 
 \newpage
-\subsubsection{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
 \begin{figure}[htb]
     \centering
-    \subfloat[\centering Single-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/float_Speedup_per(openmp).png} }}%
+    \caption*{Comparison of the Boost.uBLAS.Tensor ?dot implementation [sorted]}
+    \subfloat[\centering Single-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/float_Speedup_per(openmp).png} }}%
     \label{fig:dot_Sspeedup_per16382}
     \qquad
-    \subfloat[\centering Double-Precision]{{\includegraphics[width=5cm]{../assets/dot_product/plot_ 16382/double_Speedup_per(openmp).png} }}%
+    \subfloat[\centering Double-Precision]{{\includegraphics[width=8cm]{../assets/dot_product/plot_ 16382/double_Speedup_per(openmp).png} }}%
     \label{fig:dot_Dspeedup_per16382}
 \end{figure}
 
@@ -572,9 +581,7 @@ be equal to give the optimal block size.
         Intel's MKL & $94$ & $5$ \\
         \hline
     \end{tabular}
-    \newline
-    \vspace*{1 cm}
-    \newline
+
     \begin{tabular}{|l|c|c|}
         \hline
         \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
@@ -610,9 +617,7 @@ be equal to give the optimal block size.
         Intel's MKL & $71$ & $2$ \\
         \hline
     \end{tabular}
-    \newline
-    \vspace*{1 cm}
-    \newline
+
     \begin{tabular}{|l|c|c|}
         \hline
         \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
@@ -630,7 +635,7 @@ be equal to give the optimal block size.
     \end{tabular}
 \end{table}
 
-\newpage
+\clearpage
 \section{Performance Metrics}
 
 \subsection*{Range[Start: $2$, End: $2^{20}$, Step: $1024$]}
