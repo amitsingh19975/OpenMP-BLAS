@@ -128,8 +128,54 @@ If $A$ is a column-major then $A^T$ is must be row-major and vice-versa.
             $aj \gets a$ \\
             $bj \gets b + i$ \\
             $cj \gets b + i \times wc $ \\
-            $outer\_simd\_loop$($cj$, $aj$, $bj$, $na$);\\
+            $outer\_simd\_loop$($cj$, $aj$, $bj$, $na$)\\
         }
      }
     \caption{Vector-Vector Outer Product}
 \end{algorithm}
+
+Here, we start threads if the second vector's size exceeds $256$ because 
+to avoid thread overhead for a small vector. The number is not concrete, 
+so it can be any value until it small enough, or we can remove it. 
+There is a problem we have to give a thought about and solve. 
+This problem arises when multiple threads try to fetch the data, 
+and if the data not found, it will evict the cached data using LRU policy. 
+If the evicted data is still in use and it does not find the data will 
+again evict and may or may not propagate to the other cores. 
+
+To avoid the cache eviction problem, we decrease the threads spawned 
+if the data cannot fit inside the cache.
+
+Let the length of the first vector be $n$ and a small chunk of the second
+vector be $m_c$.
+
+$S_{L_2} = $ a block of matrix $+$ length of the first vector
+
+We are not trying to fit the second vector because each core can 
+put the element from the second vector inside the register and 
+access each column of the resultant matrix and the whole first vector.
+This algorithm is performing a rank-1 update in each core.
+
+\begin{align*}
+    S_{L_2} &= S_{data}(n \times m_c + n)\\
+    n \times m_c &= \frac{S_{L_2}}{S_{data}} - n\\
+\end{align*}
+
+\begin{equation}
+    m_c = \frac{S_{L_2}}{S_{data} \times n} - 1
+    \label{eq:outer_block}
+\end{equation}
+
+As the $n$ increase, the block $m_c$ decreases. 
+We control the second vector's blocks through the outer loop, 
+where we divide the second vector through threads, and each 
+thread contains a single element. Therefore, 
+the $m_c$ block drops below the maximum allowed threads, 
+we start to spawn $m_c$ amount of threads.
+
+\begin{equation}
+    num\_threads = max(1, min(m_c,max\_threads)) 
+    \label{eq:outer_num_threads}
+\end{equation}
+
+
