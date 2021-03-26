@@ -23,27 +23,27 @@ $
 
 \begin{equation}
     x \cdot y = \sum_{i=0}^{n}(x_i \times y_i)
-    \label{eqdot_prod}
+    \label{eq:dot_prod}
 \end{equation}
 
 \begin{equation}
     y \cdot x = x \cdot y
-    \label{eqdot_prod_comm}
+    \label{eq:dot_prod_comm}
 \end{equation}
 
-Equation \ref{eqdot_prod_comm} can be easily proven using equation \ref{eqdot_prod}.
+Equation \ref{eq:dot_prod_comm} can be easily proven using equation \ref{eq:dot_prod}.
 
 \[y \cdot x = \sum_{i=0}^{n}(y_i \times x_i)\]
 
 We know that multiplication on a scalar is commutative. Using this fact, we can say
 \[y \cdot x = \sum_{i=0}^{n}(x_i \times y_i)\]
 
-From the equation \ref{eqdot_prod}
+From the equation \ref{eq:dot_prod}
 \[y \cdot x = x \cdot y\]
 
 \section{Calculating Number of Operations}
 
-Using equation \ref{eqdot_prod}, we fill the below table
+Using equation \ref{eq:dot_prod}, we fill the below table
 
 \begin{table}[ht]
     \centering
@@ -160,14 +160,14 @@ According to the \textbf{Amdahl's Law}, we know
 
 \begin{equation}
     Speedup_N = \frac{1}{ p + \frac{1 - p}{N} } - O_N
-    \label{eqamdahls_law}
+    \label{eq:amdahls_law}
 \end{equation}
 $p$ is the proportion of execution time for code that is not parallelizable, where $p \in [0,1]$ \\
 $1 - p$ is the proportion of execution time for code that is parallelizable \\
 $N$ is the number of processor cores or number of threads, where $N \in Z_{\ne 0}$ \\
 $O_N$ is the overhead incurred due to the $N$ thread
 
-Using the equation \ref{eqamdahls_law}  for $N = 1$, we know the $Speedup_1 = 1$ since 
+Using the equation \ref{eq:amdahls_law}  for $N = 1$, we know the $Speedup_1 = 1$ since 
 the program is already running on the thread, and we do not need to spawn another thread. 
 Therefore the thread overhead incurred is none ( $O_1 = 0$ ).
 
@@ -177,7 +177,7 @@ We can now get the lower bound using the fact and the
 relationship between the vectors' length and the thread overhead.
 \[Speedup_N > Speedup_1\]
 
-From the equation \ref{eqamdahls_law}, we get
+From the equation \ref{eq:amdahls_law}, we get
 \[\frac{1}{ p + \frac{1 - p}{N} } - O_N > 1\]
 \begin{align*}
 O_N &< \frac{1}{ p + \frac{1 - p}{N} } - 1\\
@@ -286,7 +286,7 @@ In the end, it will combine all the partial results into one final result.
 
 \[S_{L_1} = S_{data}(Block\ of\ the\ first\ vector + Block\ of\ the\ second\ vector)\]
 
-From the equation \ref{eqdot_prod}, we can infer that the block of both vectors must
+From the equation \ref{eq:dot_prod}, we can infer that the block of both vectors must
 be equal to give the optimal block size.
 
 \[B_2 = Block\ of\ the\ first\ vector = Block\ of\ the\ second\ vector\]
@@ -340,7 +340,7 @@ we used to derive equation \ref{eq:dot_block2}, we can use it here also.
 
 \[S_{L_2} = S_{data}(Block\ of\ the\ first\ vector + Block\ of\ the\ second\ vector)\]
 
-From the equation \ref{eqdot_prod}, we can infer that the block of both vectors must
+From the equation \ref{eq:dot_prod}, we can infer that the block of both vectors must
 be equal to give the optimal block size.
 
 \[B_3 = Block\ of\ the\ first\ vector = Block\ of\ the\ second\ vector\]
