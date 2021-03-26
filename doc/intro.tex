@@ -172,59 +172,67 @@ the CPU can compute X amount of floating-point operations.
     \label{eqpeak_util}
 \end{equation}
 
-\section{System Information}
-
-\begin{tabular}{|l | l|}
-    \hline
-    Processor & 2.3 GHz 8-Core Intel Core i9 \\
-    \hline
-    Architecture & x86 \\
-    \hline
-    L1 Cache & 8-way, 32KiB \\
-    \hline
-    L2 Cache & 4-way, 256KiB \\
-    \hline
-    L3 Cache & 16-way, 16MiB \\
-    \hline
-    Cache Line & 64B \\
-    \hline
-    Single-Precision(FP32) & 32 FLOPs per cycle per core \\
-    \hline
-    Double-Precision(FP64) & 16 FLOPs per cycle per core\\
-    \hline
-\end{tabular}
-
-Peak Utilization found using the formula defined on the \citep{wiki:FLOPS}
+Peak Performance can be calculated using the formula defined on the \citep{wiki:FLOPS}
 
 \begin{equation}
-    Peak\ Utilization = Frequency \times Cores \times \frac{FLOPS}{Cycle}
+    Peak\ Performance = Frequency \times Cores \times \frac{FLOPS}{Cycle}
 \end{equation}
 
-\[Peak\ Utilization_{FP32} = 588.8\ GFLOPS\]
-\[Peak\ Utilization_{FP64} = 294.4\ GFLOPS\]
+\clearpage
+\section{System Information}
+\begin{table}[htb]
+    \centering
+    \begin{tabular}{|l | l|}
+        \hline
+        Processor & 2.3 GHz 8-Core Intel Core i9 \\
+        \hline
+        Architecture & x86 \\
+        \hline
+        L1 Cache & 8-way, 32KiB \\
+        \hline
+        L2 Cache & 4-way, 256KiB \\
+        \hline
+        L3 Cache & 16-way, 16MiB \\
+        \hline
+        Cache Line & 64B \\
+        \hline
+        Single-Precision(FP32) & 32 FLOPs per cycle per core \\
+        \hline
+        Double-Precision(FP64) & 16 FLOPs per cycle per core\\
+        \hline
+        Peak Performance(FP32) & $588.8$ GFLOPS\\
+        \hline
+        Peak Performance(FP64) & $294.4$ GFLOPS\\
+        \hline
+    \end{tabular}
+\end{table}
 
 \section{Compiler Information}
-
-\begin{tabular}{|l | l|}
-    \hline
-    Compiler & Apple clang version 12.0.0 (clang-1200.0.32.29) \\
-    \hline
-    Compiler Flags & -march=native -ffast-math -Xclang -fopenmp -O3 \\
-    \hline
-    C++ Standard & 20 \\
-    \hline
-\end{tabular}
+\begin{table}[htb]
+    \centering
+    \begin{tabular}{|l | l|}
+        \hline
+        Compiler & Apple clang version 12.0.0 (clang-1200.0.32.29) \\
+        \hline
+        Compiler Flags & -march=native -ffast-math -Xclang -fopenmp -O3 \\
+        \hline
+        C++ Standard & 20 \\
+        \hline
+    \end{tabular}
+\end{table}
 
 \section{library Version}
-
-\begin{tabular}{|l | l|}
-    \hline
-    Intel MKL & 2020.0.1 \\
-    \hline
-    Eigen & 3.3.9 \\
-    \hline
-    OpenBLAS & 0.3.13 \\
-    \hline
-    BLIS & 0.8.0 \\
-    \hline
-\end{tabular}
+\begin{table}[htb]
+    \centering
+    \begin{tabular}{|l | l|}
+        \hline
+        Intel MKL & 2020.0.1 \\
+        \hline
+        Eigen & 3.3.9 \\
+        \hline
+        OpenBLAS & 0.3.13 \\
+        \hline
+        BLIS & 0.8.0 \\
+        \hline
+    \end{tabular}
+\end{table}
