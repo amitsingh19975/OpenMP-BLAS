@@ -1,1 +1,51 @@
 \chapter{Matrix-Vector Product}
+
+When we take the product of the matrix and the vector, 
+it will result in a vector. The product is a contraction 
+operation, which means that the matrix's dimension reduced from two to one.
+To apply the contraction, then the length of one of the matrix dimensions 
+must be the same as the vector's length.
+
+Let the $A$ be the matrix with dimensions $m$ and $n$, 
+and the length of the vector $x$ be $n$.
+
+The resultant vector $y$ will have the dimension $m$.
+
+\vspace*{0.5 cm}
+$
+A = 
+\begin{bmatrix}
+    a_{00}  & a_{01}    & \dots     & a_{0n}\\
+    a_{10}  & a_{11}    & \dots     & a_{1n}\\
+    \vdots  & \vdots    & \ddots    & \vdots\\
+    a_{m0}  & a_{m1}    & \dots     & a_{mn}\\
+\end{bmatrix}
+, x =
+\begin{bmatrix}
+    x_0\\
+    x_1\\
+    \vdots\\
+    x_n\\
+\end{bmatrix}
+$
+
+\begin{equation}
+    y = Ax + y
+    \label{eq:mtv}
+\end{equation}
+
+The vector times matrix can calculated by taking the transpose on the both sides.
+\begin{align*}
+    y^T &= (Ax + y)^T\\
+    y^T &= (Ax)^T + y^T\\
+    y^T &= x^TA^T + y^T\\
+\end{align*}
+
+The column-major and row-major layout for the vector in the memory 
+is non-distinguishable. Hence, we can use this fact and we get $x = x^T$.
+If $A$ is column-major then $A^T$ is row-major and vice-versa.
+
+\begin{equation}
+    y = xA^T + y
+    \label{eq:vtm}
+\end{equation}
