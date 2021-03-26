@@ -92,9 +92,24 @@ Using equation \ref{eq:org_outer_prod}, we fill the below table
     \end{tabular}
 \end{table}
 
-Total Number of Operations $=$ ($n$ or $m$) $\times$ (Number of Multiplication $+$ Number of Addition)
+Total Number of Operations $=$ (Number of Multiplication $+$ Number of Addition) $\times
+\begin{cases}
+    n \\
+    m
+\end{cases}
+$
 
-Total Number of Operations $= n \times (m - 1 + m)$ or $m \times (n - 1 + n)$
+Total Number of Operations $= 
+\begin{cases}
+    n \times (m + m - 1)\\
+    m  \times (n + n - 1)
+\end{cases}
+$
 
-Total Number of Operations $= n \times (2m - 1)$ or $m \times (2n - 1)$
+Total Number of Operations $= 
+\begin{cases}
+    n \times (2m - 1)\\
+    m  \times (2n - 1)
+\end{cases}
+$
 
