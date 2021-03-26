@@ -36,9 +36,7 @@ namespace amt {
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(In);
         [[maybe_unused]] static SizeType const small_block = sqrt_pow_of_two(number_of_el_l1);
-        
-        [[maybe_unused]] SizeType const halfL1 = number_of_el_l1 >> 1;
-        [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? halfL1 : small_block);
+        [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? number_of_el_l1>>1 : small_block);
 
         constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
             auto const cst = *b;
