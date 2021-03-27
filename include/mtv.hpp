@@ -20,6 +20,41 @@ namespace amt {
         return 1u << (p >> 1);
     }
 
+    template<std::size_t N, typename ValueType, typename SizeType>
+    AMT_ALWAYS_INLINE void simd_loop(ValueType* c, ValueType const* a, ValueType const* b, SizeType const n, SizeType const w) noexcept{
+        #pragma omp simd
+        for(auto i = 0ul; i < n; ++i){
+            #pragma unroll(N)
+            for(auto j = 0ul; j < N; ++j){
+                c[i] += a[i + w * j] * b[j];
+            }
+        }
+    }
+
+    template<std::size_t N, typename ValueType, typename SizeType>
+    AMT_ALWAYS_INLINE void mtv_helper_nitr(ValueType* c, 
+        ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
+        SizeType const nb, SizeType const block
+    ) noexcept{
+        auto ai = a;
+        auto bi = b;
+        auto ci = c;
+        #pragma omp parallel for schedule(dynamic)
+        for(auto i = 0ul; i < na; i += block){
+            auto aj = ai + i;
+            auto bj = bi;
+            auto cj = ci + i;
+            auto ib = std::min(block,na-i);
+            for(auto j = 0ul; j < nb; ++j){
+                auto jw = j * N;
+                auto ak = aj + jw * wa;
+                auto bk = bj + jw;
+                auto ck = cj;
+                simd_loop<N>(ck, ak, bk, ib, wa);
+            }
+        }
+    }
+
     template<typename Out, typename In, typename SizeType>
     AMT_ALWAYS_INLINE void mtv_helper(
         Out* c,
@@ -37,32 +72,41 @@ namespace amt {
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(In);
         [[maybe_unused]] static SizeType const small_block = sqrt_pow_of_two(number_of_el_l1);
         [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? number_of_el_l1>>1 : small_block);
-
-        constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
-            auto const cst = *b;
-            #pragma omp simd
-            for(auto i = 0ul; i < n; ++i){
-                c[i] += a[i] * cst;
-            }
-        };
-
+        
         auto ai = a;
         auto bi = b;
         auto ci = c;
+        auto Nitr = nb / small_block;
+        auto Nrem = nb % small_block;
 
-        #pragma omp parallel for schedule(dynamic) if (na > small_block)
-        for(auto i = 0ul; i < na; i += block){
-            auto aj = ai + i;
-            auto bj = bi;
-            auto cj = ci + i;
-            auto ib = std::min(block,na-i);
-            for(auto j = 0ul; j < nb; ++j){
-                auto ak = aj + j * wa;
-                auto bk = bj + j;
-                auto ck = cj;
-                simd_loop(ck, ak, bk, ib);
+        if(Nrem != 0ul){
+            #pragma omp parallel for schedule(dynamic) if (na > small_block)
+            for(auto i = 0ul; i < na; i += block){
+                auto aj = ai + i;
+                auto bj = bi;
+                auto cj = ci + i;
+                auto ib = std::min(block,na-i);
+                for(auto j = 0ul; j < Nrem; ++j){
+                    auto ak = aj + j * wa;
+                    auto bk = bj + j;
+                    auto ck = cj;
+                    simd_loop<1ul>(ck,ak,bk,ib,wa);
+                }
+            }
+            ai += Nrem * wa;
+            bi += Nrem;
+        }
+
+        if(Nitr != 0ul){
+            switch(small_block){
+                case 8: mtv_helper_nitr<8ul>(ci,ai,wa,na,bi,Nitr,block); break;
+                case 16: mtv_helper_nitr<16ul>(ci,ai,wa,na,bi,Nitr,block); break;
+                case 32: mtv_helper_nitr<32ul>(ci,ai,wa,na,bi,Nitr,block); break;
+                case 128: mtv_helper_nitr<128ul>(ci,ai,wa,na,bi,Nitr,block); break;
+                default: mtv_helper_nitr<64ul>(ci,ai,wa,na,bi,Nitr,block); break;
             }
         }
+
         
     }
 
