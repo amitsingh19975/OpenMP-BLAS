@@ -32,10 +32,11 @@ namespace amt {
     }
 
     template<std::size_t N, typename ValueType, typename SizeType>
-    AMT_ALWAYS_INLINE void mtv_helper_nitr(ValueType* c, 
+    AMT_ALWAYS_INLINE void mtv_helper_loop(ValueType* c, 
         ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
         SizeType const nb, SizeType const block
     ) noexcept{
+        if(nb == 0ul) return;
         auto ai = a;
         auto bi = b;
         auto ci = c;
@@ -70,8 +71,9 @@ namespace amt {
         static_assert(std::is_same_v<Out,In>);
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(In);
+        [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static SizeType const small_block = sqrt_pow_of_two(number_of_el_l1);
-        [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? number_of_el_l1>>1 : small_block);
+        [[maybe_unused]] SizeType const block = (na > number_of_el_l1 ? half_block : small_block);
         
         auto ai = a;
         auto bi = b;
@@ -79,32 +81,16 @@ namespace amt {
         auto Nitr = nb / small_block;
         auto Nrem = nb % small_block;
 
-        if(Nrem != 0ul){
-            #pragma omp parallel for schedule(dynamic) if (na > small_block)
-            for(auto i = 0ul; i < na; i += block){
-                auto aj = ai + i;
-                auto bj = bi;
-                auto cj = ci + i;
-                auto ib = std::min(block,na-i);
-                for(auto j = 0ul; j < Nrem; ++j){
-                    auto ak = aj + j * wa;
-                    auto bk = bj + j;
-                    auto ck = cj;
-                    simd_loop<1ul>(ck,ak,bk,ib,wa);
-                }
-            }
-            ai += Nrem * wa;
-            bi += Nrem;
-        }
+        mtv_helper_loop<1ul>(ci,ai,wa,na,bi,Nrem,block);
+        ai += Nrem * wa;
+        bi += Nrem;
 
-        if(Nitr != 0ul){
-            switch(small_block){
-                case 8: mtv_helper_nitr<8ul>(ci,ai,wa,na,bi,Nitr,block); break;
-                case 16: mtv_helper_nitr<16ul>(ci,ai,wa,na,bi,Nitr,block); break;
-                case 32: mtv_helper_nitr<32ul>(ci,ai,wa,na,bi,Nitr,block); break;
-                case 128: mtv_helper_nitr<128ul>(ci,ai,wa,na,bi,Nitr,block); break;
-                default: mtv_helper_nitr<64ul>(ci,ai,wa,na,bi,Nitr,block); break;
-            }
+        switch(small_block){
+            case 8: mtv_helper_loop<8ul>(ci,ai,wa,na,bi,Nitr,block); break;
+            case 16: mtv_helper_loop<16ul>(ci,ai,wa,na,bi,Nitr,block); break;
+            case 32: mtv_helper_loop<32ul>(ci,ai,wa,na,bi,Nitr,block); break;
+            case 128: mtv_helper_loop<128ul>(ci,ai,wa,na,bi,Nitr,block); break;
+            default: mtv_helper_loop<64ul>(ci,ai,wa,na,bi,Nitr,block); break;
         }
 
         
