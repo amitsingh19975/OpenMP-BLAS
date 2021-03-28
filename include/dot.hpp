@@ -9,29 +9,11 @@
 
 namespace amt {
 
-    template<bool Serial = false, typename Out, typename In, typename SizeType>
-    AMT_ALWAYS_INLINE void dot_prod_helper_tuning_param(
-        Out* c,
-        In const* a,
-        In const* b,
-        [[maybe_unused]] SizeType n,
-        [[maybe_unused]] int max_threads,
-        [[maybe_unused]] SizeType const block1,
-        [[maybe_unused]] SizeType const block2,
-        [[maybe_unused]] SizeType const block3
-    ) noexcept
+    namespace dot_impl
     {
-        static_assert(std::is_same_v<Out,In>);
-        
-        using value_type = std::remove_pointer_t<Out>;
-        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
-
-        [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
-        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
-        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
-
-        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
-            auto sum = value_type{};
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE auto simd_loop(ValueType const* a, ValueType const* b, SizeType const n){
+            auto sum = ValueType{};
             #pragma omp simd reduction(+:sum)
             for(auto i = 0ul; i < n; ++i){
                 sum += (a[i] * b[i]);
@@ -39,26 +21,20 @@ namespace amt {
             return sum;
         };
 
-        value_type sum {};
-
-        if( n < block1 ){
-            sum = simd_loop(a, b, n);
-        }else if( n < number_of_el_l3 ){
-
-
-            auto q = static_cast<int>(n / block2);
-            auto num_threads = std::max(1, std::min(max_threads, q));
-            
-            threads::set_num_threads(num_threads);
-
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE auto section_two_loop(ValueType const* a, ValueType const* b, SizeType const n, SizeType const block){
+            ValueType sum{};
             #pragma omp parallel for schedule(static) reduction(+:sum)
-            for(auto i = 0ul; i < n; i += block2){
-                auto ib = std::min(block2, n - i);
-                sum += simd_loop(a + i, b + i, ib);
+            for(auto i = 0ul; i < n; i += block){
+                auto ib = std::min(block, n - i);
+                sum += dot_impl::simd_loop(a + i, b + i, ib);
             }
+            return sum;
+        };
 
-        }else{
-
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE auto section_three_loop(ValueType const* a, ValueType const* b, SizeType const n, SizeType const block2, SizeType const block3){
+            ValueType sum{};
             #pragma omp parallel reduction(+:sum)
             {
                 for(auto i = 0ul; i < n; i += block3){
@@ -68,13 +44,46 @@ namespace amt {
                     #pragma omp for schedule(dynamic)
                     for(auto j = 0ul; j < ib; j += block2){
                         auto jb = std::min(block2, ib - j);
-                        sum += simd_loop(ai + j, bi + j, jb);
+                        sum += dot_impl::simd_loop(ai + j, bi + j, jb);
                     }
                 }
             }
+            return sum;
+        };
 
+    } // namespace dot_impl
+    
+
+
+    template<typename ValueType, typename SizeType>
+    AMT_ALWAYS_INLINE void dot_prod_helper_tuning_param(
+        ValueType* c,
+        ValueType const* a,
+        ValueType const* b,
+        [[maybe_unused]] SizeType n,
+        [[maybe_unused]] int max_threads,
+        [[maybe_unused]] SizeType const block1,
+        [[maybe_unused]] SizeType const block2,
+        [[maybe_unused]] SizeType const block3
+    ) noexcept
+    {   
+        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(ValueType);
+
+        [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
+        [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
+
+        if( n < block1 ){
+            *c = dot_impl::simd_loop(a, b, n);
+        }else if( n < number_of_el_l3 ){
+            auto q = static_cast<int>(n / block2);
+            auto num_threads = std::max(1, std::min(max_threads, q));
+            threads::set_num_threads(num_threads);
+
+            *c = dot_impl::section_two_loop(a,b,n,block2);
+        }else{
+            *c = dot_impl::section_three_loop(a,b,n,block2,block3);
         }
-        *c = sum;
     }
 
     template<typename Out, typename E1, typename E2>
@@ -146,50 +155,17 @@ namespace amt {
         [[maybe_unused]] static auto const section_three_block = (number_of_el_l2 >> 1u);
         auto const n = na[0] * na[1];
 
-        constexpr auto simd_loop = [](ValueType const* a, ValueType const* b, SizeType const n){
-            auto sum = ValueType{};
-            #pragma omp simd reduction(+:sum)
-            for(auto i = 0ul; i < n; ++i){
-                sum += (a[i] * b[i]);
-            }
-            return sum;
-        };
-
-        ValueType sum {};
-
         if( n < section_one_block ){
-            sum = simd_loop(a, b, n);
+            *c = dot_impl::simd_loop(a, b, n);
         }else if( n < number_of_el_l3 ){
-            
             auto q = static_cast<int>(n / section_two_block);
             auto num_threads = std::max(1, std::min(max_threads, q));
-            
             threads::set_num_threads(num_threads);
 
-            #pragma omp parallel for schedule(static) reduction(+:sum)
-            for(auto i = 0ul; i < n; i += section_two_block){
-                auto ib = std::min(section_two_block, n - i);
-                sum += simd_loop(a + i, b + i, ib);
-            }
-
+            *c = dot_impl::section_two_loop(a,b,n,section_two_block);
         }else{
-
-            #pragma omp parallel reduction(+:sum)
-            {
-                for(auto i = 0ul; i < n; i += section_three_block){
-                    auto ib = std::min(section_three_block, n - i);
-                    auto ai = a + i;
-                    auto bi = b + i;
-                    #pragma omp for schedule(dynamic)
-                    for(auto j = 0ul; j < ib; j += section_two_block){
-                        auto jb = std::min(section_two_block, ib - j);
-                        sum += simd_loop(ai + j, bi + j, jb);
-                    }
-                }
-            }
-
+            *c = dot_impl::section_three_loop(a,b,n,section_two_block,section_three_block);
         }
-        *c = sum;
     }
 
     template<typename Out, typename E1, typename E2>
