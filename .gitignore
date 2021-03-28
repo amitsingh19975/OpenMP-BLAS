@@ -3,6 +3,8 @@ dark/
 .DS_Store
 build/
 *
+!include/
+!include/*.hpp
 !doc/
 !doc/assets
 !doc/*.tex
