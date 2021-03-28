@@ -260,8 +260,8 @@ namespace amt {
         using size_type = std::decay_t< std::remove_pointer_t<decltype(na.data())> >;
         using other_layout_type = std::conditional_t<
             is_first_order,
-            boost::numeric::ublas::layout::first_order,
-            boost::numeric::ublas::layout::last_order
+            boost::numeric::ublas::layout::last_order,
+            boost::numeric::ublas::layout::first_order
         >;
 
         auto const* aptr = a.data();
