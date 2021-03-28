@@ -2,12 +2,11 @@
 #define AMT_BENCHMARK_MTV_PRODUCT_HPP
 
 #include <boost/numeric/ublas/tensor.hpp>
-#include <omp.h>
 #include <optional>
 #include <cache_manager.hpp>
-#include <cstdlib>
 #include <macros.hpp>
 #include <array>
+#include <thread_utils.hpp>
 
 namespace amt {
 
@@ -166,16 +165,9 @@ namespace amt {
         
         std::size_t NB = boost::numeric::ublas::product(nb);
         std::size_t NC = boost::numeric::ublas::product(nc);
-
-        auto max_num_threads = 1;
-        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
-            max_num_threads = std::atoi(omp_env_var);
-        }else{
-            max_num_threads = omp_get_max_threads();
-        }
         
-        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
-        omp_set_num_threads(nths);
+        threads::set_num_threads(num_threads);
+        auto nths = threads::get_num_threads();
         
         if( (na[1] != NB ) || (na[0] != NC) ){
             throw std::runtime_error(
@@ -238,15 +230,8 @@ namespace amt {
         std::size_t NB = boost::numeric::ublas::product(nb);
         std::size_t NC = boost::numeric::ublas::product(nc);
 
-        auto max_num_threads = 1;
-        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
-            max_num_threads = std::atoi(omp_env_var);
-        }else{
-            max_num_threads = omp_get_max_threads();
-        }
-        
-        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
-        omp_set_num_threads(nths);
+        threads::set_num_threads(num_threads);
+        auto nths = threads::get_num_threads();
         
         if( (na[1] != NC ) || (na[0] != NB) ){
             throw std::runtime_error(

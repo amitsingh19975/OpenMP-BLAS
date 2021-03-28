@@ -2,11 +2,10 @@
 #define AMT_BENCHMARK_DOT_PRODUCT_HPP
 
 #include <boost/numeric/ublas/tensor.hpp>
-#include <omp.h>
 #include <optional>
 #include <cache_manager.hpp>
-#include <cstdlib>
 #include <macros.hpp>
+#include <thread_utils.hpp>
 
 namespace amt {
 
@@ -50,7 +49,7 @@ namespace amt {
             auto q = static_cast<int>(n / block2);
             auto num_threads = std::max(1, std::min(max_threads, q));
             
-            omp_set_num_threads(num_threads);
+            threads::set_num_threads(num_threads);
 
             #pragma omp parallel for schedule(static) reduction(+:sum)
             for(auto i = 0ul; i < n; i += block2){
@@ -111,15 +110,8 @@ namespace amt {
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
 
-        auto max_num_threads = 1;
-        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
-            max_num_threads = std::atoi(omp_env_var);
-        }else{
-            max_num_threads = omp_get_max_threads();
-        }
-        
-        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
-        omp_set_num_threads(nths);
+        threads::set_num_threads(num_threads);
+        auto nths = threads::get_num_threads();
 
         if( NA != NB ){
             throw std::runtime_error(
@@ -172,7 +164,7 @@ namespace amt {
             auto q = static_cast<int>(n / section_two_block);
             auto num_threads = std::max(1, std::min(max_threads, q));
             
-            omp_set_num_threads(num_threads);
+            threads::set_num_threads(num_threads);
 
             #pragma omp parallel for schedule(static) reduction(+:sum)
             for(auto i = 0ul; i < n; i += section_two_block){
@@ -230,15 +222,8 @@ namespace amt {
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
 
-        auto max_num_threads = 1;
-        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
-            max_num_threads = std::atoi(omp_env_var);
-        }else{
-            max_num_threads = omp_get_max_threads();
-        }
-        
-        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
-        omp_set_num_threads(nths);
+        threads::set_num_threads(num_threads);
+        auto nths = threads::get_num_threads();
 
         if( NA != NB ){
             throw std::runtime_error(

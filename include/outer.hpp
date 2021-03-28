@@ -2,11 +2,10 @@
 #define AMT_BENCHMARK_OUTER_PRODUCT_HPP
 
 #include <boost/numeric/ublas/tensor.hpp>
-#include <omp.h>
 #include <optional>
 #include <cache_manager.hpp>
-#include <cstdlib>
 #include <macros.hpp>
+#include <thread_utils.hpp>
 
 namespace amt {
 
@@ -39,7 +38,8 @@ namespace amt {
         auto NA_temp = static_cast<int>(NA);
         auto num_ths = (static_cast<int>(number_of_el_l2) - NA_temp) / NA_temp;
         auto ths = std::max(1, std::min(max_threads,num_ths));
-        omp_set_num_threads(ths);
+        threads::set_num_threads(ths);
+
         #pragma omp parallel for if(NB > MinSize)
         for(auto i = 0ul; i < NB; ++i){
             auto aj = ai;
@@ -86,15 +86,8 @@ namespace amt {
         std::size_t NA = boost::numeric::ublas::product(na);
         std::size_t NB = boost::numeric::ublas::product(nb);
 
-        auto max_num_threads = 1;
-        if( char const* omp_env_var = std::getenv("OMP_NUM_THREADS"); omp_env_var != nullptr ){
-            max_num_threads = std::atoi(omp_env_var);
-        }else{
-            max_num_threads = omp_get_max_threads();
-        }
-        
-        auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
-        omp_set_num_threads(nths);
+        threads::set_num_threads(num_threads);
+        auto nths = threads::get_num_threads();
         
         if( nc[0] != NA || nc[1] != NB ){
             throw std::runtime_error(
