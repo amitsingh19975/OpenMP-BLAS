@@ -189,10 +189,10 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto WA = a.strides()[0];
+        auto WA = a.size(1);
         auto NA = na[0];
         
-        if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) WA = a.strides()[1];
+        if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) WA = a.size(0);
 
         return [NA,cptr,aptr,WA,bptr,NB,nths]{
             mtv_helper(cptr,aptr,WA,NA,bptr,NB,nths, layout_type{});
@@ -260,6 +260,7 @@ namespace amt {
 
         // c = Av
         // c^T = v^TA^T 
+        // c = vA^T
         
         if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) {
             auto WA = na[1];

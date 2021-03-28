@@ -110,12 +110,12 @@ namespace amt {
         
         
         if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
-            auto const WC = c.strides()[1];
+            auto const WC = NA;
             return [cptr,WC,aptr,NA,bptr,NB,nths]{
                 outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
             };
         }else{
-            auto const WC = c.strides()[0];
+            auto const WC = NB;
             return [cptr,WC,aptr,NA,bptr,NB,nths]{
                 outer_prod_helper(cptr,WC,bptr,NB,aptr,NA,nths);
             };
