@@ -6,5 +6,7 @@
 #endif
 
 #define AMT_ALWAYS_INLINE __attribute__((always_inline))
+#define MiB(SIZE) SIZE / (1<<20)
+#define KiB(SIZE) SIZE / (1<<10)
 
 #endif // AMT_BENCHMARK_MACROS_HPP

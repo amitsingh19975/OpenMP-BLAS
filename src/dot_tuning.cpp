@@ -91,15 +91,22 @@ void openmp_dot_prod(std::size_t N, std::size_t B1, std::size_t B2, std::size_t 
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 // #define PLOT_ALL
-#define SIZE_KiB
+#define SIZE_KiB true
+
 
 #ifdef SIZE_KiB
     #define SIZE_SUFFIX "[K]"
-    constexpr double size_conv(double val) noexcept{ return val / 1024. ;}
 #else
+    #define SIZE_KiB false
     #define SIZE_SUFFIX "[M]"
-    constexpr double size_conv(double val) noexcept{ return val / ( 1024. * 1024. ); }
 #endif
+
+constexpr double size_conv(double val) noexcept{ 
+    if constexpr( SIZE_KiB )
+        return KiB(val);
+    else
+        return MiB(val);
+}
 
 int main(){
     

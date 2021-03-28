@@ -141,6 +141,8 @@ void openblas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
         amt::blas::mtv(std::forward<decltype(args)>(args)...);
     };
 
+    openblas_set_num_threads(omp_get_max_threads());
+
     constexpr auto open_layout = std::is_same_v<ub::layout::first_order,LayoutType> ? amt::blas::ColMajor : amt::blas::RowMajor;
 
     auto t = amt::timer{};
@@ -283,24 +285,30 @@ void show_cache_info(std::ostream& os){
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 #define PLOT_ALL
-#define SIZE_KiB
+#define SIZE_KiB true
 
 
 #ifdef SIZE_KiB
     #define SIZE_SUFFIX "[KiB]"
-    constexpr double size_conv(double val) noexcept{ return val / 1024. ;}
 #else
+    #define SIZE_KiB false
     #define SIZE_SUFFIX "[MiB]"
-    constexpr double size_conv(double val) noexcept{ return val / ( 1024. * 1024. ); }
 #endif
+
+constexpr double size_conv(double val) noexcept{ 
+    if constexpr( SIZE_KiB )
+        return KiB(val);
+    else
+        return MiB(val);
+}
 
 
 int main(){
     
     show_cache_info(std::cout);
 
-    // using layout_t = ub::layout::first_order;
-    using layout_t = ub::layout::last_order;
+    using layout_t = ub::layout::first_order;
+    // using layout_t = ub::layout::last_order;
 
     using value_type = float;
     // using value_type = double;
@@ -311,7 +319,7 @@ int main(){
     // is_lrect_matrix = true;
     // is_rrect_matrix = true;
 
-    [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
+    [[maybe_unused]]constexpr std::size_t max_iter = 10ul;
     [[maybe_unused]]constexpr double max_value = 4 * 1024;
     amt::range(x, 32., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<16;
@@ -319,17 +327,17 @@ int main(){
 
     auto m = amt::metric<value_type>(x.size());
 
-    ublas_gemv<value_type,layout_t,max_iter>(x,m);
-    openblas_gemv<value_type,layout_t,max_iter>(x,m);
-    blis_gemv<value_type,layout_t,max_iter>(x,m);
+    // ublas_gemv<value_type,layout_t,max_iter>(x,m);
+    // openblas_gemv<value_type,layout_t,max_iter>(x,m);
+    // blis_gemv<value_type,layout_t,max_iter>(x,m);
     mkl_gemv<value_type,layout_t,max_iter>(x,m);
     openmp_gemv<value_type,layout_t,max_iter>(x,m);
-    eigen_gemv<value_type,layout_t,max_iter>(x,m);
+    // eigen_gemv<value_type,layout_t,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
 
-    constexpr std::string_view plot_xlable = "Size [n = m]" SIZE_SUFFIX;
+    constexpr std::string_view plot_xlable = "Size [n = m], " SIZE_SUFFIX " iterating";
     std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
         double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
         // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));

@@ -163,15 +163,22 @@ void eigen_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
 // #define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 #define PLOT_ALL
-#define SIZE_KiB
+#define SIZE_KiB true
+
 
 #ifdef SIZE_KiB
     #define SIZE_SUFFIX "[KiB]"
-    constexpr double size_conv(double val) noexcept{ return val / 1024. ;}
 #else
+    #define SIZE_KiB false
     #define SIZE_SUFFIX "[MiB]"
-    constexpr double size_conv(double val) noexcept{ return val / ( 1024. * 1024. ); }
 #endif
+
+constexpr double size_conv(double val) noexcept{ 
+    if constexpr( SIZE_KiB )
+        return KiB(val);
+    else
+        return MiB(val);
+}
 
 int main(){
     
