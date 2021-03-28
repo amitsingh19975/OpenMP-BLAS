@@ -10,22 +10,17 @@
 
 namespace amt {
 
-    template<std::size_t MinSize = 256ul, typename Out, typename In, typename SizeType>
+    template<std::size_t MinSize = 256ul, typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void outer_prod_helper(
-        Out* c,
-        [[maybe_unused]] SizeType const wc,
-        In const* a,
-        [[maybe_unused]] SizeType const na,
-        In const* b,
-        [[maybe_unused]] SizeType const nb,
+        ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
+        ValueType const* a, [[maybe_unused]] SizeType const* na,
+        ValueType const* b, [[maybe_unused]] SizeType const* nb,
         [[maybe_unused]] int max_threads
     ) noexcept
     {
-        static_assert(std::is_same_v<Out,In>);
-        namespace ub = boost::numeric::ublas;
-        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(In);
+        [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(ValueType);
         
-        constexpr auto simd_loop = [](Out* c, In const* const a, In const* const b, SizeType const n){
+        constexpr auto simd_loop = [](ValueType* c, ValueType const* const a, ValueType const* const b, SizeType const n){
             auto const cst = *b;
             #pragma omp simd
             for(auto i = 0ul; i < n; ++i){
@@ -33,21 +28,24 @@ namespace amt {
             }
         };
 
+        auto const NA = na[0] * na[1];
+        auto const NB = nb[0] * nb[1];
+        auto const WC = std::max(wc[0],wc[1]);
 
         auto ai = a;
         auto bi = b;
         auto ci = c;
 
-        auto NA = static_cast<int>(na);
-        auto num_ths = (static_cast<int>(number_of_el_l2) - NA) / NA;
+        auto NA_temp = static_cast<int>(NA);
+        auto num_ths = (static_cast<int>(number_of_el_l2) - NA_temp) / NA_temp;
         auto ths = std::max(1, std::min(max_threads,num_ths));
         omp_set_num_threads(ths);
-        #pragma omp parallel for if(nb > MinSize)
-        for(auto i = 0ul; i < nb; ++i){
+        #pragma omp parallel for if(NB > MinSize)
+        for(auto i = 0ul; i < NB; ++i){
             auto aj = ai;
             auto bj = bi + i;
-            auto cj = ci + i * wc;
-            simd_loop(cj, aj, bj, na);
+            auto cj = ci + i * WC;
+            simd_loop(cj, aj, bj, NA);
         }
         
     }
@@ -76,6 +74,7 @@ namespace amt {
 
         auto const& na = a.extents();
         auto const& nb = b.extents();
+        auto const& nc = c.extents();
 
         if( !( boost::numeric::ublas::is_vector(na) && boost::numeric::ublas::is_vector(nb) ) ) {
             throw std::runtime_error(
@@ -97,7 +96,7 @@ namespace amt {
         auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
         omp_set_num_threads(nths);
         
-        if( c.size(0) != NA || c.size(1) != NB ){
+        if( nc[0] != NA || nc[1] != NB ){
             throw std::runtime_error(
                 "amt::outer_prod(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
                 "dimension mismatch"
@@ -107,17 +106,22 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
+        auto const* na_ptr = na.data();
+        auto const* nb_ptr = nb.data();
+        auto const* nc_ptr = nc.data();
         
         
         if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
-            auto const WC = NA;
-            return [cptr,WC,aptr,NA,bptr,NB,nths]{
-                outer_prod_helper(cptr,WC,aptr,NA,bptr,NB,nths);
+            return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
+                using size_type = std::decay_t< std::remove_pointer_t<decltype(nc_ptr)> >;
+                size_type const wc[2] = {1ul, nc_ptr[0]};
+                outer_prod_helper(cptr,nc_ptr,wc,aptr,na_ptr,bptr,nb_ptr,nths);
             };
         }else{
-            auto const WC = NB;
-            return [cptr,WC,aptr,NA,bptr,NB,nths]{
-                outer_prod_helper(cptr,WC,bptr,NB,aptr,NA,nths);
+            return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
+                using size_type = std::decay_t< std::remove_pointer_t<decltype(nc_ptr)> >;
+                size_type const wc[2] = {nc_ptr[1],1ul};
+                outer_prod_helper(cptr,nc_ptr,wc,bptr,nb_ptr,aptr,na_ptr,nths);
             };
         }
 

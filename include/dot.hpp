@@ -136,19 +136,15 @@ namespace amt {
 
     }
 
-    template<typename Out, typename In, typename SizeType>
+    template<typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void dot_prod_helper(
-        Out* c,
-        In const* a,
-        In const* b,
-        [[maybe_unused]] SizeType n,
+        ValueType* c,
+        ValueType const* a, [[maybe_unused]] SizeType const* na,
+        ValueType const* b, [[maybe_unused]] SizeType const* nb,
         [[maybe_unused]] int max_threads
     ) noexcept
     {
-        static_assert(std::is_same_v<Out,In>);
-        
-        using value_type = std::remove_pointer_t<Out>;
-        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(value_type);
+        [[maybe_unused]] constexpr auto size_in_bytes = sizeof(ValueType);
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
@@ -156,9 +152,10 @@ namespace amt {
         [[maybe_unused]] static auto const section_one_block = (number_of_el_l1 << 1);
         [[maybe_unused]] static auto const section_two_block = (number_of_el_l1 >> 1u);
         [[maybe_unused]] static auto const section_three_block = (number_of_el_l2 >> 1u);
+        auto const n = na[0] * na[1];
 
-        constexpr auto simd_loop = [](In const* a, In const* b, SizeType const n){
-            auto sum = value_type{};
+        constexpr auto simd_loop = [](ValueType const* a, ValueType const* b, SizeType const n){
+            auto sum = ValueType{};
             #pragma omp simd reduction(+:sum)
             for(auto i = 0ul; i < n; ++i){
                 sum += (a[i] * b[i]);
@@ -166,7 +163,7 @@ namespace amt {
             return sum;
         };
 
-        value_type sum {};
+        ValueType sum {};
 
         if( n < section_one_block ){
             sum = simd_loop(a, b, n);
@@ -203,12 +200,12 @@ namespace amt {
         *c = sum;
     }
 
-    template<bool TuningFlag = false, typename Out, typename E1, typename E2>
+    template<typename Out, typename E1, typename E2>
     constexpr auto dot_prod(
         Out& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_threads
+        std::optional<std::size_t> num_threads = std::nullopt
     )
     {
         using tensor_type1 = boost::numeric::ublas::tensor_core<E1>;
@@ -251,9 +248,11 @@ namespace amt {
         }
         auto const* aptr = a.data();
         auto const* bptr = b.data();
+        auto const* na_ptr = na.data();
+        auto const* nb_ptr = nb.data();
     
-        return [&c,aptr,bptr,NA,nths]{
-            dot_prod_helper(&c,aptr,bptr,NA,nths);
+        return [&c,aptr,bptr,na_ptr,nb_ptr,nths]{
+            dot_prod_helper(&c,aptr,na_ptr,bptr,nb_ptr,nths);
         };
 
     }
