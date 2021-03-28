@@ -159,10 +159,10 @@ namespace amt {
         auto const& nb = b.extents();
         auto const& nc = c.extents();
 
-        if( !( boost::numeric::ublas::is_matrix(na) && boost::numeric::ublas::is_vector(nb) ) ) {
+        if( !( boost::numeric::ublas::is_matrix(na) && boost::numeric::ublas::is_vector(nb) && boost::numeric::ublas::is_vector(nc) ) ) {
             throw std::runtime_error(
-                "amt::mtv(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
-                "both tensor must be vector"
+                "amt::mtv(boost::numeric::ublas::tensor_core<Out>& c, boost::numeric::ublas::tensor_core<E1> const& a, boost::numeric::ublas::tensor_core<E2> const& b) : "
+                "c and b must be vector, and a must be a matrix"
             );
         }
         
@@ -189,10 +189,10 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto WA = a.size(1);
+        auto WA = na[1];
         auto NA = na[0];
         
-        if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) WA = a.size(0);
+        if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) WA = na[0];
 
         return [NA,cptr,aptr,WA,bptr,NB,nths]{
             mtv_helper(cptr,aptr,WA,NA,bptr,NB,nths, layout_type{});
@@ -226,10 +226,10 @@ namespace amt {
         auto const& nb = b.extents();
         auto const& nc = c.extents();
 
-        if( !( boost::numeric::ublas::is_matrix(na) && boost::numeric::ublas::is_vector(nb) ) ) {
+        if( !( boost::numeric::ublas::is_matrix(na) && boost::numeric::ublas::is_vector(nb) && boost::numeric::ublas::is_vector(nc) ) ) {
             throw std::runtime_error(
-                "amt::mtv(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
-                "both tensor must be vector"
+                "amt::mtv(boost::numeric::ublas::tensor_core<Out>& c, boost::numeric::ublas::tensor_core<E1> const& a, boost::numeric::ublas::tensor_core<E2> const& b) : "
+                "c and b must be vector, and a must be a matrix"
             );
         }
         
@@ -246,7 +246,7 @@ namespace amt {
         auto nths = static_cast<int>(num_threads.value_or(max_num_threads));
         omp_set_num_threads(nths);
         
-        if( (na[1] != NB ) || (na[0] != NC) ){
+        if( (na[1] != NC ) || (na[0] != NB) ){
             throw std::runtime_error(
                 "amt::mtv(boost::numeric::ublas::tensor_core<Out>&, boost::numeric::ublas::tensor_core<E1> const&, boost::numeric::ublas::tensor_core<E2> const&) : "
                 "dimension mismatch"
