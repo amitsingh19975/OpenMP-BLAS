@@ -7,6 +7,7 @@
 #include <macros.hpp>
 #include <thread_utils.hpp>
 #include <simd_loop.hpp>
+#include <array>
 
 namespace amt {
 
@@ -100,19 +101,18 @@ namespace amt {
         auto const* na_ptr = na.data();
         auto const* nb_ptr = nb.data();
         auto const* nc_ptr = nc.data();
+        std::array<size_type,2> wc = {1ul, nc_ptr[0]};
         
         
-        if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
-            return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
-                size_type const wc[2] = {1ul, nc_ptr[0]};
-                outer_prod_helper(cptr,nc_ptr,wc,aptr,na_ptr,bptr,nb_ptr,nths);
-            };
-        }else{
-            return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
-                size_type const wc[2] = {nc_ptr[1],1ul};
-                outer_prod_helper(cptr,nc_ptr,wc,bptr,nb_ptr,aptr,na_ptr,nths);
-            };
+        if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::last_order> ){
+            wc = {nc_ptr[1],1ul};
+            std::swap(bptr,aptr);
+            std::swap(na_ptr,nb_ptr);
         }
+        
+        return [cptr,nc_ptr,wc,aptr,na_ptr,bptr,nb_ptr,nths]{
+            outer_prod_helper(cptr,nc_ptr,wc.data(),aptr,na_ptr,bptr,nb_ptr,nths);
+        };
 
     }
 
