@@ -47,12 +47,12 @@ TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Range[Start: 2, End: 
         auto lres = tensor_t<TestType>(shape_t{1,sz});
         auto rres = tensor_t<TestType>(shape_t{1,sz});
 
-        auto inc = static_cast<inc_t>(1);
-        auto M = static_cast<dim_t>(sz);
-        auto N = static_cast<dim_t>(sz);
         auto alpha = TestType(1);
-        auto rsa = static_cast<inc_t>(A.strides()[0]);
-        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto inc = static_cast<inc_t>(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(A.size(1));
+        auto rsa = static_cast<inc_t>(1);
+        auto csa = static_cast<inc_t>(M);
         auto aptr = A.data();
         auto bptr = v.data();
         auto cptr = lres.data();
@@ -71,7 +71,7 @@ TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Range[Start: 2, End: 
 
         auto rptr = rres.data();
         auto lptr = cptr;
-        for(auto i = 0ul; i < sz; ++i, ++rptr, ++lptr){
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
             REQUIRE(Approx(*rptr) == *lptr);
         }
         
@@ -97,12 +97,12 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Range[Start: 2, End: 5
         auto lres = tensor_t<TestType>(shape_t{1,sz});
         auto rres = tensor_t<TestType>(shape_t{1,sz});
 
-        auto inc = static_cast<inc_t>(1);
-        auto M = static_cast<dim_t>(sz);
-        auto N = static_cast<dim_t>(sz);
         auto alpha = TestType(1);
-        auto rsa = static_cast<inc_t>(A.strides()[0]);
-        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto inc = static_cast<inc_t>(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(A.size(1));
+        auto rsa = static_cast<inc_t>(N);
+        auto csa = static_cast<inc_t>(1);
         auto aptr = A.data();
         auto bptr = v.data();
         auto cptr = lres.data();
@@ -121,7 +121,7 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Range[Start: 2, End: 5
 
         auto rptr = rres.data();
         auto lptr = cptr;
-        for(auto i = 0ul; i < sz; ++i, ++rptr, ++lptr){
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
             REQUIRE(Approx(*rptr) == *lptr);
         }
         
@@ -141,12 +141,12 @@ TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Size 32Kib", "[first_
     auto lres = tensor_t<TestType>(shape_t{1,sz});
     auto rres = tensor_t<TestType>(shape_t{1,sz});
 
-    auto inc = static_cast<inc_t>(1);
-    auto M = static_cast<dim_t>(sz);
-    auto N = static_cast<dim_t>(sz);
     auto alpha = TestType(1);
-    auto rsa = static_cast<inc_t>(A.strides()[0]);
-    auto csa = static_cast<inc_t>(A.strides()[1]);
+    auto inc = static_cast<inc_t>(1);
+    auto M = static_cast<dim_t>(A.size(0));
+    auto N = static_cast<dim_t>(A.size(1));
+    auto rsa = static_cast<inc_t>(1);
+    auto csa = static_cast<inc_t>(M);
     auto aptr = A.data();
     auto bptr = v.data();
     auto cptr = lres.data();
@@ -165,7 +165,7 @@ TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Size 32Kib", "[first_
 
     auto rptr = rres.data();
     auto lptr = cptr;
-    for(auto i = 0ul; i < sz; ++i, ++rptr, ++lptr){
+    for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
         REQUIRE(Approx(*rptr) == *lptr);
     }
     
@@ -185,12 +185,12 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Size 32Kib", "[last_or
     auto lres = tensor_t<TestType>(shape_t{1,sz});
     auto rres = tensor_t<TestType>(shape_t{1,sz});
 
-    auto inc = static_cast<inc_t>(1);
-    auto M = static_cast<dim_t>(sz);
-    auto N = static_cast<dim_t>(sz);
     auto alpha = TestType(1);
-    auto rsa = static_cast<inc_t>(A.strides()[0]);
-    auto csa = static_cast<inc_t>(A.strides()[1]);
+    auto inc = static_cast<inc_t>(1);
+    auto M = static_cast<dim_t>(A.size(0));
+    auto N = static_cast<dim_t>(A.size(1));
+    auto rsa = static_cast<inc_t>(N);
+    auto csa = static_cast<inc_t>(1);
     auto aptr = A.data();
     auto bptr = v.data();
     auto cptr = lres.data();
@@ -209,7 +209,7 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Size 32Kib", "[last_or
 
     auto rptr = rres.data();
     auto lptr = cptr;
-    for(auto i = 0ul; i < sz; ++i, ++rptr, ++lptr){
+    for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
         REQUIRE(Approx(*rptr) == *lptr);
     }
     
