@@ -5,6 +5,7 @@
 #include <ostream>
 #include <utility>
 #include <tuple>
+#include <macros.hpp>
 
 namespace amt{
 
@@ -22,6 +23,16 @@ namespace amt{
             os << k << ": [ ( 1 => U: " << up.one<<", D: "<<down.one <<" ), ( 2 => U: "<< up.two<<", D: "<<down.two <<" ) ]\n";
         }
         os <<'\n';
+    }
+
+    AMT_ALWAYS_INLINE constexpr auto sqrt_pow_of_two(std::size_t N) noexcept{
+        std::size_t p = 0;
+        N >>= 1;
+        while(N) {
+            N >>= 1;
+            ++p;
+        }
+        return 1u << (p >> 1);
     }
 
 } // namespace amt

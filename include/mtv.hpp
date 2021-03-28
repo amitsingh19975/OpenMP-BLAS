@@ -4,57 +4,66 @@
 #include <boost/numeric/ublas/tensor.hpp>
 #include <optional>
 #include <cache_manager.hpp>
-#include <macros.hpp>
+#include <utils.hpp>
 #include <array>
 #include <thread_utils.hpp>
+#include <simd_loop.hpp>
 
 namespace amt {
 
-    AMT_ALWAYS_INLINE constexpr auto sqrt_pow_of_two(std::size_t N) noexcept{
-        std::size_t p = 0;
-        N >>= 1;
-        while(N) {
-            N >>= 1;
-            ++p;
-        }
-        return 1u << (p >> 1);
-    }
+    namespace impl{        
 
-    template<std::size_t N, typename ValueType, typename SizeType>
-    AMT_ALWAYS_INLINE void simd_loop(ValueType* c, ValueType const* a, ValueType const* b, SizeType const n, SizeType const w) noexcept{
-        #pragma omp simd
-        for(auto i = 0ul; i < n; ++i){
-            #pragma unroll(N)
-            for(auto j = 0ul; j < N; ++j){
-                c[i] += a[i + w * j] * b[j];
+        template<typename ValueType, typename SizeType, typename SIMDLoop>
+        AMT_ALWAYS_INLINE void mtv_helper_loop(ValueType* c, 
+            ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
+            SizeType const nb, SizeType const block, SIMDLoop const& simd_loop
+        ) noexcept{
+            static_assert(SIMDLoop::type == impl::SIMD_PROD_TYPE::MTV);
+            if(nb == 0ul) return;
+            auto ai = a;
+            auto bi = b;
+            auto ci = c;
+            #pragma omp parallel for schedule(dynamic)
+            for(auto i = 0ul; i < na; i += block){
+                auto aj = ai + i;
+                auto bj = bi;
+                auto cj = ci + i;
+                auto ib = std::min(block,na-i);
+                for(auto j = 0ul; j < nb; ++j){
+                    auto jw = j * SIMDLoop::size;
+                    auto ak = aj + jw * wa;
+                    auto bk = bj + jw;
+                    auto ck = cj;
+                    simd_loop(ck, ak, bk, ib, wa);
+                }
             }
         }
-    }
 
-    template<std::size_t N, typename ValueType, typename SizeType>
-    AMT_ALWAYS_INLINE void mtv_helper_loop(ValueType* c, 
-        ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
-        SizeType const nb, SizeType const block
-    ) noexcept{
-        if(nb == 0ul) return;
-        auto ai = a;
-        auto bi = b;
-        auto ci = c;
-        #pragma omp parallel for schedule(dynamic)
-        for(auto i = 0ul; i < na; i += block){
-            auto aj = ai + i;
-            auto bj = bi;
-            auto cj = ci + i;
-            auto ib = std::min(block,na-i);
-            for(auto j = 0ul; j < nb; ++j){
-                auto jw = j * N;
-                auto ak = aj + jw * wa;
-                auto bk = bj + jw;
-                auto ck = cj;
-                simd_loop<N>(ck, ak, bk, ib, wa);
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void mtv_helper_switch(ValueType* c, 
+            ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
+            SizeType const nb, SizeType const block, SizeType const small_block
+        ) noexcept{
+            constexpr auto simd_type = impl::SIMD_PROD_TYPE::MTV;
+
+            auto wraped_fn = [a,b,c,wa,na,nb,block](auto&& loop){
+                impl::mtv_helper_loop(c,a,wa,na,b,nb,block,std::forward<decltype(loop)>(loop));
+            };
+            switch(small_block){
+                case 0: break;
+                case 1: wraped_fn(impl::simd_loop<simd_type,1ul>{}); break;
+                case 8: wraped_fn(impl::simd_loop<simd_type,8ul>{}); break;
+                case 16: wraped_fn(impl::simd_loop<simd_type,16ul>{}); break;
+                case 32: wraped_fn(impl::simd_loop<simd_type,32ul>{}); break;
+                case 128: wraped_fn(impl::simd_loop<simd_type,128ul>{}); break;
+                case 512: wraped_fn(impl::simd_loop<simd_type,512ul>{}); break;
+                default: [[fallthrough]];
+                case 64: wraped_fn(impl::simd_loop<simd_type,64ul>{}); break;
             }
         }
-    }
+
+    } // namespace impl
+    
 
     template<typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void mtv_helper(
@@ -71,26 +80,18 @@ namespace amt {
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
-        [[maybe_unused]] static SizeType const small_block = sqrt_pow_of_two(number_of_el_l1);
-        [[maybe_unused]] SizeType const block = (NA > number_of_el_l1 ? half_block : small_block);
+        [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
+        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : small_block);
+        [[maybe_unused]] SizeType block2 = small_block;
         
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        auto Nitr = NB / small_block;
-        auto Nrem = NB % small_block;
+        auto Nitr = NB / block2;
+        auto Nrem = NB % block2;
 
-        mtv_helper_loop<1ul>(ci,ai,WA,NA,bi,Nrem,block);
-        ai += Nrem * WA;
-        bi += Nrem;
-
-        switch(small_block){
-            case 8: mtv_helper_loop<8ul>(ci,ai,WA,NA,bi,Nitr,block); break;
-            case 16: mtv_helper_loop<16ul>(ci,ai,WA,NA,bi,Nitr,block); break;
-            case 32: mtv_helper_loop<32ul>(ci,ai,WA,NA,bi,Nitr,block); break;
-            case 128: mtv_helper_loop<128ul>(ci,ai,WA,NA,bi,Nitr,block); break;
-            default: mtv_helper_loop<64ul>(ci,ai,WA,NA,bi,Nitr,block); break;
-        }
+        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
+        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr,block1,block2);
 
         
     }
@@ -104,15 +105,8 @@ namespace amt {
         boost::numeric::ublas::layout::last_order
     ) noexcept
     {
-        constexpr auto simd_loop = [](ValueType* c, ValueType const* const a, ValueType const* const b, SizeType const n){
-            auto sum = *c;
-            #pragma omp simd
-            for(auto i = 0ul; i < n; ++i){
-                sum += a[i] * b[i];
-            }
-            *c = sum;
-        };
-
+        constexpr auto simd_type = impl::SIMD_PROD_TYPE::INNER;
+        auto simd_loop = impl::simd_loop<simd_type>{};
         auto ai = a;
         auto bi = b;
         auto ci = c;
@@ -125,7 +119,7 @@ namespace amt {
             auto aj = ai + i * WA;
             auto bj = bi;
             auto cj = ci + i;
-            simd_loop(cj,aj,bj,NB);
+            *cj = simd_loop(aj,bj,NB);
         }
         
     }

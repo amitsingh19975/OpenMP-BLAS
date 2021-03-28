@@ -6,6 +6,7 @@
 #include <cache_manager.hpp>
 #include <macros.hpp>
 #include <thread_utils.hpp>
+#include <simd_loop.hpp>
 
 namespace amt {
 
@@ -19,13 +20,8 @@ namespace amt {
     {
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / sizeof(ValueType);
         
-        constexpr auto simd_loop = [](ValueType* c, ValueType const* const a, ValueType const* const b, SizeType const n){
-            auto const cst = *b;
-            #pragma omp simd
-            for(auto i = 0ul; i < n; ++i){
-                c[i] += (a[i] * cst);
-            }
-        };
+        constexpr auto simd_type = impl::SIMD_PROD_TYPE::OUTER;
+        constexpr auto simd_loop = impl::simd_loop<simd_type>{};
 
         auto const NA = na[0] * na[1];
         auto const NB = nb[0] * nb[1];
@@ -96,6 +92,8 @@ namespace amt {
             );
         }
 
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(nc.data())> >;
+
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
@@ -106,13 +104,11 @@ namespace amt {
         
         if constexpr( std::is_same_v<out_layout_type, boost::numeric::ublas::layout::first_order> ){
             return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
-                using size_type = std::decay_t< std::remove_pointer_t<decltype(nc_ptr)> >;
                 size_type const wc[2] = {1ul, nc_ptr[0]};
                 outer_prod_helper(cptr,nc_ptr,wc,aptr,na_ptr,bptr,nb_ptr,nths);
             };
         }else{
             return [cptr,nc_ptr,aptr,na_ptr,bptr,nb_ptr,nths]{
-                using size_type = std::decay_t< std::remove_pointer_t<decltype(nc_ptr)> >;
                 size_type const wc[2] = {nc_ptr[1],1ul};
                 outer_prod_helper(cptr,nc_ptr,wc,bptr,nb_ptr,aptr,na_ptr,nths);
             };

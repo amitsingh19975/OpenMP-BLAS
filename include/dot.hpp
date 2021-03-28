@@ -6,34 +6,35 @@
 #include <cache_manager.hpp>
 #include <macros.hpp>
 #include <thread_utils.hpp>
+#include <simd_loop.hpp>
 
 namespace amt {
 
     namespace dot_impl
     {
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE auto simd_loop(ValueType const* a, ValueType const* b, SizeType const n){
-            auto sum = ValueType{};
-            #pragma omp simd reduction(+:sum)
-            for(auto i = 0ul; i < n; ++i){
-                sum += (a[i] * b[i]);
-            }
-            return sum;
-        };
 
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE auto section_two_loop(ValueType const* a, ValueType const* b, SizeType const n, SizeType const block){
+        template<typename ValueType, typename SizeType, typename SIMDLoop>
+        AMT_ALWAYS_INLINE auto section_two_loop(ValueType const* a, ValueType const* b, 
+            SizeType const n, SizeType const block, SIMDLoop const& simd_loop
+        ) noexcept{
+            static_assert(SIMDLoop::type == impl::SIMD_PROD_TYPE::INNER);
+
             ValueType sum{};
             #pragma omp parallel for schedule(static) reduction(+:sum)
             for(auto i = 0ul; i < n; i += block){
                 auto ib = std::min(block, n - i);
-                sum += dot_impl::simd_loop(a + i, b + i, ib);
+                sum += simd_loop(a + i, b + i, ib);
             }
             return sum;
         };
 
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE auto section_three_loop(ValueType const* a, ValueType const* b, SizeType const n, SizeType const block2, SizeType const block3){
+        template<typename ValueType, typename SizeType, typename SIMDLoop>
+        AMT_ALWAYS_INLINE auto section_three_loop(ValueType const* a, ValueType const* b, 
+            SizeType const n, SizeType const block2, SizeType const block3, 
+            SIMDLoop const& simd_loop
+        ) noexcept{
+            static_assert(SIMDLoop::type == impl::SIMD_PROD_TYPE::INNER);
+            
             ValueType sum{};
             #pragma omp parallel reduction(+:sum)
             {
@@ -44,7 +45,7 @@ namespace amt {
                     #pragma omp for schedule(dynamic)
                     for(auto j = 0ul; j < ib; j += block2){
                         auto jb = std::min(block2, ib - j);
-                        sum += dot_impl::simd_loop(ai + j, bi + j, jb);
+                        sum += simd_loop(ai + j, bi + j, jb);
                     }
                 }
             }
@@ -68,21 +69,23 @@ namespace amt {
     ) noexcept
     {   
         [[maybe_unused]] constexpr auto size_in_bytes = sizeof(ValueType);
+        constexpr auto simd_type = impl::SIMD_PROD_TYPE::INNER;
+        constexpr auto simd_loop = impl::simd_loop<simd_type>{};
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l3 = cache_manager::size(2) / size_in_bytes;
 
         if( n < block1 ){
-            *c = dot_impl::simd_loop(a, b, n);
+            *c = simd_loop(a, b, n);
         }else if( n < number_of_el_l3 ){
             auto q = static_cast<int>(n / block2);
             auto num_threads = std::max(1, std::min(max_threads, q));
             threads::set_num_threads(num_threads);
 
-            *c = dot_impl::section_two_loop(a,b,n,block2);
+            *c = dot_impl::section_two_loop(a,b,n,block2,simd_loop);
         }else{
-            *c = dot_impl::section_three_loop(a,b,n,block2,block3);
+            *c = dot_impl::section_three_loop(a,b,n,block2,block3,simd_loop);
         }
     }
 
@@ -146,6 +149,8 @@ namespace amt {
     ) noexcept
     {
         [[maybe_unused]] constexpr auto size_in_bytes = sizeof(ValueType);
+        constexpr auto simd_type = impl::SIMD_PROD_TYPE::INNER;
+        constexpr auto simd_loop = impl::simd_loop<simd_type>{};
 
         [[maybe_unused]] static auto const number_of_el_l1 = cache_manager::size(0) / size_in_bytes;
         [[maybe_unused]] static auto const number_of_el_l2 = cache_manager::size(1) / size_in_bytes;
@@ -156,15 +161,15 @@ namespace amt {
         auto const n = na[0] * na[1];
 
         if( n < section_one_block ){
-            *c = dot_impl::simd_loop(a, b, n);
+            *c = simd_loop(a, b, n);
         }else if( n < number_of_el_l3 ){
             auto q = static_cast<int>(n / section_two_block);
             auto num_threads = std::max(1, std::min(max_threads, q));
             threads::set_num_threads(num_threads);
 
-            *c = dot_impl::section_two_loop(a,b,n,section_two_block);
+            *c = dot_impl::section_two_loop(a,b,n,section_two_block,simd_loop);
         }else{
-            *c = dot_impl::section_three_loop(a,b,n,section_two_block,section_three_block);
+            *c = dot_impl::section_three_loop(a,b,n,section_two_block,section_three_block,simd_loop);
         }
     }
 
