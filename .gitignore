@@ -4,6 +4,12 @@ dark/
 build/
 *
 !include/
+!assets/
+!assets/mtv
+!assets/mtv/col_major
+!assets/mtv/row_major
+!assets/mtv/col_major/*.png
+!assets/mtv/row_major/*.png
 !include/*.hpp
 !doc/
 !doc/assets
