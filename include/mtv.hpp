@@ -81,17 +81,16 @@ namespace amt {
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
-        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : small_block);
-        [[maybe_unused]] SizeType block2 = small_block;
+        [[maybe_unused]] SizeType const block = (NA > number_of_el_l1 ? half_block : small_block);
         
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        auto Nitr = NB / block2;
-        auto Nrem = NB % block2;
+        auto Nitr = NB / small_block;
+        auto Nrem = NB % small_block;
 
-        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
-        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr,block1,block2);
+        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block,1ul);
+        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr,block,small_block);
 
         
     }
