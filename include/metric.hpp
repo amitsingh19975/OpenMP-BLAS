@@ -274,7 +274,7 @@ namespace amt{
             for(auto&& [k,v] : m_data){
                 if(std::addressof(v) == pref) continue;
                 std::transform(v.plot.begin(), v.plot.end(), pref->plot.begin(), speed.begin(), [](double l, double r){
-                    return clamp(r / l);
+                    return r / l;
                 });
                 if constexpr(Smooth) moving_average(speed);
                 auto l = plt::semilogy(x_coord, speed);
