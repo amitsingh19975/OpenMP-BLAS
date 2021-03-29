@@ -55,10 +55,11 @@ namespace amt {
                 case 8: wraped_fn(impl::simd_loop<simd_type,8ul>{}); break;
                 case 16: wraped_fn(impl::simd_loop<simd_type,16ul>{}); break;
                 case 32: wraped_fn(impl::simd_loop<simd_type,32ul>{}); break;
-                case 128: wraped_fn(impl::simd_loop<simd_type,128ul>{}); break;
-                case 512: wraped_fn(impl::simd_loop<simd_type,512ul>{}); break;
-                default: [[fallthrough]];
                 case 64: wraped_fn(impl::simd_loop<simd_type,64ul>{}); break;
+                case 128: wraped_fn(impl::simd_loop<simd_type,128ul>{}); break;
+                case 256: wraped_fn(impl::simd_loop<simd_type,256ul>{}); break;
+                case 512: wraped_fn(impl::simd_loop<simd_type,512ul>{}); break;
+                default: assert(false && "Unknown block size");
             }
         }
 
@@ -79,18 +80,20 @@ namespace amt {
         auto const WA = std::max(wa[0],wa[1]);
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
+        [[maybe_unused]] static SizeType const number_of_el_l2 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
-        [[maybe_unused]] SizeType const block = (NA > number_of_el_l1 ? half_block : small_block);
+        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? number_of_el_l1 : small_block);
+        [[maybe_unused]] SizeType const block2 = (NA > half_block ? 1ul : small_block);
         
         auto ai = a;
         auto bi = b;
         auto ci = c;
-        auto Nitr = NB / small_block;
-        auto Nrem = NB % small_block;
+        auto Nitr = NB / block2;
+        auto Nrem = NB % block2;
 
-        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block,1ul);
-        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr,block,small_block);
+        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
+        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr, block1, block2);
 
         
     }
