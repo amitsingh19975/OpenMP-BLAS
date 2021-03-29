@@ -23,7 +23,7 @@ namespace amt {
             auto ai = a;
             auto bi = b;
             auto ci = c;
-            #pragma omp parallel for schedule(dynamic)
+            #pragma omp for schedule(dynamic) nowait
             for(auto i = 0ul; i < na; i += block){
                 auto aj = ai + i;
                 auto bj = bi;
@@ -80,7 +80,6 @@ namespace amt {
         auto const WA = std::max(wa[0],wa[1]);
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
-        [[maybe_unused]] static SizeType const number_of_el_l2 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
         [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? number_of_el_l1 : small_block);
@@ -92,8 +91,12 @@ namespace amt {
         auto Nitr = NB / block2;
         auto Nrem = NB % block2;
 
-        impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
-        impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr, block1, block2);
+        #pragma omp parallel
+        {
+            impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
+            #pragma omp barrier
+            impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr, block1, block2);
+        }
 
         
     }
