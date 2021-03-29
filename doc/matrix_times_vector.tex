@@ -113,6 +113,132 @@ Total Number of Operations $=
 \end{cases}
 $
 
+\section{Algorithm}
+The matrix-vector product has two different algorithms: 
+Column-Major and Row-Major. We need to handle two different 
+layouts differently. 
+The Row-Major has the most straightforward algorithm because 
+the row elements lay contiguously in the memory, which improves 
+the cache locality compared against Column-Major, where the row 
+elements placed with a specific stride and hinder the cache locality.
+
+\subsection{Column-Major}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \SetKwFunction{SIMDFn}{$simd\_loop_N$}
+    \SetKwProg{Fn}{Function}{:}{end}
+
+    \tcp{$c$ is the pointer to the output vector}
+    \tcp{$a$ is the pointer to the input matrix}
+    \tcp{$b$ is the pointer to the input vector}
+    \tcp{$block$ is the block of the output vector}
+    \tcp{$w$ is the leading dimension of the matrix}
+    \tcp{$simd\_loop_N$ is a function where N signifies the amount of the unrolling done}
+    \Fn{\SIMDFn($c$, $a$, $b$, $block$, $w$)}{
+        \openmp{simd}
+        \For{\assign{i}{0} \KwTo $block$ \KwBy $1$}{
+            $    
+            \begin{matrix}
+                c[i] \gets c[i] +  A[i + w * 0] * b[0];\\
+                c[i] \gets c[i] +  A[i + w * 1] * b[1];\\
+                \vdots\\
+                c[i] \gets c[i] +  A[i + w * N] * b[N];\\
+            \end{matrix}
+            $
+        }
+    }
+    \caption{Matrix-Vector Product SIMD Function}
+\end{algorithm}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \SetKwFunction{SIMDFn}{$main\_loop_N$}
+    \SetKwProg{Fn}{Function}{:}{end}
+
+    \tcp{$c$ is the pointer to the output vector}
+    \tcp{$a$ is the pointer to the input matrix}
+    \tcp{$b$ is the pointer to the input vector}
+    \tcp{$na$ is the size of the column of the matrix $a$}
+    \tcp{$wa$ is the leading dimension of the matrix $a$}
+    \tcp{$nb$ is the size of the vector $b$}
+    \tcp{$block$ is the block of the output vector}
+    \tcp{$main\_loop_N$ is a function where N signifies the amount of the unrolling done}
+    \Fn{\SIMDFn($c$, $a$, $na$, $wa$, $b$, $nb$, $block$)}{
+        \If{$nb == 0$}{
+            \KwRet{};
+        }
+        \assignln{ai}{a}
+        \assignln{bi}{b}
+        \assignln{ci}{c}
+        \openmp{for schedule(dynamic)}
+        \For{\assign{i}{0} \KwTo $na$ \KwBy $block$}{
+            \assignln{aj}{ai + i}
+            \assignln{bj}{bi}
+            \assignln{cj}{ci + i}
+            \assignln{ib}{min(block,na-i)}
+            \For{\assign{j}{0} \KwTo $nb$ \KwBy $1$}{
+                \assignln{ak}{a + j \times N \times wa}
+                \assignln{bk}{bk + j \times N}
+                \assignln{ck}{cj}
+                $simd\_loop_N(ck,ak,bk,ib,wa)$
+            }
+        }
+    }
+    \caption{Matrix-Vector Product Loop}
+\end{algorithm}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \KwIn{$c$, $a$, $na$, $wa$, $b$, $nb$, $max\_threads$}
+    \tcp{$c$ is the pointer to the output vector}
+    \tcp{$a$ and $b$ are pointer to the matrix}
+    \tcp{$b$ are pointer to the vector}
+    \tcp{$na$ is the size of the column of the matrix $a$}
+    \tcp{$wa$ is the leading dimension of the matrix $a$}
+    \tcp{$nb$ is the size of the vector $b$}
+    \tcp{$max\_threads$ is the user provided thread count}
+
+    \Begin{
+        $omp\_set\_num\_threads(max\_threads)$
+
+        \assignln{number\_el\_L_1}{\lfloor \frac{S_{L_1}}{S_{data}} \rfloor}
+        \assignln{half\_block}{\lfloor \frac{number\_el\_L_1}{2} \rfloor}
+        \assign{small\_block}{2^{\lfloor \frac{k}{2} \rfloor}}
+        \tcp{Where $2^k$ is a power of two representation of $number\_el\_L_1$}
+
+        \If{$na > number\_el\_L_1$}{
+            \assignln{block_1}{number\_el\_L_1}
+            }
+        \Else{
+            \assignln{block_1}{small\_block}
+        }
+
+        \If{$na > half\_block$}{
+            \assignln{block_2}{1}
+        }
+        \Else{
+            \assignln{block_2}{small\_block}
+        }
+
+        \assignln{n_{itr}}{\lfloor \frac{nb}{block_2} \rfloor}
+        \assign{n_{rem}}{nb - (block_2 \times \lfloor \frac{nb}{block_2} \rfloor)}
+        \tcp{This equation gives the remainder}
+
+        \openmp{parallel}
+        \Begin{
+            $main\_loop_1(c,a,wa,na,b,n_{rem},block_1)$
+            
+            \assignln{at}{a + wa \times n_{rem}}
+            \assignln{bt}{b + n_{rem}}
+            $main\_loop_{block_2}(c,at,wa,na,bt,n_{iter},block_1)$
+        }
+
+    }
+
+    \caption{Matrix-Vector Product}
+\end{algorithm}
+
 \clearpage
 \section{Performance Plots and Speedup Summary For Column-Major}
 
