@@ -159,29 +159,29 @@ elements placed with a specific stride and hinder the cache locality.
     \tcp{$c$ is the pointer to the output vector}
     \tcp{$a$ is the pointer to the input matrix}
     \tcp{$b$ is the pointer to the input vector}
-    \tcp{$na$ is the size of the column of the matrix $a$}
-    \tcp{$wa$ is the leading dimension of the matrix $a$}
-    \tcp{$nb$ is the size of the vector $b$}
+    \tcp{$n_a$ is the size of the column of the matrix $a$}
+    \tcp{$w_a$ is the leading dimension of the matrix $a$}
+    \tcp{$n_b$ is the size of the vector $b$}
     \tcp{$block$ is the block of the output vector}
     \tcp{$main\_loop_N$ is a function where N signifies the amount of the unrolling done}
-    \Fn{\SIMDFn($c$, $a$, $na$, $wa$, $b$, $nb$, $block$)}{
-        \If{$nb == 0$}{
+    \Fn{\SIMDFn($c$, $a$, $n_a$, $w_a$, $b$, $n_b$, $block$)}{
+        \If{$n_b == 0$}{
             \KwRet{};
         }
         \assignln{ai}{a}
         \assignln{bi}{b}
         \assignln{ci}{c}
         \openmp{for schedule(dynamic)}
-        \For{\assign{i}{0} \KwTo $na$ \KwBy $block$}{
+        \For{\assign{i}{0} \KwTo $n_a$ \KwBy $block$}{
             \assignln{aj}{ai + i}
             \assignln{bj}{bi}
             \assignln{cj}{ci + i}
             \assignln{ib}{min(block,na-i)}
-            \For{\assign{j}{0} \KwTo $nb$ \KwBy $1$}{
+            \For{\assign{j}{0} \KwTo $n_b$ \KwBy $1$}{
                 \assignln{ak}{a + j \times N \times wa}
                 \assignln{bk}{bk + j \times N}
                 \assignln{ck}{cj}
-                $simd\_loop_N(ck,ak,bk,ib,wa)$
+                $simd\_loop_N(ck,ak,bk,ib,w_a)$
             }
         }
     }
@@ -190,13 +190,13 @@ elements placed with a specific stride and hinder the cache locality.
 
 \begin{algorithm}[H]
     \SetAlgoLined
-    \KwIn{$c$, $a$, $na$, $wa$, $b$, $nb$, $max\_threads$}
+    \KwIn{$c$, $a$, $n_a$, $w_a$, $b$, $n_b$, $max\_threads$}
     \tcp{$c$ is the pointer to the output vector}
     \tcp{$a$ and $b$ are pointer to the matrix}
     \tcp{$b$ are pointer to the vector}
-    \tcp{$na$ is the size of the column of the matrix $a$}
-    \tcp{$wa$ is the leading dimension of the matrix $a$}
-    \tcp{$nb$ is the size of the vector $b$}
+    \tcp{$n_a$ is the size of the column of the matrix $a$}
+    \tcp{$w_a$ is the leading dimension of the matrix $a$}
+    \tcp{$n_b$ is the size of the vector $b$}
     \tcp{$max\_threads$ is the user provided thread count}
 
     \Begin{
@@ -207,33 +207,84 @@ elements placed with a specific stride and hinder the cache locality.
         \assign{small\_block}{2^{\lfloor \frac{k}{2} \rfloor}}
         \tcp{Where $2^k$ is a power of two representation of $number\_el\_L_1$}
 
-        \If{$na > number\_el\_L_1$}{
+        \If{$n_a > number\_el\_L_1$}{
             \assignln{block_1}{number\_el\_L_1}
             }
         \Else{
             \assignln{block_1}{small\_block}
         }
 
-        \If{$na > half\_block$}{
+        \If{$n_a > half\_block$}{
             \assignln{block_2}{1}
         }
         \Else{
             \assignln{block_2}{small\_block}
         }
 
-        \assignln{n_{itr}}{\lfloor \frac{nb}{block_2} \rfloor}
-        \assign{n_{rem}}{nb - (block_2 \times \lfloor \frac{nb}{block_2} \rfloor)}
+        \assignln{n_{itr}}{\lfloor \frac{n_b}{block_2} \rfloor}
+        \assign{n_{rem}}{n_b - (block_2 \times \lfloor \frac{n_b}{block_2} \rfloor)}
         \tcp{This equation gives the remainder}
 
         \openmp{parallel}
         \Begin{
-            $main\_loop_1(c,a,wa,na,b,n_{rem},block_1)$
+            $main\_loop_1(c,a,w_a,n_a,b,n_{rem},block_1)$
             
-            \assignln{at}{a + wa \times n_{rem}}
+            \assignln{at}{a + w_a \times n_{rem}}
             \assignln{bt}{b + n_{rem}}
-            $main\_loop_{block_2}(c,at,wa,na,bt,n_{iter},block_1)$
+            $main\_loop_{block_2}(c,at,w_a,n_a,bt,n_{iter},block_1)$
         }
 
+    }
+
+    \caption{Matrix-Vector Product}
+\end{algorithm}
+
+\subsection{Row-Major}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \SetKwFunction{SIMDFn}{$simd\_loop$}
+    \SetKwProg{Fn}{Function}{:}{end}
+
+    \tcp{$a$ is the pointer to the input matrix}
+    \tcp{$b$ is the pointer to the input vector}
+    \tcp{$n_b$ is the block of the output vector}
+    \Fn{\SIMDFn($a$, $b$, $n_b$)}{
+        \assignln{sum}{0}
+        \openmp{simd}
+        \For{\assign{i}{0} \KwTo $n_b$ \KwBy $1$}{
+            \assignln{sum}{sum + a[i] \times b[i]}
+        }
+        \KwRet{sum}
+    }
+    \caption{Matrix-Vector Product SIMD Function}
+\end{algorithm}
+
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \KwIn{$c$, $a$, $n_a$, $w_a$, $b$, $n_b$, $max\_threads$}
+    \tcp{$c$ is the pointer to the output vector}
+    \tcp{$a$ and $b$ are pointer to the matrix}
+    \tcp{$b$ are pointer to the vector}
+    \tcp{$n_a$ is the size of the column of the matrix $a$}
+    \tcp{$w_a$ is the leading dimension of the matrix $a$}
+    \tcp{$n_b$ is the size of the vector $b$}
+    \tcp{$max\_threads$ is the user provided thread count}
+
+    \Begin{
+        $omp\_set\_num\_threads(max\_threads)$
+
+        \assignln{ai}{a}
+        \assignln{bi}{b}
+        \assignln{ci}{c}
+        
+        \openmp{parallel for schedule(static)}
+        \For{\assign{i}{0} \KwTo $n_a$ \KwBy $1$}{
+            \assignln{aj}{ai + i * w_a}
+            \assignln{bj}{bi}
+            \assignln{cj}{ci + i}
+            \assignln{cj}{simd\_loop(aj,bj,n_b)}
+        }
     }
 
     \caption{Matrix-Vector Product}
