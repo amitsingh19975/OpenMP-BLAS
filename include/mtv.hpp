@@ -23,7 +23,7 @@ namespace amt {
             auto ai = a;
             auto bi = b;
             auto ci = c;
-            #pragma omp for schedule(dynamic) nowait
+            #pragma omp for schedule(dynamic)
             for(auto i = 0ul; i < na; i += block){
                 auto aj = ai + i;
                 auto bj = bi;
@@ -94,7 +94,6 @@ namespace amt {
         #pragma omp parallel
         {
             impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
-            #pragma omp barrier
             impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr, block1, block2);
         }
 
