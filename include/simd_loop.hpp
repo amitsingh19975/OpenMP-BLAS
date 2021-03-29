@@ -46,53 +46,6 @@ namespace amt::impl{
 
     };
 
-    #define MTV_UNROLL_LOOP1(C,A,B,I) \
-        C[I] += A[I] * b[0];
-    
-    #define MTV_UNROLL_LOOP8_IMPL(C,A,B,W,I,J) \
-        C[I] += A[I + W * (0+J)] * b[0 + J]; \
-        C[I] += A[I + W * (1+J)] * b[1 + J]; \
-        C[I] += A[I + W * (2+J)] * b[2 + J]; \
-        C[I] += A[I + W * (3+J)] * b[3 + J]; \
-        C[I] += A[I + W * (4+J)] * b[4 + J]; \
-        C[I] += A[I + W * (5+J)] * b[5 + J]; \
-        C[I] += A[I + W * (6+J)] * b[6 + J]; \
-        C[I] += A[I + W * (7+J)] * b[7 + J]; \
-    
-    #define MTV_UNROLL_LOOP16_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP8_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP8_IMPL(C,A,B,W,I,J + 8) \
-    
-    #define MTV_UNROLL_LOOP32_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP16_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP16_IMPL(C,A,B,W,I,J + 16) \
-    
-    #define MTV_UNROLL_LOOP64_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP32_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP32_IMPL(C,A,B,W,I,J + 32) \
-    
-    #define MTV_UNROLL_LOOP128_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP64_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP64_IMPL(C,A,B,W,I,J + 64) \
-    
-    #define MTV_UNROLL_LOOP256_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP128_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP128_IMPL(C,A,B,W,I,J + 128) \
-    
-    #define MTV_UNROLL_LOOP512_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP256_IMPL(C,A,B,W,I,J) \
-        MTV_UNROLL_LOOP256_IMPL(C,A,B,W,I,J + 256) \
-
-    #define MTV_UNROLL_LOOP1(C,A,B,I) C[I] += A[I] * b[0];
-    
-    #define MTV_UNROLL_LOOP8(C,A,B,W,I) MTV_UNROLL_LOOP8_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP16(C,A,B,W,I) MTV_UNROLL_LOOP16_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP32(C,A,B,W,I) MTV_UNROLL_LOOP32_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP64(C,A,B,W,I) MTV_UNROLL_LOOP64_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP128(C,A,B,W,I) MTV_UNROLL_LOOP128_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP256(C,A,B,W,I) MTV_UNROLL_LOOP256_IMPL(C,A,B,W,I,0)
-    #define MTV_UNROLL_LOOP512(C,A,B,W,I) MTV_UNROLL_LOOP512_IMPL(C,A,B,W,I,0)
-
     template<std::size_t N>
     struct simd_loop<SIMD_PROD_TYPE::MTV,N>{
         constexpr static auto type = SIMD_PROD_TYPE::MTV;
@@ -104,49 +57,52 @@ namespace amt::impl{
 
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, ValueType const* b, SizeType const n, SizeType const w) const noexcept{
+            #define AMT_UNROLL_STATEMENT(OFFSET,C,A,B,W,I) C[I] += A[I + W * OFFSET] * b[OFFSET];
+            
             #pragma omp simd
             for(auto i = 0ul; i < n; ++i){
                 if constexpr(N == 1){
-                    MTV_UNROLL_LOOP1(c,a,b,i);
+                    AMT_UNROLL_LOOP1(c,a,b,w,i);
                 }else if constexpr(N == 8){
-                    MTV_UNROLL_LOOP8(c,a,b,w,i);
+                    AMT_UNROLL_LOOP8(c,a,b,w,i);
                 }else if constexpr(N == 16){
-                    MTV_UNROLL_LOOP16(c,a,b,w,i);
+                    AMT_UNROLL_LOOP16(c,a,b,w,i);
                 }else if constexpr(N == 32){
-                    MTV_UNROLL_LOOP32(c,a,b,w,i);
+                    AMT_UNROLL_LOOP32(c,a,b,w,i);
                 }else if constexpr(N == 64){
-                    MTV_UNROLL_LOOP64(c,a,b,w,i);
+                    AMT_UNROLL_LOOP64(c,a,b,w,i);
                 }else if constexpr(N == 128){
-                    MTV_UNROLL_LOOP128(c,a,b,w,i);
+                    AMT_UNROLL_LOOP128(c,a,b,w,i);
                 }else if constexpr(N == 256){
-                    MTV_UNROLL_LOOP256(c,a,b,w,i);
+                    AMT_UNROLL_LOOP256(c,a,b,w,i);
                 }else{
-                    MTV_UNROLL_LOOP512(c,a,b,w,i);
+                    AMT_UNROLL_LOOP512(c,a,b,w,i);
                 }
             }
+            
+            #undef AMT_UNROLL_STATEMENT
         }
 
     };
-
     
-    #undef MTV_UNROLL_LOOP1
-    #undef MTV_UNROLL_LOOP8
-    #undef MTV_UNROLL_LOOP16
-    #undef MTV_UNROLL_LOOP32
-    #undef MTV_UNROLL_LOOP64
-    #undef MTV_UNROLL_LOOP128
-    #undef MTV_UNROLL_LOOP256
-    #undef MTV_UNROLL_LOOP512
-    #undef MTV_UNROLL_LOOP8_IMPL
-    #undef MTV_UNROLL_LOOP16_IMPL
-    #undef MTV_UNROLL_LOOP32_IMPL
-    #undef MTV_UNROLL_LOOP64_IMPL
-    #undef MTV_UNROLL_LOOP128_IMPL
-    #undef MTV_UNROLL_LOOP256_IMPL
-    #undef MTV_UNROLL_LOOP512_IMPL
-    
-
 } // namespace amt::impl
 
+
+#undef AMT_UNROLL_LOOP1
+#undef AMT_UNROLL_LOOP8
+#undef AMT_UNROLL_LOOP16
+#undef AMT_UNROLL_LOOP32
+#undef AMT_UNROLL_LOOP64
+#undef AMT_UNROLL_LOOP128
+#undef AMT_UNROLL_LOOP256
+#undef AMT_UNROLL_LOOP512
+#undef AMT_UNROLL_LOOP1_IMPL
+#undef AMT_UNROLL_LOOP8_IMPL
+#undef AMT_UNROLL_LOOP16_IMPL
+#undef AMT_UNROLL_LOOP32_IMPL
+#undef AMT_UNROLL_LOOP64_IMPL
+#undef AMT_UNROLL_LOOP128_IMPL
+#undef AMT_UNROLL_LOOP256_IMPL
+#undef AMT_UNROLL_LOOP512_IMPL
 
 #endif // AMT_BENCHMARK_SIMD_LOOP_HPP
