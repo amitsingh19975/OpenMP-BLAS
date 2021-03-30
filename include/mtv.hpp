@@ -52,6 +52,8 @@ namespace amt {
             switch(small_block){
                 case 0: break;
                 case 1: wraped_fn(impl::simd_loop<simd_type,1ul>{}); break;
+                case 2: wraped_fn(impl::simd_loop<simd_type,2ul>{}); break;
+                case 4: wraped_fn(impl::simd_loop<simd_type,4ul>{}); break;
                 case 8: wraped_fn(impl::simd_loop<simd_type,8ul>{}); break;
                 case 16: wraped_fn(impl::simd_loop<simd_type,16ul>{}); break;
                 case 32: wraped_fn(impl::simd_loop<simd_type,32ul>{}); break;
@@ -82,8 +84,9 @@ namespace amt {
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
+        [[maybe_unused]] static SizeType total_size = small_block * small_block;
         [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? number_of_el_l1 : small_block);
-        [[maybe_unused]] SizeType const block2 = (NA > half_block ? 1ul : small_block);
+        [[maybe_unused]] SizeType const block2 = (NA > total_size ? 1ul : small_block);
         
         auto ai = a;
         auto bi = b;

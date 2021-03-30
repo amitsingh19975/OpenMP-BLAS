@@ -51,8 +51,8 @@ namespace amt::impl{
         constexpr static auto type = SIMD_PROD_TYPE::MTV;
         constexpr static std::size_t size = N;
         static_assert(
-            (N==1ul) || (N==8ul) || (N==16ul) || (N==32ul) ||
-            (N==64ul) || (N==128ul) || (N==256ul) || (N==512ul)
+            (N < 1024ul) && N && !(N & (N - 1)),
+            "N should be a power of 2 and less than 1024, but not 0"
         );
 
         template<typename ValueType, typename SizeType>
@@ -63,6 +63,10 @@ namespace amt::impl{
             for(auto i = 0ul; i < n; ++i){
                 if constexpr(N == 1){
                     AMT_UNROLL_LOOP1(c,a,b,w,i);
+                }else if constexpr(N == 2){
+                    AMT_UNROLL_LOOP2(c,a,b,w,i);
+                }else if constexpr(N == 4){
+                    AMT_UNROLL_LOOP4(c,a,b,w,i);
                 }else if constexpr(N == 8){
                     AMT_UNROLL_LOOP8(c,a,b,w,i);
                 }else if constexpr(N == 16){
@@ -89,6 +93,8 @@ namespace amt::impl{
 
 
 #undef AMT_UNROLL_LOOP1
+#undef AMT_UNROLL_LOOP2
+#undef AMT_UNROLL_LOOP4
 #undef AMT_UNROLL_LOOP8
 #undef AMT_UNROLL_LOOP16
 #undef AMT_UNROLL_LOOP32
@@ -97,6 +103,8 @@ namespace amt::impl{
 #undef AMT_UNROLL_LOOP256
 #undef AMT_UNROLL_LOOP512
 #undef AMT_UNROLL_LOOP1_IMPL
+#undef AMT_UNROLL_LOOP2_IMPL
+#undef AMT_UNROLL_LOOP4_IMPL
 #undef AMT_UNROLL_LOOP8_IMPL
 #undef AMT_UNROLL_LOOP16_IMPL
 #undef AMT_UNROLL_LOOP32_IMPL
