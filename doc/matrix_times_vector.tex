@@ -204,6 +204,7 @@ elements placed with a specific stride and hinder the cache locality.
 
         \assignln{number\_el\_L_1}{\lfloor \frac{S_{L_1}}{S_{data}} \rfloor}
         \assignln{half\_block}{\lfloor \frac{number\_el\_L_1}{2} \rfloor}
+        \assignln{total\_block\_size}{small\_block \times small\_block}
         \assign{small\_block}{2^{\lfloor \frac{k}{2} \rfloor}}
         \tcp{Where $2^k$ is a power of two representation of $number\_el\_L_1$}
 
@@ -214,7 +215,7 @@ elements placed with a specific stride and hinder the cache locality.
             \assignln{block_1}{small\_block}
         }
 
-        \If{$n_a > half\_block$}{
+        \If{$n_a > total\_block\_size$}{
             \assignln{block_2}{1}
         }
         \Else{
