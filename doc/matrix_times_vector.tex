@@ -234,6 +234,81 @@ elements placed with a specific stride and hinder the cache locality.
     \caption{Matrix-Vector Product}
 \end{algorithm}
 
+The Column-Major product is quite tricky and complicated if 
+we cannot control the instruction set. 
+The row elements are $x$ strides away from each other and 
+paralyse the cache predictor or cache locality. 
+The cache predictor brings the cache line size elements 
+from memory, which are place contiguously. 
+Each element in the result vector is the product of the 
+matrix's row vector and the whole vector. 
+
+For OpenMP to do its magic, we need to fill the $L_1$ cache with 
+the result vector block, block of the input vector's matrix and block. 
+We divide the load through the threads, where each thread has 
+its private cache, and they calculate a small block of the 
+result vector without hindering the other vectors. 
+The result vector calculation is done by dividing it into 
+smaller chunk or block and handing over the block to each thread, 
+which removes the dependency within the different blocks and 
+eradicates the data races and synchronization. 
+The loop which manages the block for the result 
+vectors must be multithreaded, and each thread needs to fill 
+the $L_1$ cache with the output vector and a column vector of the matrix 
+as large as it can so that the registers can fetch the blocks as fast 
+as possible from the cache rather than fetching from memory, which adds 
+an overhead to the performance. To fit the output vector, the matrix and the vector, 
+we previously discussed fact and the \ref{fig:mtv_col_block_diagram} 
+for the variable convention; we derive the following equation.
+
+\begin{equation}
+    S_{L_1} = S_{data}(m_cn_c + m_c + n_c)
+    \label{eq:mtv_col_block} 
+\end{equation}
+
+\begin{figure}[htb]
+    \centering
+    \caption{Matrix-Vector Block Diagram}
+    \includegraphics[width=8cm]{../assets/mtv/col_major/block_diagram.png} %
+    \label{fig:mtv_col_block_diagram}
+\end{figure}
+
+
+For the small length of the result vector, which is less than the L1 
+cache size, to maximize the block in the L1 cache, the row block and 
+column block must be identical, $m_c = n_c$, which makes the matrix a square matrix.
+
+Let $m_c = n_c = B_{small}$
+\begin{align*}
+    S_{L_1} &= S_{data}(m_cn_c + m_c + n_c)\\
+    S_{L_1} &= S_{data}(B_{small} \times B_{small} + B_{small} + B_{small})\\
+    S_{L_1} &= S_{data}(B_{small}^2 + 2B_{small})\\
+\end{align*}
+
+\begin{equation}
+    B_{small}^2 + 2B_{small} = \frac{S_{L_1}}{S_{data}}
+    \label{eq:mtv_col_small_block} 
+\end{equation}
+
+$B_{small}^2$ is much larger than the $2B_{small}$ in \ref{eq:mtv_col_small_block}, so we can ignore the smaller term.
+
+\[B_{small}^2 = \frac{S_{L_1}}{S_{data}}\]
+
+We can represent $\frac{S_{L_1}}{S_{data}}$ in form of power of two because 
+we know both $S_{L_1}$ and $S_{data}$ are power of two. Therefore, the division must 
+produce a power of two. Let the exponent of two be $k$, which gives us
+
+\[B_{small}^2 = 2^k\]
+
+\begin{equation}
+    B_{small} = 2^{\lfloor \frac{k}{2} \rfloor}
+    \label{eq:mtv_col_small_block_simplified} 
+\end{equation}
+
+The eqauation \ref{eq:mtv_col_small_block_simplified} is only valid if the length of the output
+vector is less than the $L_1$ cache.
+
+\clearpage
 \subsection{Row-Major}
 
 \begin{algorithm}[H]
