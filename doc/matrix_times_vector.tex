@@ -540,13 +540,13 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Boost.uBLAS & $97$ & $97$ \\
         \hline
-        OpenBLAS    & $98$ & $8$ \\
+        OpenBLAS    & $98$ & $38$ \\
         \hline
-        Eigen       & $97$ & $96$ \\
+        Eigen       & $97$ & $97$ \\
         \hline
-        Blis        & $65$ & $5$ \\
+        Blis        & $98$ & $98$ \\
         \hline
-        Intel's MKL & $52$ & $1$ \\
+        Intel's MKL & $61$ & $1$ \\
         \hline
     \end{tabular}
     
@@ -554,15 +554,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speed-down $\geq$ 1 [\%]} & \textbf{Speed-down $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $1$ & $1$ \\
+        Boost.uBLAS & $0$ & $0$ \\
         \hline
         OpenBLAS    & $0$ & $0$ \\
         \hline
         Eigen       & $1$ & $1$ \\
         \hline
-        Blis        & $33$ & $1$ \\
+        Blis        & $7$ & $1$ \\
         \hline
-        Intel's MKL & $46$ & $1$ \\
+        Intel's MKL & $37$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -574,15 +574,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $98$ & $97$ \\
+        Boost.uBLAS & $98$ & $98$ \\
         \hline
-        OpenBLAS    & $87$ & $31$ \\
+        OpenBLAS    & $92$ & $47$ \\
         \hline
-        Eigen       & $98$ & $97$ \\
+        Eigen       & $98$ & $96$ \\
         \hline
-        Blis        & $82$ & $0$ \\
+        Blis        & $87$ & $0$ \\
         \hline
-        Intel's MKL & $75$ & $2$ \\
+        Intel's MKL & $76$ & $1$ \\
         \hline
     \end{tabular}
     
@@ -592,13 +592,13 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Boost.uBLAS & $0$ & $0$ \\
         \hline
-        OpenBLAS    & $11$ & $0$ \\
+        OpenBLAS    & $6$ & $0$ \\
         \hline
         Eigen       & $0$ & $0$ \\
         \hline
-        Blis        & $16$ & $1$ \\
+        Blis        & $11$ & $2$ \\
         \hline
-        Intel's MKL & $23$ & $0$ \\
+        Intel's MKL & $22$ & $1$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -615,17 +615,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $68.657$& $15.4648$ \\
+        Boost.uBLAS.Tensor  & $63.1299$& $16.3994$ \\
         \hline
-        Boost.uBLAS         & $1.88885$& $0.36405$ \\
+        Boost.uBLAS         & $1.04371$& $0.275396$ \\
         \hline
-        Intel's MKL         & $82.9976$& $16.2728$ \\
+        Intel's MKL         & $82.2283$& $15.6702$ \\
         \hline
-        OpenBLAS            & $31.0462$& $9.46484$ \\
+        OpenBLAS            & $31.4436$& $9.49543$ \\
         \hline
-        Blis                & $28.7954$& $12.5415$ \\
+        Blis                & $28.142$& $12.4837$ \\
         \hline
-        Eigen               & $11.2304$& $3.85244$ \\
+        Eigen               & $7.59804$& $4.15489$ \\
         \hline
     \end{tabular}
 
@@ -637,17 +637,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $35.6327$ & $7.39512$ \\
+        Boost.uBLAS.Tensor  & $37.9093$ & $7.66141$ \\
         \hline
-        Boost.uBLAS         & $1.19679$ & $0.254521$ \\
+        Boost.uBLAS         & $0.585254$ & $0.184873$ \\
         \hline
-        Intel's MKL         & $34.9999$ & $6.91274$ \\
+        Intel's MKL         & $46.0515$ & $6.78875$ \\
         \hline
-        OpenBLAS            & $12.4044$ & $4.59443$ \\
+        OpenBLAS            & $12.3714$ & $4.69513$ \\
         \hline
-        Blis                & $14.1552$ & $5.86746$ \\
+        Blis                & $14.4262$ & $5.90106$ \\
         \hline
-        Eigen               & $4.72151$ & $2.07815$ \\
+        Eigen               & $5.1347$ & $2.0504$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -659,17 +659,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $11.6605$& $2.62649$ \\
+        Boost.uBLAS.Tensor  & $10.7218$& $2.78522$ \\
         \hline
-        Boost.uBLAS         & $0.320797$& $0.0618291$ \\
+        Boost.uBLAS         & $0.17726$& $0.0467724$ \\
         \hline
-        Intel's MKL         & $14.0961$& $2.76373$ \\
+        Intel's MKL         & $13.9654$& $2.66137$ \\
         \hline
-        OpenBLAS            & $5.2728$& $1.60748$ \\
+        OpenBLAS            & $5.34028$& $1.61268$ \\
         \hline
-        Blis                & $4.89052$& $2.13$ \\
+        Blis                & $4.77956$& $2.12019$ \\
         \hline
-        Eigen               & $1.90734$& $0.654287$ \\
+        Eigen               & $1.29043$& $0.705654$ \\
         \hline
     \end{tabular}
 
@@ -681,17 +681,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $12.1035$ & $2.51193$ \\
+        Boost.uBLAS.Tensor  & $12.8768$ & $2.60238$ \\
         \hline
-        Boost.uBLAS         & $0.406518$ & $0.0864542$ \\
+        Boost.uBLAS         & $0.198795$ & $0.0627965$ \\
         \hline
-        Intel's MKL         & $11.8886$ & $2.34808$ \\
+        Intel's MKL         & $15.6425$ & $2.30596$ \\
         \hline
-        OpenBLAS            & $4.21346$ & $1.56061$ \\
+        OpenBLAS            & $4.20224$ & $1.59481$ \\
         \hline
-        Blis                & $4.80814$ & $1.99302$ \\
+        Blis                & $4.90021$ & $2.00443$ \\
         \hline
-        Eigen               & $1.60378$ & $0.705893$ \\
+        Eigen               & $1.74412$ & $0.696469$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -703,15 +703,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $36.3486$ & $42.4797$ \\
+        Boost.uBLAS         & $60.4862$ & $59.5483$ \\
         \hline
-        Intel's MKL         & $0.827217$ & $0.950343$ \\
+        Intel's MKL         & $0.767739$ & $1.04653$ \\
         \hline
-        OpenBLAS            & $2.21144$ & $1.63392$ \\
+        OpenBLAS            & $2.00772$ & $1.72708$ \\
         \hline
-        Blis                & $2.38431$ & $1.23309$ \\
+        Blis                & $2.24326$ & $1.31366$ \\
         \hline
-        Eigen               & $6.1135$ & $4.01427$ \\
+        Eigen               & $8.30871$ & $3.947$ \\
         \hline
     \end{tabular}
 
@@ -723,15 +723,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $29.7735$ & $29.055$ \\
+        Boost.uBLAS         & $64.7741$ & $41.4415$ \\
         \hline
-        Intel's MKL         & $1.01808$ & $1.06978$ \\
+        Intel's MKL         & $0.823193$ & $1.12854$ \\
         \hline
-        OpenBLAS            & $2.87258$ & $1.60958$ \\
+        OpenBLAS            & $3.06427$ & $1.63178$ \\
         \hline
-        Blis                & $2.51729$ & $1.26036$ \\
+        Blis                & $2.6278$ & $1.29831$ \\
         \hline
-        Eigen               & $7.54688$ & $3.55852$ \\
+        Eigen               & $7.38297$ & $3.73654$ \\
         \hline
     \end{tabular}
 \end{table}
