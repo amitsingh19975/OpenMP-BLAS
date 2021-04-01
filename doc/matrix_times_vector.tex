@@ -269,7 +269,7 @@ for the variable convention; we derive the following equation.
 \begin{figure}[htb]
     \centering
     \caption{Matrix-Vector Block Diagram}
-    \includegraphics[width=8cm]{../assets/mtv/col_major/block_diagram.png} %
+    \includegraphics[width=10cm]{../assets/mtv/col_major/block_diagram.png} %
     \label{fig:mtv_col_block_diagram}
 \end{figure}
 
@@ -292,21 +292,126 @@ Let $m_c = n_c = B_{small}$
 
 $B_{small}^2$ is much larger than the $2B_{small}$ in \ref{eq:mtv_col_small_block}, so we can ignore the smaller term.
 
-\[B_{small}^2 = \frac{S_{L_1}}{S_{data}}\]
+\[B_{small}^2 < \frac{S_{L_1}}{S_{data}}\]
 
 We can represent $\frac{S_{L_1}}{S_{data}}$ in form of power of two because 
 we know both $S_{L_1}$ and $S_{data}$ are power of two. Therefore, the division must 
 produce a power of two. Let the exponent of two be $k$, which gives us
 
-\[B_{small}^2 = 2^k\]
+\begin{align*}
+    B_{small}^2 &< 2^k\\
+    B_{small} &< 2^{\frac{k}{2} }
+\end{align*}
+
+Here, $k$ can be both even or odd. We will have a fractional value if $k$ is odd, 
+and we cannot have a fractional value because we have no control over the registers, 
+and registers are always discrete, which is a multiple of a power of two. 
+We try to maximize the register use, and if the value is fractional, 
+it will not fill the registers fully, and it is a wastage of processing power. 
+There might be a case when the register has only one element, and subsequent 
+iteration will have to fill the register with more elements; we could have filled 
+the register with the following elements and had processed more elements rather 
+than waiting for subsequent iteration, which is a wastage of cycles.
+
+\begin{align*}
+    2^{\lfloor \frac{k}{2} \rfloor} &\leq 2^{\frac{k}{2}} \leq 2^{\lceil \frac{k}{2} \rceil}\\
+    \lfloor \frac{k}{2} \rfloor &\leq \frac{k}{2} \leq \lceil \frac{k}{2} \rceil\\
+\end{align*}
+
+using this relation and taking the lower bound, we have
 
 \begin{equation}
-    B_{small} = 2^{\lfloor \frac{k}{2} \rfloor}
+    B_{small} \leq 2^{\lfloor \frac{k}{2} \rfloor}
     \label{eq:mtv_col_small_block_simplified} 
 \end{equation}
 
 The eqauation \ref{eq:mtv_col_small_block_simplified} is only valid if the length of the output
 vector is less than the $L_1$ cache.
+
+$B_{small}$ is the lower bound, so now, we need to find the upper bound. 
+To find the upper bound, we will use the fact that each thread has its 
+private cache, an $L_1$ cache. Using the equation \ref{eq:mtv_col_block}, 
+we can maximize the output vector's block by putting an 
+input vector element into the register, making the block of 
+the input vector one, $m_c$ by putting an input vector element into the 
+register, which makes the block of the input vector one, $n_c = 1$. We do not need $n_c$
+in the $L_1$ cache, so we remove it from the equation \ref{eq:mtv_col_block}.
+
+\begin{align*}
+    S_{L_1} &= S_{data}(m_cn_c + m_c)\\
+    S_{L_1} &= S_{data}(m_c + m_c)\\
+    S_{L_1} &= S_{data}(2m_c)\\
+    m_c &= \frac{S_{L_1}}{2S_{data}}\\
+\end{align*}
+
+When $M < \frac{S_{L_1}}{S_{data}}$ then $m_c = B_{small}$, otherwise, $m_c = \frac{S_{L_1}}{2S_{data}}$.
+
+\vspace*{0.5 cm}
+Now, we need to find block $n_c$, where $n_c$ is an unrolling factor. 
+The unrolling factor helps to bring the block of column vectors 
+in the cache, and the block is the size of the cache line. 
+If the cache line size and $m_c$ are of the same size, then the 
+cache misses minimized. We found that $n_c$ is a decreasing value 
+through experiments and depends on the maximum dimension, 
+where it reaches the minimum value of one when the maximum dimension 
+is equal to or exceeds the $L_1$ cache size.
+
+We see this behaviour due to the cache misses as the dimension 
+increase in size, the block $n_c$ starts to replace the block of 
+output vector $m_c$ using the LRU policy, so on the subsequent iteration, 
+the replaced block of the output $m_c$ again needs to bring back to the $L_1$ cache.
+
+Let $cm_X$ be the cache miss where $X$ is the size of the block.
+For the large block of $n_c$ and the large dimension.
+
+$Total\ Cache\ Misses = $ cache miss for bringing the block $m_c$ of the output into the cache $+$
+cache miss for bringing the block $m_c \times n_c$ of the matrix $A$ into the cache $+$
+cache miss for bringing the block $m_c - Size(Register)$ of the output into the cache back which was
+replaced due to eviction + cache miss for bringing the block $n_c$ of the input into the cache.
+
+\[Total\ Cache\ Misses = cm_{m_c} + cm_{m_cn_c} + cm_{m_c - Size(Register)} + cm_{n_c}\]
+
+If the $n_c = 1$ for the large length then $cm_{n_c} = 0$ because it will reside inside the register 
+and there is no cache eviction. Therefore, $cm_{m_c - Size(Register)} = 0$, so we have
+\begin{align*}
+    Total\ Cache\ Misses &= cm_{m_c} + cm_{m_c}\\
+    Total\ Cache\ Misses &= 2cm_{m_c}\\
+\end{align*}
+
+Using this fact, we can deduce
+\[1 \leq n_c \leq B_{small}\]
+
+Since $n_c$ is a decreasing value and we decrease $n_c$ by the power of two 
+because we need to use the register efficiently. Let $S_{max}$ be the maximum dimension 
+of the matrix.
+
+\begin{figure}[htb]
+    \centering
+    \caption{Input Vector Block Divison Diagram}
+    \includegraphics[width=15cm]{../assets/mtv/col_major/input_block_diagram.png} %
+\end{figure}
+
+Using the previously derived facts, we know $\frac{B_{small}}{2^k} = 1$ 
+when $\frac{S_{L_1}}{S_{data}} \leq S_{max}$
+
+\[\frac{B_{small}}{2^k} = 1\]
+\[B_{small} = 2^k\]
+\[k = \log_2{B_{small}}\]
+\[kS_{block} = \frac{S_{L_1}}{S_{data}}\]
+\[S_{block} = \frac{S_{L_1}}{kS_{data}}\]
+
+\begin{equation}
+    S_{block} = \frac{S_{L_1}}{S_{data} \log_2{B_{small}}}
+\end{equation}
+
+If the $S_{block}$ is not the power of two then get the nearest power of two.
+\[2^q \leq S_{block} \leq 2^{q+1}\]
+
+Therefore,
+\begin{equation}
+    Block_2 = max(1, \frac{B_{small}}{2^{\lfloor \frac{S_{max}}{S_{block}} \rfloor}})
+    \label{eq:mtv_col_nc_block} 
+\end{equation}
 
 \clearpage
 \subsection{Row-Major}
