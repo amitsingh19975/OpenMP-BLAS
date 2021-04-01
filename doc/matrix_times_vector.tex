@@ -231,7 +231,7 @@ elements placed with a specific stride and hinder the cache locality.
 
     }
 
-    \caption{Matrix-Vector Product}
+    \caption{Col-Major Matrix-Vector Product}
 \end{algorithm}
 
 The Column-Major product is quite tricky and complicated if 
@@ -268,7 +268,7 @@ for the variable convention; we derive the following equation.
 
 \begin{figure}[htb]
     \centering
-    \caption{Matrix-Vector Block Diagram}
+    \caption{Column-Major Matrix-Vector Block Diagram}
     \includegraphics[width=10cm]{../assets/mtv/col_major/block_diagram.png} %
     \label{fig:mtv_col_block_diagram}
 \end{figure}
@@ -462,8 +462,21 @@ Therefore,
         }
     }
 
-    \caption{Matrix-Vector Product}
+    \caption{Row-Major Matrix-Vector Product}
 \end{algorithm}
+
+The Row-Major product is the simplest one because the row elements 
+are contiguous in memory; therefore, each thread assigned to each 
+row vector, and they are responsible for each element of the output 
+vector. The distribution of the row-vector to the threads simplifies 
+the problem to the vector-vector inner product. The inner product of 
+the row-vector and the input vector gives an element of the output vector.
+
+\begin{figure}[htb]
+    \centering
+    \caption{Row-Major Matrix-Vector Block Diagram}
+    \includegraphics[width=15cm]{../assets/mtv/row_major/block_diagram.png} %
+\end{figure}
 
 \clearpage
 \section{Performance Plots and Speedup Summary For Column-Major}
