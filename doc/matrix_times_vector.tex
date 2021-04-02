@@ -207,7 +207,9 @@ elements placed with a specific stride and hinder the cache locality.
         \assignln{max\_size}{max(na,nb)}
         \assign{small\_block}{2^{\lfloor \frac{k}{2} \rfloor}}
         \tcp{Where $2^k$ is a power of two representation of $number\_el\_L_1$}
-        \assignln{block_2}{max(1, \frac{small\_size}{2^{\lfloor \frac{max\_size}{\log_2{small\_block}} \rfloor}})}
+        
+        \assignln{k\_factor}{nearest\_power\_of\_2(\frac{number\_el\_L_1}{\log_2{small\_block}})}
+        \assignln{block_2}{max(1, \frac{small\_size}{2^{\lfloor \frac{max\_size}{k\_factor} \rfloor}})}
 
         \If{$n_a > number\_el\_L_1$}{
             \assignln{block_1}{half\_block}
