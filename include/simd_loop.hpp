@@ -52,7 +52,7 @@ namespace amt::impl{
         constexpr static std::size_t size = N;
         static_assert(
             N && !(N & (N - 1)),
-            "N should be a power of 2, except 0"
+            "N should be a power of 2 and greater than 0"
         );
 
         template<typename ValueType, typename SizeType>
