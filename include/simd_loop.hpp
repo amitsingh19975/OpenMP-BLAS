@@ -71,21 +71,6 @@ namespace amt::impl{
         }
 
     };
-
-    template<std::size_t N, std::size_t K>
-    struct simd_loop<SIMD_PROD_TYPE::MTV,N,K>{
-        constexpr static auto type = SIMD_PROD_TYPE::MTV;
-        constexpr static std::size_t size = N;
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, ValueType const* b, SizeType const n, SizeType const w) const noexcept{
-            auto loop = simd_loop<type,K>{};
-            constexpr auto M = size / K;
-            for(auto i = 0ul; i < M; ++i){
-                loop(c,a + i * w * K,b + i * K,n,w);
-            }
-        }
-
-    };
     
 } // namespace amt::impl
 
