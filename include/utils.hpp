@@ -25,15 +25,29 @@ namespace amt{
         os <<'\n';
     }
 
-    AMT_ALWAYS_INLINE constexpr auto sqrt_pow_of_two(std::size_t N) noexcept{
+    AMT_ALWAYS_INLINE constexpr std::pair<std::size_t,std::size_t> sqrt_pow_of_two(std::size_t N) noexcept{
         std::size_t p = 0;
         N >>= 1;
         while(N) {
             N >>= 1;
             ++p;
         }
-        return 1u << (p >> 1);
+        p >>=1;
+        return {1ul<<p, p};
     }
+
+    AMT_ALWAYS_INLINE constexpr auto nearest_power_of_two(std::size_t N) noexcept{
+        std::size_t p = 0;
+        if (N && !(N & (N - 1)))
+            return N;
+        
+        while(N > (1<<(p+1))){
+            ++p;
+        }
+        return 1ul<<p;
+    }
+
+
 
 } // namespace amt
 

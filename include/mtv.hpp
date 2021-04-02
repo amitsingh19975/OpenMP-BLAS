@@ -83,11 +83,12 @@ namespace amt {
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
-        [[maybe_unused]] static SizeType small_block = sqrt_pow_of_two(number_of_el_l1);
+        [[maybe_unused]] static auto [small_block,count] = sqrt_pow_of_two(number_of_el_l1);
+        [[maybe_unused]] static SizeType k_factor = nearest_power_of_two(number_of_el_l1 / std::max(1ul,count));
         [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : small_block);
         [[maybe_unused]] SizeType const max_size = std::max(NA,NB);
-        [[maybe_unused]] SizeType const block2 = std::max(1ul, (small_block >> (max_size / 1024)));
-        
+        [[maybe_unused]] SizeType const block2 = std::max(1ul, (small_block >> (max_size / k_factor)));
+
         auto ai = a;
         auto bi = b;
         auto ci = c;
