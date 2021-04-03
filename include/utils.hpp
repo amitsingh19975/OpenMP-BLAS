@@ -5,7 +5,9 @@
 #include <ostream>
 #include <utility>
 #include <tuple>
+#include <type_traits>
 #include <macros.hpp>
+#include <boost/numeric/ublas/tensor/layout.hpp>
 
 namespace amt{
 
@@ -47,7 +49,23 @@ namespace amt{
         return 1ul<<p;
     }
 
+    template<typename T>
+    struct is_first_order : std::false_type{};
+    
+    template<typename T>
+    constexpr static bool is_first_order_v = is_first_order<T>::value;
+    
+    template<>
+    struct is_first_order<boost::numeric::ublas::layout::first_order> : std::true_type{};
 
+    template<typename T>
+    struct is_last_order : std::false_type{};
+    
+    template<typename T>
+    constexpr static bool is_last_order_v = is_last_order<T>::value;
+
+    template<>
+    struct is_last_order<boost::numeric::ublas::layout::last_order> : std::true_type{};
 
 } // namespace amt
 
