@@ -211,13 +211,13 @@ void blis_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
 
     auto t = amt::timer{};
     for(auto const& el : x){
-        double const ops = el * (2 * el - 1);
         auto sz = static_cast<std::size_t>(el);
         auto inc = static_cast<inc_t>(1);
         auto alpha = ValueType{1};
         auto one = ValueType(1);
         auto const M = static_cast<dim_t>(lset(sz));
         auto const N = static_cast<dim_t>(rset(sz));
+        double const ops = static_cast<double>(M * (2 * N - 1));
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
         tensor_t<ValueType,LayoutType> v(shape_t{1ul, static_cast<std::size_t>(N)}, one);
         tensor_t<ValueType,LayoutType> res(shape_t{1ul, static_cast<std::size_t>(M)});
@@ -329,7 +329,7 @@ int main(){
 
     // ublas_gemv<value_type,layout_t,max_iter>(x,m);
     // openblas_gemv<value_type,layout_t,max_iter>(x,m);
-    // blis_gemv<value_type,layout_t,max_iter>(x,m);
+    blis_gemv<value_type,layout_t,max_iter>(x,m);
     mkl_gemv<value_type,layout_t,max_iter>(x,m);
     openmp_gemv<value_type,layout_t,max_iter>(x,m);
     // eigen_gemv<value_type,layout_t,max_iter>(x,m);
