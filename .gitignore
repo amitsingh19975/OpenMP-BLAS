@@ -5,6 +5,8 @@ build/
 *
 !include/
 !assets/
+!test/
+!test/*
 !assets/mtv
 !assets/mtv/col_major
 !assets/mtv/row_major

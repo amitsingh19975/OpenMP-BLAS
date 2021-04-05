@@ -9,7 +9,8 @@ namespace amt::impl{
         NONE,
         INNER,
         OUTER,
-        MTV
+        MTV,
+        MTM
     };
 
     template<SIMD_PROD_TYPE OPType,std::size_t... Ns>
@@ -71,7 +72,7 @@ namespace amt::impl{
         }
 
     };
-    
+
 } // namespace amt::impl
 
 #endif // AMT_BENCHMARK_SIMD_LOOP_HPP

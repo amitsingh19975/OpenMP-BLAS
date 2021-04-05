@@ -67,6 +67,55 @@ namespace amt{
     template<>
     struct is_last_order<boost::numeric::ublas::layout::last_order> : std::true_type{};
 
+    namespace tag{
+        struct trans{};
+    }
+
+    template<typename ValueType, typename SizeType>
+    void pack(
+        ValueType* out, SizeType const wo,
+        ValueType const* in, SizeType const* wi,
+        SizeType const m,
+        SizeType const n
+    ) noexcept{
+
+        auto in0 = in;
+        auto out0 = out;
+
+        for(auto i = 0ul; i < n; ++i){
+            auto in1 = in0 + wi[1] * i;
+            auto out1 = out0 + wo * i;
+            #pragma omp simd
+            for(auto j = 0ul; j < m; ++j){
+                out1[j] = in1[j * wi[0]];
+            }
+        }
+
+    }
+
+    template<typename ValueType, typename SizeType>
+    void pack(
+        ValueType* out, SizeType const wo,
+        ValueType const* in, SizeType const* wi,
+        SizeType const m,
+        SizeType const n,
+        tag::trans /*transpose*/
+    ) noexcept{
+
+        auto in0 = in;
+        auto out0 = out;
+
+        for(auto i = 0ul; i < n; ++i){
+            auto in1 = in0 + i * wi[0];
+            auto out1 = out0 + wo * i;
+            #pragma omp simd
+            for(auto j = 0ul; j < m; ++j){
+                out1[j] = in1[j * wi[1]];
+            }
+        }
+
+    }
+
 } // namespace amt
 
 

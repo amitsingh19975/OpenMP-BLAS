@@ -238,7 +238,7 @@ void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         tensor_t<ValueType,LayoutType> A(shape_t{M, K},1.);
         tensor_t<ValueType,LayoutType> B(shape_t{K, N},1.);
         tensor_t<ValueType,LayoutType> res(shape_t{M, N});
-        auto bench_fn = amt::mtm(res, A, B, std::nullopt);
+        auto bench_fn = amt::mtm(res, A, B, std::nullopt,sz);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
         metric_data.update((ops / st));
@@ -377,33 +377,33 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 1024;
-    amt::range(x, 32., max_value, 1., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = 1<<16;
+    [[maybe_unused]]constexpr double max_value = 1024ul;
+    amt::range(x, 32., max_value, 32., std::plus<>{});
+    // [[maybe_unused]]constexpr double max_value = 1<<14;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
     // ublas_gemm<value_type,layout_t,max_iter>(x,m);
-    openblas_gemm<value_type,layout_t,max_iter>(x,m);
-    blis_gemm<value_type,layout_t,max_iter>(x,m);
-    mkl_gemm<value_type,layout_t,max_iter>(x,m);
-    // openmp_gemm<value_type,layout_t,max_iter>(x,m);
+    // openblas_gemm<value_type,layout_t,max_iter>(x,m);
+    // blis_gemm<value_type,layout_t,max_iter>(x,m);
+    // mkl_gemm<value_type,layout_t,max_iter>(x,m);
+    openmp_gemm<value_type,layout_t,max_iter>(x,m);
     eigen_gemm<value_type,layout_t,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
 
-    constexpr std::string_view plot_xlable = "Size [n = m = n], " SIZE_SUFFIX " iterating";
-    std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
-        double msz = static_cast<double>(Mset(static_cast<std::size_t>(sz)));
-        // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
-        return size_conv(msz);
-    });
+    // std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
+    //     double msz = static_cast<double>(Mset(static_cast<std::size_t>(sz)));
+    //     // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
+    //     return size_conv(msz);
+    // });
 
     // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
+        constexpr std::string_view plot_xlable = "Size [n = m = n], " SIZE_SUFFIX " iterating";
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x, "Performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]", plot_xlable);
             m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]");
