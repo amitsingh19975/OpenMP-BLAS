@@ -34,7 +34,7 @@ constexpr auto blis_gemv(
 
 TEMPLATE_TEST_CASE( "(FFF) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[fff_mtm]", float, double ) {
     namespace ub = boost::numeric::ublas;
-    constexpr auto MinSize = 9ul;
+    constexpr auto MinSize = 2ul;
     constexpr auto MaxSize = 32ul;
     constexpr auto Step = 1ul;
 
