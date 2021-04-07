@@ -81,17 +81,17 @@ namespace amt {
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type const data_size = sizeof(value_type);
-            constexpr static size_type const nr = VecLen / ( data_size * CHAR_BIT);
-            constexpr static size_type const mr = nr;
+            constexpr static size_type const nr = 4ul;//VecLen / ( data_size * CHAR_BIT);
+            constexpr static size_type const mr = 32ul;
 
             // m = (L2/L1)nr
             constexpr static size_type mc() noexcept{
-                return 16ul;//cache_manager::size(1) / (kc()*data_size);
+                return 32ul;//cache_manager::size(1) / (kc()*data_size);
             }
             
             // n = (L3/L1)nr
             constexpr static size_type nc() noexcept{
-                return 1024ul;//cache_manager::size(2) / (kc()*data_size);
+                return 1<<11;//cache_manager::size(2) / (kc()*data_size);
             }
             
             // k = L1/nr
@@ -117,22 +117,23 @@ namespace amt {
             [[maybe_unused]] SizeType const WB1 = (StridesFactor::factor[5] ? wb[1] : 1ul);
             [[maybe_unused]] constexpr auto MR = PartitionType::mr;
             [[maybe_unused]] constexpr auto NR = PartitionType::nr;
-            constexpr auto simd_type = SIMD_PROD_TYPE::INNER;
-            constexpr auto loop = simd_loop<simd_type>{};
+            constexpr auto simd_type = SIMD_PROD_TYPE::MTM;
+            constexpr auto loop = simd_loop<simd_type,MR,NR>{};
 
             auto M = nc[0];
             auto N = nc[1];
             auto K = nb[0];
 
-            for(auto j = 0ul; j < N; ++j){
+            for(auto j = 0ul; j < N; j+=NR){
                 auto ai = a;
                 auto bi = b + WB1 * j;
                 auto ci = c + WC1 * j;
+                auto jb = std::min(NR,N-j);
                 for(auto i = 0ul; i < M; ++i){
                     auto ak = ai + WA1 * i;
                     auto bk = bi;
                     auto ck = ci + WC0 * i;
-                    *ck += loop(ak,bk,K);
+                    loop(ck,WC1,ak,bk,WB1,K,jb);
                 }
             }
         }
@@ -202,7 +203,7 @@ namespace amt {
                     auto ci = ck;
                     auto kb = std::min(KB,K-k);
                     
-                    #pragma omp for schedule(static)
+                    #pragma omp for schedule(dynamic)
                     for(auto jj = 0ul; jj < jb; jj += NR){
                         auto pBjj = pB + jj * kb;
                         auto bijj = bi + jj * kb;
@@ -240,12 +241,7 @@ namespace amt {
                         auto pc = cptr;
                         auto pa = pA + tid * kb * MB;
                         auto pb = pB;
-                        // std::cout<<ib<<' '<<jb<<' '<<kb<<'\n';
-                        // std::cerr<<"\n-----A-----\n";
                         // debug::show(pA,NWA,NNA);
-                        // std::cerr<<"\n-----B-----\n";
-                        // debug::show(pB,NWB,NNB);
-                        // // debug::show(pA,packed_A.size() );
                         // exit(0);
                         impl::mtm_kernel<partition_type>(pc,NNC,wc,pa,NNA,NWA,pb,NNB,NWB,nfactor);
                     }
