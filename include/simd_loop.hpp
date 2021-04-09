@@ -78,69 +78,58 @@ namespace amt::impl{
     struct simd_loop<SIMD_PROD_TYPE::MTM,MR,NR>{
         constexpr static auto type = SIMD_PROD_TYPE::MTM;
         
-        template<std::size_t I = 0ul, bool IsMR = true, std::size_t M = 0ul, typename ValueType, typename SizeType>
-        constexpr void operator()(
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE constexpr void operator()(
             ValueType* c, SizeType const* wc,
-            ValueType const* const a,
-            ValueType const* const b,
+            ValueType const* a,
+            ValueType const* b,
             SizeType const K,
             SizeType const mr,
             SizeType const nr
         ) const noexcept{
-            static_assert((I <= MR + 1ul) || (I <= NR + 1ul));
-            if constexpr(IsMR){
-                if constexpr(I <= MR){
-                    switch(mr){
-                        case I: this->operator()<0ul,false,I>(c,wc,a,b,K,mr,nr); return;
-                        default: this->operator()<I + 1,true>(c,wc,a,b,K,mr,nr); return;
-                    }
-                }
-            }else{
-                if constexpr(I <= NR){
-                    switch(nr){
-                        case I: helper<M,I>(c,wc,a,b,K); return;
-                        default: this->operator()<I + 1,false,M>(c,wc,a,b,K,mr,nr); return;
-                    }
-                }
-            }
+            ValueType buff[MR * NR] = {0};
+            helper(buff,a,b,K,mr,nr);
+            copy_vec(c,wc,buff,mr,nr);
         }
         
 
     private:
         
-        template<std::size_t M, std::size_t N, typename ValueType, typename SizeType>
+        template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void helper(
-            ValueType* c, SizeType const* wc,
-            ValueType const* const a,
-            ValueType const* const b,
-            SizeType const K
+            ValueType* c,
+            ValueType const* a,
+            ValueType const* b,
+            SizeType const K,
+            SizeType const mr,
+            SizeType const nr
         ) const noexcept{
-            ValueType buff[MR*NR] = {0};
 
             for(auto k = 0ul; k < K; ++k){
-                auto ak = a + k * M;
-                auto bk = b + k * N;
+                auto ak = a + k * mr;
+                auto bk = b + k * nr;
                 #pragma omp simd
-                for(auto j = 0ul; j < N; ++j){
+                for(auto j = 0ul; j < NR; ++j){
                     auto ai = ak;
                     auto bval = bk[j];
-                    auto ci = buff + j * MR;
-                    for(auto i = 0ul; i < M; ++i){
+                    auto ci = c + j * MR;
+                    #pragma unroll(MR)
+                    for(auto i = 0ul; i < MR; ++i){
                         ci[i] += ai[i] * bval;
                     }
                 }
             }
-            copy_vec<M,N>(c,wc,buff);
+
         }
 
-        template<std::size_t M, std::size_t N, typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void copy_vec(ValueType* out, SizeType const* wo, ValueType const* in) const noexcept{
-            for(auto j = 0ul; j < N; ++j){
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void copy_vec(ValueType* out, SizeType const* wo, ValueType const* in, SizeType const mr, SizeType const nr) const noexcept{
+            for(auto j = 0ul; j < nr; ++j){
                 auto ai = in + j * MR;
                 auto ci = out + j * wo[1];
                 #pragma omp simd
-                for(auto i = 0ul; i < M; ++i){
-                    ci[i * wo[0]] += ai[i];
+                for(auto i = 0ul; i < mr; ++i){
+                    ci[i] += ai[i];
                 }
             }
         }

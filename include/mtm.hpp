@@ -15,37 +15,6 @@ namespace amt {
     
 
     namespace impl{
-        
-        template<std::size_t... Ns>
-        struct strides_factor{
-            constexpr static std::size_t size = sizeof...(Ns);
-            constexpr static std::array<std::size_t,size> factor = {Ns...};
-        };
-
-        template<typename LayoutType1, typename LayoutType2, typename OutLayoutType>
-        constexpr auto get_strides_factor() noexcept{
-            if constexpr(is_first_order_v<LayoutType1> && is_first_order_v<LayoutType2>){
-                if constexpr(is_first_order_v<OutLayoutType>) 
-                    return strides_factor<0,1,0,1,0,1>{};
-                else 
-                    return strides_factor<1,0,0,1,0,1>{};
-            }else if constexpr(is_last_order_v<LayoutType1> && is_first_order_v<LayoutType2>){
-                if constexpr(is_first_order_v<OutLayoutType>) 
-                    return strides_factor<0,1,1,0,0,1>{};
-                else 
-                    return strides_factor<1,0,1,0,0,1>{};
-            }else if constexpr(is_first_order_v<LayoutType1> && is_last_order_v<LayoutType2>){
-                if constexpr(is_first_order_v<OutLayoutType>) 
-                    return strides_factor<0,1,0,1,1,0>{};
-                else 
-                    return strides_factor<1,0,0,1,1,0>{};
-            }else{
-                if constexpr(is_first_order_v<OutLayoutType>) 
-                    return strides_factor<0,1,1,0,1,0>{};
-                else 
-                    return strides_factor<1,0,1,0,1,0>{};
-            }
-        }
 
         template<std::size_t VecLen, typename T>
         struct matrix_partition{
@@ -55,19 +24,22 @@ namespace amt {
             constexpr static size_type const nr = 6ul;//VecLen / ( data_size * CHAR_BIT);
             constexpr static size_type const mr = 16ul;
 
-            // m = (L2/L1)nr
             constexpr static size_type mc() noexcept{
-                return 16ul;//cache_manager::size(1) / (kc()*data_size);
+                return 64ul;//32ul;//nearest_power_of_two(cache_manager::size(1) / get_data_size_oblivious_kc()) >> 1;
             }
             
-            // n = (L3/L1)nr
             constexpr static size_type nc() noexcept{
-                return 1024ul;//cache_manager::size(2) / (kc()*data_size);
+                return 4096ul;//2048ul;//nearest_power_of_two(cache_manager::size(2) / get_data_size_oblivious_kc()) >> 1;
             }
             
-            // k = L1/nr
+            // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
-                return 256ul;//cache_manager::size(0) / ( (nr) * data_size );
+                return 256ul;//nearest_power_of_two(get_data_size_oblivious_kc() / data_size );
+            }
+
+        private:
+            constexpr static size_type get_data_size_oblivious_kc() noexcept{
+                return cache_manager::size(0) / (nr + mr);
             }
         };
         
@@ -95,7 +67,6 @@ namespace amt {
                     auto ib = std::min(MR,M-i);
                     loop(ck,wc,ak,bk,K,ib,jb);
                 }
-                // return;
             }
         }
 
@@ -103,46 +74,42 @@ namespace amt {
     } // namespace impl
     
 
-    template<typename ValueType, typename SizeType, typename StridesFactor>
+    template<typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void mtm_helper(
         ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
         ValueType const* a, [[maybe_unused]] SizeType const* na, [[maybe_unused]] SizeType const* wa,
         ValueType const* b, [[maybe_unused]] SizeType const* nb, [[maybe_unused]] SizeType const* wb,
-        [[maybe_unused]] int max_threads,
-        StridesFactor,
         SizeType ={}
         // boost::numeric::ublas::layout::last_order
     )
     {
-        SizeType const WC0 = (StridesFactor::factor[0] ? wc[0] : 1ul);
-        SizeType const WC1 = (StridesFactor::factor[1] ? wc[1] : 1ul);
-        SizeType const WA0 = (StridesFactor::factor[2] ? wa[0] : 1ul);
-        SizeType const WA1 = (StridesFactor::factor[3] ? wa[1] : 1ul);
-        SizeType const WB0 = (StridesFactor::factor[4] ? wb[0] : 1ul);
-        SizeType const WB1 = (StridesFactor::factor[5] ? wb[1] : 1ul);
+        SizeType const WC0 = wc[0];
+        SizeType const WC1 = wc[1];
+        SizeType const WA0 = wa[0];
+        SizeType const WA1 = wa[1];
+        SizeType const WB0 = wb[0];
+        SizeType const WB1 = wb[1];
         using partition_type = impl::matrix_partition<256ul,ValueType>;
 
         auto M = na[0];
         auto K = na[1];
         auto N = nb[1];
 
-
         auto aj = a;
         auto bj = b;
         auto cj = c;
 
-        auto const MB = partition_type::mc();
-        auto const NB = partition_type::nc();
-        auto const KB = partition_type::kc();
-        auto const NR = partition_type::nr;
-        auto const MR = partition_type::mr;
-
+        static auto const MB = partition_type::mc();
+        static auto const NB = partition_type::nc();
+        static auto const KB = partition_type::kc();
+        constexpr static auto const NR = partition_type::nr;
+        constexpr static auto const MR = partition_type::mr;
         
-        std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(max_threads);
-        std::size_t const buffB_sz = KB * ( NB + 1ul );
+        static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
+        static std::size_t const buffB_sz = KB * ( NB + 1ul );
 
-        aligned_buff<ValueType> buffA(buffA_sz);
-        aligned_buff<ValueType> buffB(buffB_sz);
+        static aligned_buff<ValueType> buffA(buffA_sz);
+        static aligned_buff<ValueType> buffB(buffB_sz);
 
         auto const pA = buffA.data();
         auto const pB = buffB.data();
@@ -214,9 +181,9 @@ namespace amt {
         using value_type1       = typename tensor_type1::value_type;
         using value_type2       = typename tensor_type2::value_type;
         using out_value_type    = typename out_type::value_type;
-        using out_layout_type   = typename out_type::layout_type;
-        using layout_type1      = typename tensor_type1::layout_type;
-        using layout_type2      = typename tensor_type2::layout_type;
+        // using out_layout_type   = typename out_type::layout_type;
+        // using layout_type1      = typename tensor_type1::layout_type;
+        // using layout_type2      = typename tensor_type2::layout_type;
 
         static_assert(
             std::is_same_v< value_type1, value_type2 > && 
@@ -235,8 +202,7 @@ namespace amt {
             );
         }
         
-        threads::set_num_threads(num_threads);
-        auto nths = threads::get_num_threads();
+        threads::clip_num_threads(num_threads);
         
         bool has_no_dim_err = (na[0] == nc[0]) && (na[1] == nb[0]) && (nc[1] == nb[1]);
 
@@ -257,9 +223,8 @@ namespace amt {
         auto const* na_ptr = na.data();
         auto const* nb_ptr = nb.data();
 
-        return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr,nths,Block]{
-            mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, nths,
-                impl::get_strides_factor<layout_type1,layout_type2,out_layout_type>(),Block
+        return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr,Block]{
+            mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, Block
             );
         };
     }
