@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <macros.hpp>
 #include <boost/numeric/ublas/tensor/layout.hpp>
+#include <iomanip>
 
 namespace amt{
 
@@ -90,7 +91,6 @@ namespace amt{
                 out1[j] = in1[j * wi[0]];
             }
         }
-
     }
 
     template<typename ValueType, typename SizeType>
@@ -115,6 +115,48 @@ namespace amt{
         }
 
     }
+
+    namespace debug
+    {   
+        template<typename ValueType, typename SizeType>
+        void show( ValueType* in, SizeType const wm, SizeType const wn, SizeType const m, SizeType const n, int width = 2ul){
+            std::stringstream ss;
+            auto in0 = in;
+            ss<<'\n';
+            for(auto i = 0ul; i < m; ++i){
+                auto in1 = in0 + wm * i;
+                for(auto j = 0ul; j < n; ++j){
+                    ss<<std::setfill('0')<<std::setw(width)<<in1[j * wn] << ' ';
+                }
+                ss<<'\n';
+            }
+            std::cerr<<ss.str();
+
+        }
+        
+        template<typename ValueType, typename SizeType>
+        void show( ValueType* in, SizeType const n, char del = '\n', int width = 2ul){
+            std::stringstream ss;
+            ss<<'\n';
+            for(auto i = 0ul; i < n; ++i){
+                ss<<std::setfill('0')<<std::setw(width)<<in[i] << del;
+            }
+            ss << '\n';
+            std::cerr<<ss.str();
+
+        }
+
+        template<typename ValueType, typename SizeType>
+        void show( ValueType* in, SizeType const* w, SizeType const* n, int width = 2ul){
+            show(in,w[0],w[1],n[0],n[1],width);
+        }
+        
+        template<typename ValueType, typename SizeType>
+        void show( ValueType* in, SizeType const* w, SizeType const m, SizeType const n, int width = 2ul){
+            show(in,w[0],w[1],m,n,width);
+        }
+
+    } // namespace debug
 
 } // namespace amt
 
