@@ -78,58 +78,70 @@ namespace amt::impl{
     struct simd_loop<SIMD_PROD_TYPE::MTM,MR,NR>{
         constexpr static auto type = SIMD_PROD_TYPE::MTM;
         
-        template<typename ValueType, typename SizeType>
-        auto operator()(
-            ValueType* c, SizeType const ldc,
+        template<std::size_t I = 0ul, bool IsMR = true, std::size_t M = 0ul, typename ValueType, typename SizeType>
+        constexpr void operator()(
+            ValueType* c, SizeType const* wc,
             ValueType const* const a,
-            ValueType const* const b, SizeType const ldb, 
+            ValueType const* const b,
             SizeType const K,
+            SizeType const mr,
             SizeType const nr
         ) const noexcept{
-            helper(c,ldc,a,b,ldb,K,nr);
+            static_assert((I <= MR + 1ul) || (I <= NR + 1ul));
+            if constexpr(IsMR){
+                if constexpr(I <= MR){
+                    switch(mr){
+                        case I: this->operator()<0ul,false,I>(c,wc,a,b,K,mr,nr); return;
+                        default: this->operator()<I + 1,true>(c,wc,a,b,K,mr,nr); return;
+                    }
+                }
+            }else{
+                if constexpr(I <= NR){
+                    switch(nr){
+                        case I: helper<M,I>(c,wc,a,b,K); return;
+                        default: this->operator()<I + 1,false,M>(c,wc,a,b,K,mr,nr); return;
+                    }
+                }
+            }
         }
         
 
     private:
         
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE static void helper(
-            ValueType* c,
+        template<std::size_t M, std::size_t N, typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void helper(
+            ValueType* c, SizeType const* wc,
             ValueType const* const a,
-            ValueType const* const b, SizeType const ldb,
+            ValueType const* const b,
             SizeType const K
-        ) noexcept{
+        ) const noexcept{
+            ValueType buff[MR*NR] = {0};
 
-            #pragma omp simd reduction(+:c[0:NR])
             for(auto k = 0ul; k < K; ++k){
-                auto aval = a[k];
-                auto bk = b + k;
-                for(auto i = 0ul; i < NR; ++i){
-                    c[i] += aval * bk[i * ldb];
+                auto ak = a + k * M;
+                auto bk = b + k * N;
+                #pragma omp simd
+                for(auto j = 0ul; j < N; ++j){
+                    auto ai = ak;
+                    auto bval = bk[j];
+                    auto ci = buff + j * MR;
+                    for(auto i = 0ul; i < M; ++i){
+                        ci[i] += ai[i] * bval;
+                    }
                 }
             }
-
-            // copy_vec(c,ldc,acc,nr);
+            copy_vec<M,N>(c,wc,buff);
         }
 
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE static void helper(
-            ValueType* c, SizeType const ldc,
-            ValueType const* const a,
-            ValueType const* const b, SizeType const ldb,
-            SizeType const K,
-            SizeType const nr
-        ) noexcept{
-            ValueType acc[NR] = {0};
-            helper(acc,a,b,ldb,K);;
-            copy_vec(c,ldc,acc,nr);
-        }
-
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE static void copy_vec(ValueType* out, SizeType const wo, ValueType const* in, SizeType const nr) noexcept{
-            #pragma omp simd
-            for(auto i = 0ul; i < nr; ++i){
-                out[i * wo] += in[i];
+        template<std::size_t M, std::size_t N, typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void copy_vec(ValueType* out, SizeType const* wo, ValueType const* in) const noexcept{
+            for(auto j = 0ul; j < N; ++j){
+                auto ai = in + j * MR;
+                auto ci = out + j * wo[1];
+                #pragma omp simd
+                for(auto i = 0ul; i < M; ++i){
+                    ci[i * wo[0]] += ai[i];
+                }
             }
         }
 

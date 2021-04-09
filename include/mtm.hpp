@@ -9,38 +9,9 @@
 #include <thread_utils.hpp>
 #include <simd_loop.hpp>
 #include <sstream>
+#include <aligned_buff.hpp>
 
 namespace amt {
-
-    namespace debug
-    {   
-        template<typename ValueType, typename SizeType>
-        constexpr void show( ValueType* in, SizeType const* w, SizeType const* n ){
-
-            auto in0 = in;
-            std::cerr<<'\n';
-            for(auto i = 0ul; i < n[0]; ++i){
-                auto in1 = in0 + w[0] * i;
-                for(auto j = 0ul; j < n[1]; ++j){
-                    // printf("%03d ",static_cast<int>(in1[j * w[1]]) );
-                    std::cerr<<in1[j * w[1]] << ' ';
-                }
-                std::cerr<<'\n';
-            }
-
-        }
-        
-        template<typename ValueType, typename SizeType>
-        void show( ValueType* in, SizeType const n, char del = '\n'){
-            std::stringstream ss;
-            ss<<'\n';
-            for(auto i = 0ul; i < n; ++i){
-                ss<<in[i] << del;
-            }
-            std::cerr<<ss.str();
-
-        }
-    } // namespace debug
     
 
     namespace impl{
@@ -81,60 +52,50 @@ namespace amt {
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type const data_size = sizeof(value_type);
-            constexpr static size_type const nr = 4ul;//VecLen / ( data_size * CHAR_BIT);
-            constexpr static size_type const mr = 32ul;
+            constexpr static size_type const nr = 6ul;//VecLen / ( data_size * CHAR_BIT);
+            constexpr static size_type const mr = 16ul;
 
             // m = (L2/L1)nr
             constexpr static size_type mc() noexcept{
-                return 32ul;//cache_manager::size(1) / (kc()*data_size);
+                return 16ul;//cache_manager::size(1) / (kc()*data_size);
             }
             
             // n = (L3/L1)nr
             constexpr static size_type nc() noexcept{
-                return 1<<11;//cache_manager::size(2) / (kc()*data_size);
+                return 1024ul;//cache_manager::size(2) / (kc()*data_size);
             }
             
             // k = L1/nr
             constexpr static size_type kc() noexcept{
-                return 512ul;//cache_manager::size(0) / ( nr * data_size );
+                return 256ul;//cache_manager::size(0) / ( (nr) * data_size );
             }
         };
         
-        template<typename PartitionType, typename ValueType, typename SizeType, typename StridesFactor>
+        template<typename PartitionType, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void mtm_kernel(
-            ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
-            ValueType const* a, [[maybe_unused]] SizeType const* na, [[maybe_unused]] SizeType const* wa,
-            ValueType const* b, [[maybe_unused]] SizeType const* nb, [[maybe_unused]] SizeType const* wb,
-            StridesFactor
-            // boost::numeric::ublas::layout::last_order
+            ValueType* c,       SizeType const* wc,
+            ValueType const* a,
+            ValueType const* b,
+            SizeType const M,   SizeType const N,   SizeType const K
         ) noexcept
         {
-            [[maybe_unused]] SizeType const WC0 = (StridesFactor::factor[0] ? wc[0] : 1ul);
-            [[maybe_unused]] SizeType const WC1 = (StridesFactor::factor[1] ? wc[1] : 1ul);
-            [[maybe_unused]] SizeType const WA0 = (StridesFactor::factor[2] ? wa[0] : 1ul);
-            [[maybe_unused]] SizeType const WA1 = (StridesFactor::factor[3] ? wa[1] : 1ul);
-            [[maybe_unused]] SizeType const WB0 = (StridesFactor::factor[4] ? wb[0] : 1ul);
-            [[maybe_unused]] SizeType const WB1 = (StridesFactor::factor[5] ? wb[1] : 1ul);
-            [[maybe_unused]] constexpr auto MR = PartitionType::mr;
-            [[maybe_unused]] constexpr auto NR = PartitionType::nr;
+            constexpr auto MR = PartitionType::mr;
+            constexpr auto NR = PartitionType::nr;
             constexpr auto simd_type = SIMD_PROD_TYPE::MTM;
             constexpr auto loop = simd_loop<simd_type,MR,NR>{};
-
-            auto M = nc[0];
-            auto N = nc[1];
-            auto K = nb[0];
-
-            for(auto j = 0ul; j < N; j+=NR){
+            for(auto j = 0ul; j < N; j += NR){
                 auto ai = a;
-                auto bi = b + WB1 * j;
-                auto ci = c + WC1 * j;
+                auto bi = b + j * K;
+                auto ci = c + wc[1] * j;
                 auto jb = std::min(NR,N-j);
-                for(auto i = 0ul; i < M; ++i){
-                    auto ak = ai + WA1 * i;
+                for(auto i = 0ul; i < M; i += MR){
+                    auto ak = ai + i * K;
                     auto bk = bi;
-                    auto ck = ci + WC0 * i;
-                    loop(ck,WC1,ak,bk,WB1,K,jb);
+                    auto ck = ci + wc[0] * i;
+                    auto ib = std::min(MR,M-i);
+                    loop(ck,wc,ak,bk,K,ib,jb);
                 }
+                // return;
             }
         }
 
@@ -151,7 +112,7 @@ namespace amt {
         StridesFactor,
         SizeType ={}
         // boost::numeric::ublas::layout::last_order
-    ) noexcept
+    )
     {
         SizeType const WC0 = (StridesFactor::factor[0] ? wc[0] : 1ul);
         SizeType const WC1 = (StridesFactor::factor[1] ? wc[1] : 1ul);
@@ -175,80 +136,66 @@ namespace amt {
         auto const KB = partition_type::kc();
         auto const NR = partition_type::nr;
         auto const MR = partition_type::mr;
+
         
-        std::vector<ValueType> packed_A( KB * ( MB + 1ul ) * static_cast<std::size_t>(max_threads) );
-        std::vector<ValueType> packed_B( KB * ( NB + 1ul ) );
+        std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(max_threads);
+        std::size_t const buffB_sz = KB * ( NB + 1ul );
 
-        constexpr auto nfactor = impl::strides_factor<
-            StridesFactor::factor[0],StridesFactor::factor[1],
-            StridesFactor::factor[2], StridesFactor::factor[3], 
-            StridesFactor::factor[4], StridesFactor::factor[5]
-        >{};
+        aligned_buff<ValueType> buffA(buffA_sz);
+        aligned_buff<ValueType> buffB(buffB_sz);
 
-        auto pA = packed_A.data();
-        auto pB = packed_B.data();
-
-        // std::cerr<< M<<' '<<N<<' '<<K<<'\n';
+        auto const pA = buffA.data();
+        auto const pB = buffB.data();
 
         #pragma omp parallel
         {
             for(auto j = 0ul; j < N; j += NB){
-                auto ak = aj;
-                auto bk = bj + WB1 * j;
-                auto ck = cj + WC1 * j;
-                auto jb = std::min(NB,N-j);
+                auto const ak = aj;
+                auto const bk = bj + WB1 * j;
+                auto const ck = cj + WC1 * j;
+                auto const jb = std::min(NB,N-j);
                 for(auto k = 0ul; k < K; k += KB){
-                    auto ai = ak + WA1 * k;
-                    auto bi = bk + WB0 * k;
-                    auto ci = ck;
-                    auto kb = std::min(KB,K-k);
+                    auto const ai = ak + WA1 * k;
+                    auto const bi = bk + WB0 * k;
+                    auto const ci = ck;
+                    auto const kb = std::min(KB,K-k);
                     
                     #pragma omp for schedule(dynamic)
                     for(auto jj = 0ul; jj < jb; jj += NR){
-                        auto pBjj = pB + jj * kb;
-                        auto bijj = bi + jj * kb;
-                        pack(pBjj, kb,
+                        auto jjb = std::min(jb-jj,NR);
+                        auto const pBjj = pB + jj * kb;
+                        auto const bijj = bi + jj * WB1;
+
+                        pack(pBjj, jjb,
                             bijj, wb,
-                            kb,std::min(jb-jj,NR)
+                            jjb, kb,
+                            tag::trans{}
                         );
                     }
 
                     #pragma omp for schedule(dynamic)
                     for(auto i = 0ul; i < M; i += MB){
-                        auto aptr = ai + WA0 * i;
-                        auto cptr = ci + WC0 * i;
-                        auto ib = std::min(MB,M-i);
-                        auto tid = static_cast<std::size_t>(omp_get_thread_num());
-                        
+                        auto const tid = static_cast<std::size_t>(omp_get_thread_num());
+                        auto const ib = std::min(MB,M-i);
+                        auto const aii = ai + WA0 * i;
+                        auto const aptr = pA + tid * kb * MB;
+                        auto const bptr = pB;
+                        auto const cptr = ci + WC0 * i;
+
                         for(auto ii = 0ul; ii < ib; ii += MR){
-                            auto pAii = pA + ( ii + tid * MB ) * kb;
-                            auto apii = aptr + ii * WA0;
-                            pack(pAii, kb, 
+                            auto iib = std::min(ib-ii,MR);
+                            auto const pAii = aptr + ii * kb;
+                            auto const apii = aii + ii * WA0;
+                            pack(pAii, iib, 
                                 apii, wa,
-                                kb, std::min(ib-ii,MR),
-                                tag::trans{}
+                                iib, kb
                             );
-                            // debug::show(pAii,WpA,NpA);
-                            // debug::show(pAii,packed_A.size() );
                         }
-
-                        SizeType const NNC[] = {ib,jb};
-                        SizeType const NNA[] = {kb,ib};
-                        SizeType const NNB[] = {kb,jb};
-                        SizeType const NWA[] = {1ul,kb};
-                        SizeType const NWB[] = {1ul,kb};
-
-                        auto pc = cptr;
-                        auto pa = pA + tid * kb * MB;
-                        auto pb = pB;
-                        // debug::show(pA,NWA,NNA);
-                        // exit(0);
-                        impl::mtm_kernel<partition_type>(pc,NNC,wc,pa,NNA,NWA,pb,NNB,NWB,nfactor);
+                        impl::mtm_kernel<partition_type>(cptr,wc,aptr,bptr,ib,jb,kb);
                     }
                 } 
             }
         }
-
 
     }
 
