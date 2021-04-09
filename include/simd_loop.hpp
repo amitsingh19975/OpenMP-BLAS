@@ -89,7 +89,7 @@ namespace amt::impl{
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
             helper(buff,a,b,K,mr,nr);
-            copy_vec(c,wc,buff,mr,nr);
+            copy_from_buff(c,wc,buff,mr,nr);
         }
         
 
@@ -123,7 +123,7 @@ namespace amt::impl{
         }
 
         template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void copy_vec(ValueType* out, SizeType const* wo, ValueType const* in, SizeType const mr, SizeType const nr) const noexcept{
+        AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const* wo, ValueType const* in, SizeType const mr, SizeType const nr) const noexcept{
             for(auto j = 0ul; j < nr; ++j){
                 auto ai = in + j * MR;
                 auto ci = out + j * wo[1];
