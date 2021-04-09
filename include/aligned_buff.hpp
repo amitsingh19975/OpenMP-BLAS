@@ -10,7 +10,7 @@
 namespace amt{
 
     template<typename ValueType, std::size_t Alignment = 32ul>
-    struct alinged_buff{
+    struct aligned_buff{
         using value_type    = ValueType;
         using size_type     = std::size_t;
         using alignment_type= std::align_val_t;
@@ -19,25 +19,25 @@ namespace amt{
 
         constexpr static alignment_type alignment = alignment_type{Alignment};
         
-        constexpr alinged_buff(size_type sz)
+        constexpr aligned_buff(size_type sz)
             : m_ptr(new(alignment) value_type[sz])
             , m_size(sz)
         {
             if(!m_ptr){
                 throw std::runtime_error(
-                    "amt::alinged_buff(size_type): unable to allocate aligned buffer"
+                    "amt::aligned_buff(size_type): unable to allocate aligned buffer"
                 );
             }
         }
         
-        constexpr alinged_buff(size_type sz, value_type val)
+        constexpr aligned_buff(size_type sz, value_type val)
             : m_ptr(new(alignment) value_type[sz])
             , m_size(sz)
         {
             std::fill_n(m_ptr,sz,val);
             if(!m_ptr){
                 throw std::runtime_error(
-                    "amt::alinged_buff(size_type): unable to allocate aligned buffer"
+                    "amt::aligned_buff(size_type): unable to allocate aligned buffer"
                 );
             }
         }
@@ -51,7 +51,7 @@ namespace amt{
             return m_ptr != nullptr;
         }
 
-        ~alinged_buff() noexcept{
+        ~aligned_buff() noexcept{
             delete[] m_ptr;
         }
 
