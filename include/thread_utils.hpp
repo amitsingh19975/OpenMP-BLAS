@@ -43,6 +43,17 @@ namespace amt{
             }
             omp_set_num_threads(m_user_threads);
         }
+
+        template<typename SizeType>
+        constexpr static void clip_num_threads(SizeType const& ths) noexcept{
+            int num = get_max_threads();
+            if constexpr(detail::is_optional<SizeType>::value){
+                num = std::max(num, static_cast<int>(ths.value_or(1)));
+            }else{
+                num = std::max(num, static_cast<int>(ths));
+            }
+            set_num_threads(std::optional<int>(num));
+        }
         
         template<typename SizeType = int>
         constexpr static SizeType get_num_threads() noexcept{
