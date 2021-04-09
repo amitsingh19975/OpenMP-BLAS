@@ -34,9 +34,7 @@ namespace amt{
             : m_ptr(new(alignment) value_type[sz])
             , m_size(sz)
         {
-            auto rem = sz % static_cast<size_type>(alignment);
-
-            std::fill_n(m_ptr,sz + rem,val);
+            std::fill_n(m_ptr,sz,val);
             if(!m_ptr){
                 throw std::runtime_error(
                     "amt::alinged_buff(size_type): unable to allocate aligned buffer"
