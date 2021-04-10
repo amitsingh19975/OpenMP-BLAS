@@ -32,6 +32,7 @@
         #define AMT_CACHELINE_SIZE 64
     #endif
 #endif
+#endif
 
 #ifndef AMT_CACHELINE_SIZE
     #define AMT_CACHELINE_SIZE 64
