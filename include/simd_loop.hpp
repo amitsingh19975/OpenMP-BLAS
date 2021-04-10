@@ -108,14 +108,11 @@ namespace amt::impl{
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
-                #pragma omp simd
+                #pragma omp simd safelen(NR)
                 for(auto j = 0ul; j < NR; ++j){
-                    auto ai = ak;
-                    auto bval = bk[j];
-                    auto ci = c + j * MR;
-                    #pragma unroll(MR)
+                    #pragma unroll
                     for(auto i = 0ul; i < MR; ++i){
-                        ci[i] += ai[i] * bval;
+                        c[j * MR + i] += bk[j] * ak[i];
                     }
                 }
             }
@@ -127,7 +124,7 @@ namespace amt::impl{
             for(auto j = 0ul; j < nr; ++j){
                 auto ai = in + j * MR;
                 auto ci = out + j * wo[1];
-                #pragma omp simd
+                #pragma omp simd safelen(MR)
                 for(auto i = 0ul; i < mr; ++i){
                     ci[i] += ai[i];
                 }

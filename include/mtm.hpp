@@ -16,25 +16,34 @@ namespace amt {
 
     namespace impl{
 
-        template<std::size_t VecLen, typename T>
+        template<std::size_t VecLen, std::size_t VecRegs, typename T>
         struct matrix_partition{
             using size_type = std::size_t;
             using value_type = T;
-            constexpr static size_type const data_size = sizeof(value_type);
-            constexpr static size_type const nr = 6ul;//VecLen / ( data_size * CHAR_BIT);
-            constexpr static size_type const mr = 16ul;
+            constexpr static size_type data_size = sizeof(value_type);
+            constexpr static size_type nr = 5ul;
+            constexpr static size_type mr = AMT_CACHELINE_SIZE / data_size;
+            constexpr static size_type num_of_el_in_vec_reg = VecLen / ( data_size * CHAR_BIT);
+            constexpr static size_type num_of_vec_reg_in_use = mr / num_of_el_in_vec_reg;
 
             constexpr static size_type mc() noexcept{
-                return 64ul;//32ul;//nearest_power_of_two(cache_manager::size(1) / get_data_size_oblivious_kc()) >> 1;
+                return mr << 1;
             }
             
             constexpr static size_type nc() noexcept{
-                return 4096ul;//2048ul;//nearest_power_of_two(cache_manager::size(2) / get_data_size_oblivious_kc()) >> 1;
+                // FIXME: Get set associativity of the L3 cache for Mac
+                // Mac only provides set associativity for L2 cache
+
+                auto assoc = cache_manager::assoc(2) == 1ul ? 16ul : cache_manager::assoc(2);
+                auto sets = cache_manager::size(2) / (assoc * cache_manager::line_size(2));
+                auto w = std::floor(static_cast<double>(assoc - 1ul)/( 1. + static_cast<double>(nr / mr) ));
+                auto sz = static_cast<std::size_t>(std::max(1.,w)) * sets * cache_manager::line_size(2);
+                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size) );
             }
             
             // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
-                return 256ul;//nearest_power_of_two(get_data_size_oblivious_kc() / data_size );
+                return nearest_power_of_two(get_data_size_oblivious_kc() / data_size );
             }
 
         private:
@@ -89,7 +98,7 @@ namespace amt {
         SizeType const WA1 = wa[1];
         SizeType const WB0 = wb[0];
         SizeType const WB1 = wb[1];
-        using partition_type = impl::matrix_partition<256ul,ValueType>;
+        using partition_type = impl::matrix_partition<256ul,16ul,ValueType>;
 
         auto M = na[0];
         auto K = na[1];
@@ -104,7 +113,7 @@ namespace amt {
         static auto const KB = partition_type::kc();
         constexpr static auto const NR = partition_type::nr;
         constexpr static auto const MR = partition_type::mr;
-        
+
         static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
         static std::size_t const buffB_sz = KB * ( NB + 1ul );
 
