@@ -10,50 +10,35 @@
 #include <simd_loop.hpp>
 #include <sstream>
 #include <aligned_buff.hpp>
+#include <cpuinfo.hpp>
 
 namespace amt {
     
 
     namespace impl{
-
         template<std::size_t VecLen, std::size_t VecRegs, typename T>
         struct matrix_partition{
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type data_size = sizeof(value_type);
-            constexpr static size_type nr = 5ul;
-            constexpr static size_type mr = AMT_CACHELINE_SIZE / data_size;
             constexpr static size_type num_of_el_in_vec_reg = VecLen / ( data_size * CHAR_BIT);
-            constexpr static size_type num_of_vec_reg_in_use = mr / num_of_el_in_vec_reg;
+            constexpr static size_type nr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>() + 1;
+            constexpr static size_type mr = std::max(1ul, (VecRegs >> 1) * (num_of_el_in_vec_reg / (nr - 1)));
 
             constexpr static size_type mc() noexcept{
-                constexpr auto cache_pos = 1ul;
-                auto assoc = cache_manager::assoc(cache_pos);
-                auto sets = cache_manager::size(cache_pos) / (assoc * cache_manager::line_size(cache_pos));
-                auto w = std::floor(static_cast<double>(assoc - 1ul)/( 1. + static_cast<double>(nr / mr) ));
-                auto sz = static_cast<std::size_t>(std::max(1.,w)) * sets * cache_manager::line_size(cache_pos);
-                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size));
+                auto sz = cache_manager::size(1) / (data_size * 6);
+                return nearest_power_of_two(sz / kc());
             }
             
             constexpr static size_type nc() noexcept{
-                // FIXME: Get set associativity of the L3 cache for Mac
-                // Mac only provides set associativity for L2 cache
-
-                auto assoc = cache_manager::assoc(2) == 1ul ? 16ul : cache_manager::assoc(2);
-                auto sets = cache_manager::size(2) / (assoc * cache_manager::line_size(2));
-                auto w = std::floor(static_cast<double>(assoc - 1ul)/( 1. + static_cast<double>(nr / mr) ));
-                auto sz = static_cast<std::size_t>(std::max(1.,w)) * sets * cache_manager::line_size(2);
-                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size));
+                auto sz = cache_manager::size(2) / (data_size * 6);
+                return nearest_power_of_two(sz / kc());
             }
             
             // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
-                return get_data_size_oblivious_kc() / data_size ;
-            }
-
-        private:
-            constexpr static size_type get_data_size_oblivious_kc() noexcept{
-                return cache_manager::size(0) / (mr);
+                auto sz = cache_manager::size(0) / (data_size << 1);
+                return sz / mr;
             }
         };
         
@@ -141,7 +126,7 @@ namespace amt {
                     auto const ci = ck;
                     auto const kb = std::min(KB,K-k);
                     
-                    #pragma omp for schedule(static)
+                    #pragma omp for schedule(dynamic)
                     for(auto jj = 0ul; jj < jb; jj += NR){
                         auto jjb = std::min(jb-jj,NR);
                         auto const pBjj = pB + jj * kb;
@@ -154,7 +139,7 @@ namespace amt {
                         );
                     }
 
-                    #pragma omp for schedule(static)
+                    #pragma omp for schedule(dynamic)
                     for(auto i = 0ul; i < M; i += MB){
                         auto const tid = static_cast<std::size_t>(omp_get_thread_num());
                         auto const ib = std::min(MB,M-i);

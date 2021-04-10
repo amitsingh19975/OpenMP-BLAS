@@ -158,6 +158,24 @@ namespace amt{
 
     } // namespace debug
 
+    constexpr std::size_t ct_sqrt(std::size_t res, std::size_t l, std::size_t r) noexcept{
+        if(l == r){
+            return r;
+        } else {
+            const auto mid = (r + l) / 2;
+
+            if(mid * mid >= res){
+                return ct_sqrt(res, l, mid);
+            } else {
+                return ct_sqrt(res, mid + 1, r);
+            }
+        }
+    }
+
+    constexpr std::size_t ct_sqrt(std::size_t res) noexcept{
+        return ct_sqrt(res, 1, res);
+    }
+
 } // namespace amt
 
 

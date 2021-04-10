@@ -1,0 +1,174 @@
+#if !defined(AMT_BENCHMARK_CPUINFO_HPP)
+#define AMT_BENCHMARK_CPUINFO_HPP
+
+#include <cstddef>
+#include <utils.hpp>
+
+namespace amt{
+
+// TODO: Add more CPU support
+enum class CPUFamily{
+    NONE,
+    INTEL_ICELAKE,
+    INTEL_SKYLAKE,
+    INTEL_BROADWELL,
+    INTEL_HASWELL,
+    INTEL_IVY_BRIDGE,
+    INTEL_KNIGHTS_LANDING
+};
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+struct cpu_info;
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_ICELAKE>{
+    constexpr static double fma_latency = 4;
+    constexpr static double fma_throughput = ( VecLen < 512ul ? 0.5 : 1. );
+    constexpr static double mul_latency = ( VecLen == 256ul ? 4. : 0. );
+    constexpr static double mul_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+    constexpr static double add_latency = ( VecLen == 256ul ? 4. : 0. );
+    constexpr static double add_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+};
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_SKYLAKE>{
+    constexpr static double fma_latency = 4;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 4;
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 4;
+    constexpr static double add_throughput = 0.5;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_BROADWELL>{
+    constexpr static double fma_latency = 5;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 3;
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_HASWELL>{
+    constexpr static double fma_latency = 5;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 5;
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_IVY_BRIDGE>{
+    constexpr static double fma_latency = 0;
+    constexpr static double fma_throughput = 0;
+    constexpr static double mul_latency = 5;
+    constexpr static double mul_throughput = 1;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<float, VecLen, CPUFamily::INTEL_KNIGHTS_LANDING>{
+    constexpr static double fma_latency = 6;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 0;
+    constexpr static double mul_throughput = 0;
+    constexpr static double add_latency = 0;
+    constexpr static double add_throughput = 0;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_ICELAKE>{
+    constexpr static double fma_latency = 4;
+    constexpr static double fma_throughput = ( VecLen < 512ul ? 0.5 : 1. );
+    constexpr static double mul_latency = ( VecLen == 256ul ? 4. : 0. );
+    constexpr static double mul_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+    constexpr static double add_latency = ( VecLen == 256ul ? 4. : 0. );
+    constexpr static double add_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_SKYLAKE>{
+    constexpr static double fma_latency = 4;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 4;
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 4;
+    constexpr static double add_throughput = 0.5;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_BROADWELL>{
+    constexpr static double fma_latency = 5;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = ( VecLen == 256ul ? 3. : 5. );
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_HASWELL>{
+    constexpr static double fma_latency = 5;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 5;
+    constexpr static double mul_throughput = 0.5;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_IVY_BRIDGE>{
+    constexpr static double fma_latency = 0;
+    constexpr static double fma_throughput = 0;
+    constexpr static double mul_latency = 5;
+    constexpr static double mul_throughput = 1;
+    constexpr static double add_latency = 3;
+    constexpr static double add_throughput = 1;
+};
+
+template<std::size_t VecLen>
+struct cpu_info<double, VecLen, CPUFamily::INTEL_KNIGHTS_LANDING>{
+    constexpr static double fma_latency = 6;
+    constexpr static double fma_throughput = 0.5;
+    constexpr static double mul_latency = 0;
+    constexpr static double mul_throughput = 0;
+    constexpr static double add_latency = 0;
+    constexpr static double add_throughput = 0;
+};
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+constexpr double fma_latency() noexcept{
+    using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
+    if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
+        return cpu_type::fma_latency;
+    }else{
+        return cpu_type::mul_latency + cpu_type::add_latency;
+    }
+}
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+constexpr double fma_throughput() noexcept{
+    using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
+    if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
+        return cpu_type::fma_throughput;
+    }else{
+        return cpu_type::mul_throughput + cpu_type::add_throughput;
+    }
+}
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+constexpr double calculate_nr() noexcept{
+    constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
+    constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
+    constexpr auto num = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
+    return ct_sqrt(static_cast<std::size_t>(lat * thr * num));
+}
+
+} // namespace amt
+
+
+#endif // AMT_BENCHMARK_CPUINFO_HPP
