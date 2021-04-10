@@ -27,7 +27,12 @@ namespace amt {
             constexpr static size_type num_of_vec_reg_in_use = mr / num_of_el_in_vec_reg;
 
             constexpr static size_type mc() noexcept{
-                return mr << 1;
+                constexpr auto cache_pos = 1ul;
+                auto assoc = cache_manager::assoc(cache_pos);
+                auto sets = cache_manager::size(cache_pos) / (assoc * cache_manager::line_size(cache_pos));
+                auto w = std::floor(static_cast<double>(assoc - 1ul)/( 1. + static_cast<double>(nr / mr) ));
+                auto sz = static_cast<std::size_t>(std::max(1.,w)) * sets * cache_manager::line_size(cache_pos);
+                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size));
             }
             
             constexpr static size_type nc() noexcept{
@@ -38,17 +43,17 @@ namespace amt {
                 auto sets = cache_manager::size(2) / (assoc * cache_manager::line_size(2));
                 auto w = std::floor(static_cast<double>(assoc - 1ul)/( 1. + static_cast<double>(nr / mr) ));
                 auto sz = static_cast<std::size_t>(std::max(1.,w)) * sets * cache_manager::line_size(2);
-                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size) );
+                return nearest_power_of_two(sz / (get_data_size_oblivious_kc() * data_size));
             }
             
             // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
-                return nearest_power_of_two(get_data_size_oblivious_kc() / data_size );
+                return get_data_size_oblivious_kc() / data_size ;
             }
 
         private:
             constexpr static size_type get_data_size_oblivious_kc() noexcept{
-                return cache_manager::size(0) / (nr + mr);
+                return cache_manager::size(0) / (mr);
             }
         };
         
@@ -136,7 +141,7 @@ namespace amt {
                     auto const ci = ck;
                     auto const kb = std::min(KB,K-k);
                     
-                    #pragma omp for schedule(dynamic)
+                    #pragma omp for schedule(static)
                     for(auto jj = 0ul; jj < jb; jj += NR){
                         auto jjb = std::min(jb-jj,NR);
                         auto const pBjj = pB + jj * kb;
@@ -149,7 +154,7 @@ namespace amt {
                         );
                     }
 
-                    #pragma omp for schedule(dynamic)
+                    #pragma omp for schedule(static)
                     for(auto i = 0ul; i < M; i += MB){
                         auto const tid = static_cast<std::size_t>(omp_get_thread_num());
                         auto const ib = std::min(MB,M-i);
