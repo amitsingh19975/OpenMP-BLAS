@@ -160,12 +160,31 @@ constexpr double fma_throughput() noexcept{
     }
 }
 
+template<typename T, typename U>
+constexpr T ceil(U num) noexcept{
+    return static_cast<T>( static_cast<std::size_t>(num > static_cast<std::size_t>(num) ? num + 1 : num) );
+}
+
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double calculate_nr() noexcept{
     constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
-    constexpr auto num = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
-    return ct_sqrt(static_cast<std::size_t>(lat * thr * num));
+    constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
+    constexpr auto sq = ct_sqrt(static_cast<std::size_t>(lat * thr * elements));
+    return sq;
+}
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+constexpr double calculate_mr() noexcept{
+    constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
+    constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
+    constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
+    constexpr double num = lat * thr * elements;
+    constexpr double mr_ratio = static_cast<double>(calculate_nr<ValueType,VecLen,CPUType>()) / elements;
+    constexpr double mr = ceil<double>(mr_ratio);
+    constexpr auto ratio = num / mr;
+    constexpr auto factor = ceil<std::size_t>(ratio);
+    return factor;
 }
 
 } // namespace amt

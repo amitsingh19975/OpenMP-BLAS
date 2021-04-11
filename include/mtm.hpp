@@ -16,14 +16,14 @@ namespace amt {
     
 
     namespace impl{
-        template<std::size_t VecLen, std::size_t VecRegs, typename T>
+        template<std::size_t VecLen, typename T>
         struct matrix_partition{
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type data_size = sizeof(value_type);
             constexpr static size_type num_of_el_in_vec_reg = VecLen / ( data_size * CHAR_BIT);
+            constexpr static size_type mr = calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
             constexpr static size_type nr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>() + 1;
-            constexpr static size_type mr = std::max(1ul, (VecRegs >> 1) * (num_of_el_in_vec_reg / (nr - 1)));
 
             constexpr static size_type mc() noexcept{
                 auto sz = cache_manager::size(1) / (data_size * 6);
@@ -38,7 +38,7 @@ namespace amt {
             // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
                 auto sz = cache_manager::size(0) / (data_size << 1);
-                return sz / mr;
+                return nearest_power_of_two(sz / mr);
             }
         };
         
@@ -88,7 +88,7 @@ namespace amt {
         SizeType const WA1 = wa[1];
         SizeType const WB0 = wb[0];
         SizeType const WB1 = wb[1];
-        using partition_type = impl::matrix_partition<256ul,16ul,ValueType>;
+        using partition_type = impl::matrix_partition<256ul,ValueType>;
 
         auto M = na[0];
         auto K = na[1];
@@ -104,8 +104,8 @@ namespace amt {
         constexpr static auto const NR = partition_type::nr;
         constexpr static auto const MR = partition_type::mr;
 
-        static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
-        static std::size_t const buffB_sz = KB * ( NB + 1ul );
+        std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
+        std::size_t const buffB_sz = KB * ( NB + 1ul );
 
         static aligned_buff<ValueType> buffA(buffA_sz);
         static aligned_buff<ValueType> buffB(buffB_sz);
