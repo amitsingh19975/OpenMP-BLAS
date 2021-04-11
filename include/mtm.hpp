@@ -78,7 +78,7 @@ namespace amt {
         ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
         ValueType const* a, [[maybe_unused]] SizeType const* na, [[maybe_unused]] SizeType const* wa,
         ValueType const* b, [[maybe_unused]] SizeType const* nb, [[maybe_unused]] SizeType const* wb,
-        SizeType ={}
+        SizeType = {}
         // boost::numeric::ublas::layout::last_order
     )
     {

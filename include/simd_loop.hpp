@@ -88,7 +88,11 @@ namespace amt::impl{
             SizeType const nr
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
-            helper(buff,a,b,K,mr,nr);
+            if constexpr(std::is_same_v<ValueType,float>){
+                helper_float(buff,a,b,K,mr,nr);
+            }else{
+                helper_double(buff,a,b,K,mr,nr);
+            }
             copy_from_buff(c,wc,buff,mr,nr);
         }
         
@@ -96,7 +100,7 @@ namespace amt::impl{
     private:
         
         template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void helper(
+        AMT_ALWAYS_INLINE void helper_float(
             ValueType* c,
             ValueType const* a,
             ValueType const* b,
@@ -108,9 +112,31 @@ namespace amt::impl{
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
-                #pragma omp simd safelen(NR)
+                #pragma omp simd
                 for(auto j = 0ul; j < NR; ++j){
-                    #pragma unroll
+                    for(auto i = 0ul; i < MR; ++i){
+                        c[j * MR + i] += bk[j] * ak[i];
+                    }
+                }
+            }
+
+        }
+
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void helper_double(
+            ValueType* c,
+            ValueType const* a,
+            ValueType const* b,
+            SizeType const K,
+            SizeType const mr,
+            SizeType const nr
+        ) const noexcept{
+
+            for(auto k = 0ul; k < K; ++k){
+                auto ak = a + k * mr;
+                auto bk = b + k * nr;
+                for(auto j = 0ul; j < nr; ++j){
+                    #pragma omp simd
                     for(auto i = 0ul; i < MR; ++i){
                         c[j * MR + i] += bk[j] * ak[i];
                     }
@@ -124,7 +150,7 @@ namespace amt::impl{
             for(auto j = 0ul; j < nr; ++j){
                 auto ai = in + j * MR;
                 auto ci = out + j * wo[1];
-                #pragma omp simd safelen(MR)
+                #pragma omp simd
                 for(auto i = 0ul; i < mr; ++i){
                     ci[i] += ai[i];
                 }
