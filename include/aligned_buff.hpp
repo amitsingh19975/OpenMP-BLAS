@@ -19,7 +19,7 @@ namespace amt{
 
         constexpr static alignment_type alignment = alignment_type{Alignment};
         
-        constexpr aligned_buff(size_type sz)
+        explicit constexpr aligned_buff(size_type sz)
             : m_ptr(new(alignment) value_type[sz])
             , m_size(sz)
         {
