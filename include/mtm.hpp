@@ -86,7 +86,7 @@ namespace amt {
         SizeType const WA1 = wa[1];
         SizeType const WB0 = wb[0];
         SizeType const WB1 = wb[1];
-        // TODO: Add a way to get CPU vector register length
+        // TODO: Add a way to get CPU vector register's length
         using partition_type = impl::matrix_partition<256ul,ValueType>;
 
         auto M = na[0];
