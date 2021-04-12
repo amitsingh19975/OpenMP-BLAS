@@ -72,13 +72,12 @@ namespace amt {
     } // namespace impl
     
 
-    template<typename OutLayout, typename LayoutA, typename LayoutB, typename ValueType, typename SizeType>
+    template<typename OutLayout, typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void mtm_helper(
         ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
         ValueType const* a, [[maybe_unused]] SizeType const* na, [[maybe_unused]] SizeType const* wa,
         ValueType const* b, [[maybe_unused]] SizeType const* nb, [[maybe_unused]] SizeType const* wb,
-        OutLayout, LayoutA, LayoutB,
-        SizeType = {}
+        OutLayout
     )
     {
         SizeType const WC0 = wc[0];
@@ -103,8 +102,8 @@ namespace amt {
         constexpr static auto const NR = partition_type::nr;
         constexpr static auto const MR = partition_type::mr;
 
-        std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
-        std::size_t const buffB_sz = KB * ( NB + 1ul );
+        static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
+        static std::size_t const buffB_sz = KB * ( NB + 1ul );
 
         static aligned_buff<ValueType> buffA(buffA_sz);
         static aligned_buff<ValueType> buffB(buffB_sz);
@@ -169,8 +168,7 @@ namespace amt {
         boost::numeric::ublas::tensor_core<Out>& c,
         boost::numeric::ublas::tensor_core<E1> const& a,
         boost::numeric::ublas::tensor_core<E2> const& b,
-        std::optional<std::size_t> num_threads,
-        std::size_t Block = 64
+        std::optional<std::size_t> num_threads
     )
     {
         using out_type          = boost::numeric::ublas::tensor_core<Out>;
@@ -180,8 +178,6 @@ namespace amt {
         using value_type2       = typename tensor_type2::value_type;
         using out_value_type    = typename out_type::value_type;
         using out_layout_type   = typename out_type::layout_type;
-        using layout_type1      = typename tensor_type1::layout_type;
-        using layout_type2      = typename tensor_type2::layout_type;
 
         static_assert(
             std::is_same_v< value_type1, value_type2 > && 
@@ -221,9 +217,9 @@ namespace amt {
         auto const* na_ptr = na.data();
         auto const* nb_ptr = nb.data();
 
-        return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr,Block]{
+        return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr]{
             mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, 
-                out_layout_type{}, layout_type1{}, layout_type2{}, Block
+                out_layout_type{}
             );
         };
     }
