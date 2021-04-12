@@ -86,6 +86,114 @@ TEMPLATE_TEST_CASE( "(FFF) Matrix Matrix Product for Range[Start: 2, End: 32, St
     
 }
 
+TEMPLATE_TEST_CASE( "(FFL) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[ffl_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType>(shape_t{sz,sz});
+        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "(FLF) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[flf_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto B = tensor_t<TestType>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
 TEMPLATE_TEST_CASE( "(LFF) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[lff_mtm]", float, double ) {
     namespace ub = boost::numeric::ublas;
     constexpr auto MinSize = 2ul;
@@ -99,8 +207,224 @@ TEMPLATE_TEST_CASE( "(LFF) Matrix Matrix Product for Range[Start: 2, End: 32, St
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType,boost::numeric::ublas::layout::last_order>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType,boost::numeric::ublas::layout::last_order>(shape_t{sz,sz});
+        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "(FLL) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[fll_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "(LFL) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[lfl_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType>(shape_t{sz,sz});
+        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "(LLF) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[llF_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto B = tensor_t<TestType>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        auto alpha = TestType(1);
+        auto M = static_cast<dim_t>(A.size(0));
+        auto N = static_cast<dim_t>(B.size(1));
+        auto K = static_cast<dim_t>(A.size(1));
+        auto* aptr = A.data();
+        auto* bptr = B.data();
+        auto* cptr = lres.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsb = static_cast<inc_t>(B.strides()[0]);
+        auto csb = static_cast<inc_t>(B.strides()[1]);
+        auto rsc = static_cast<inc_t>(lres.strides()[0]);
+        auto csc = static_cast<inc_t>(lres.strides()[1]);
+
+        blis_gemv(
+            BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
+            M, N, K,
+            &alpha, 
+            aptr, rsa, csa,
+            bptr, rsb, csb,
+            &alpha,
+            cptr, rsc, csc
+        );
+
+        amt::mtm(rres,A,B,std::nullopt)();
+
+        auto rptr = rres.data();
+        auto lptr = cptr;
+
+        
+        for(auto i = 0ul; i < rres.size(); ++i, ++rptr, ++lptr){
+            REQUIRE(Approx(*rptr) == *lptr);
+        }
+        
+    }
+    
+}
+
+TEMPLATE_TEST_CASE( "(LLL) Matrix Matrix Product for Range[Start: 2, End: 32, Step: 1]", "[lll_mtm]", float, double ) {
+    namespace ub = boost::numeric::ublas;
+    constexpr auto MinSize = 2ul;
+    constexpr auto MaxSize = 32ul;
+    constexpr auto Step = 1ul;
+
+    for(auto sz = MinSize; sz < MaxSize; sz += Step){
+        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+
+        rand_gen<TestType>(A);
+        rand_gen<TestType>(B);
+
+        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
