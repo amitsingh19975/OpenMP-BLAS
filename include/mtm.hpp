@@ -35,7 +35,6 @@ namespace amt {
                 return nearest_power_of_two(sz / kc());
             }
             
-            // k = L1/(nr+mr)
             constexpr static size_type kc() noexcept{
                 auto sz = cache_manager::size(0) / (data_size << 1);
                 return nearest_power_of_two(sz / mr);
@@ -141,7 +140,7 @@ namespace amt {
 
                     #pragma omp for schedule(dynamic)
                     for(auto i = 0ul; i < M; i += MB){
-                        auto const tid = static_cast<std::size_t>(omp_get_thread_num());
+                        auto const tid = threads::get_thread_num<std::size_t>();
                         auto const ib = std::min(MB,M-i);
                         auto const aii = ai + WA0 * i;
                         auto const aptr = pA + tid * kb * MB;

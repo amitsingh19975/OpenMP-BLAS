@@ -61,6 +61,11 @@ namespace amt{
         }
         
         template<typename SizeType = int>
+        constexpr static SizeType get_thread_num() noexcept{
+            return static_cast<SizeType>(omp_get_thread_num());
+        }
+        
+        template<typename SizeType = int>
         constexpr static SizeType get_max_threads() noexcept{
             return static_cast<SizeType>(omp_get_max_threads());
         }
