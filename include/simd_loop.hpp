@@ -95,7 +95,7 @@ namespace amt::impl{
             if constexpr(std::is_same_v<ValueType,float>){
                 helper_float(buff,a,b,K,mr,nr);
             }else{
-                helper_double(buff,a,b,K,mr,nr);
+                helper_double(buff,a,b,K,mr,nr,OutLayout{});
             }
             copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
@@ -133,7 +133,8 @@ namespace amt::impl{
             ValueType const* b,
             SizeType const K,
             SizeType const mr,
-            SizeType const nr
+            SizeType const nr,
+            first_order
         ) const noexcept{
 
             for(auto k = 0ul; k < K; ++k){
@@ -146,7 +147,29 @@ namespace amt::impl{
                     }
                 }
             }
+        }
 
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void helper_double(
+            ValueType* c,
+            ValueType const* a,
+            ValueType const* b,
+            SizeType const K,
+            SizeType const mr,
+            SizeType const nr,
+            last_order
+        ) const noexcept{
+
+            for(auto k = 0ul; k < K; ++k){
+                auto ak = a + k * mr;
+                auto bk = b + k * nr;
+                for(auto i = 0ul; i < mr; ++i){
+                    #pragma omp simd
+                    for(auto j = 0ul; j < NR; ++j){
+                        c[j + i * NR] += bk[j] * ak[i];
+                    }
+                }
+            }
         }
 
         template<typename ValueType, typename SizeType>
@@ -164,11 +187,11 @@ namespace amt::impl{
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const wo, ValueType const* in, SizeType const mr, SizeType const nr, last_order) const noexcept{
             for(auto i = 0ul; i < mr; ++i){
-                auto aj = in + i;
+                auto aj = in + i * ( std::is_same_v<ValueType,float> ? 1ul : NR ) ;
                 auto cj = out + i * wo;
                 #pragma omp simd
                 for(auto j = 0ul; j < nr; ++j){
-                    cj[j] += aj[j * MR];
+                    cj[j] += aj[j * ( std::is_same_v<ValueType,float> ? MR : 1ul )];
                 }
             }
         }
