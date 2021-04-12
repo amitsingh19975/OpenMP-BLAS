@@ -42,7 +42,7 @@ namespace amt {
             }
         };
         
-        template<typename PartitionType, typename ValueType, typename SizeType>
+        template<typename OutLayout, typename PartitionType, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void mtm_kernel(
             ValueType* c,       SizeType const* wc,
             ValueType const* a,
@@ -64,7 +64,7 @@ namespace amt {
                     auto bk = bi;
                     auto ck = ci + wc[0] * i;
                     auto ib = std::min(MR,M-i);
-                    loop(ck,wc,ak,bk,K,ib,jb);
+                    loop(ck,wc,ak,bk,K,ib,jb, OutLayout{});
                 }
             }
         }
@@ -73,13 +73,13 @@ namespace amt {
     } // namespace impl
     
 
-    template<typename ValueType, typename SizeType>
+    template<typename OutLayout, typename LayoutA, typename LayoutB, typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void mtm_helper(
         ValueType* c, [[maybe_unused]] SizeType const* nc, [[maybe_unused]] SizeType const* wc,
         ValueType const* a, [[maybe_unused]] SizeType const* na, [[maybe_unused]] SizeType const* wa,
         ValueType const* b, [[maybe_unused]] SizeType const* nb, [[maybe_unused]] SizeType const* wb,
+        OutLayout, LayoutA, LayoutB,
         SizeType = {}
-        // boost::numeric::ublas::layout::last_order
     )
     {
         SizeType const WC0 = wc[0];
@@ -157,7 +157,7 @@ namespace amt {
                                 iib, kb
                             );
                         }
-                        impl::mtm_kernel<partition_type>(cptr,wc,aptr,bptr,ib,jb,kb);
+                        impl::mtm_kernel<OutLayout,partition_type>(cptr,wc,aptr,bptr,ib,jb,kb);
                     }
                 } 
             }
@@ -180,9 +180,9 @@ namespace amt {
         using value_type1       = typename tensor_type1::value_type;
         using value_type2       = typename tensor_type2::value_type;
         using out_value_type    = typename out_type::value_type;
-        // using out_layout_type   = typename out_type::layout_type;
-        // using layout_type1      = typename tensor_type1::layout_type;
-        // using layout_type2      = typename tensor_type2::layout_type;
+        using out_layout_type   = typename out_type::layout_type;
+        using layout_type1      = typename tensor_type1::layout_type;
+        using layout_type2      = typename tensor_type2::layout_type;
 
         static_assert(
             std::is_same_v< value_type1, value_type2 > && 
@@ -223,7 +223,8 @@ namespace amt {
         auto const* nb_ptr = nb.data();
 
         return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr,Block]{
-            mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, Block
+            mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, 
+                out_layout_type{}, layout_type1{}, layout_type2{}, Block
             );
         };
     }

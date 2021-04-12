@@ -77,23 +77,27 @@ namespace amt::impl{
     template<std::size_t MR,std::size_t NR>
     struct simd_loop<SIMD_PROD_TYPE::MTM,MR,NR>{
         constexpr static auto type = SIMD_PROD_TYPE::MTM;
+        using first_order = boost::numeric::ublas::layout::first_order;
+        using last_order = boost::numeric::ublas::layout::last_order;
         
-        template<typename ValueType, typename SizeType>
+        template<typename OutLayout, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE constexpr void operator()(
             ValueType* c, SizeType const* wc,
             ValueType const* a,
             ValueType const* b,
             SizeType const K,
             SizeType const mr,
-            SizeType const nr
+            SizeType const nr,
+            OutLayout
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
+            auto const ldc = std::max(wc[0],wc[1]);
             if constexpr(std::is_same_v<ValueType,float>){
                 helper_float(buff,a,b,K,mr,nr);
             }else{
                 helper_double(buff,a,b,K,mr,nr);
             }
-            copy_from_buff(c,wc,buff,mr,nr);
+            copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
         
 
@@ -146,13 +150,25 @@ namespace amt::impl{
         }
 
         template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const* wo, ValueType const* in, SizeType const mr, SizeType const nr) const noexcept{
+        AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const wo, ValueType const* in, SizeType const mr, SizeType const nr, first_order) const noexcept{
             for(auto j = 0ul; j < nr; ++j){
                 auto ai = in + j * MR;
-                auto ci = out + j * wo[1];
+                auto ci = out + j * wo;
                 #pragma omp simd
                 for(auto i = 0ul; i < mr; ++i){
                     ci[i] += ai[i];
+                }
+            }
+        }
+
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const wo, ValueType const* in, SizeType const mr, SizeType const nr, last_order) const noexcept{
+            for(auto i = 0ul; i < mr; ++i){
+                auto aj = in + i;
+                auto cj = out + i * wo;
+                #pragma omp simd
+                for(auto j = 0ul; j < nr; ++j){
+                    cj[j] += aj[j * MR];
                 }
             }
         }
