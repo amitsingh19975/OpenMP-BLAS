@@ -200,7 +200,7 @@ void openblas_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(K)}, one);
         tensor_t<ValueType,LayoutType> B(shape_t{static_cast<std::size_t>(K), static_cast<std::size_t>(M)}, one);
         tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
-        amt::no_opt(res);
+
         auto const* aptr = A.data();
         auto const* bptr = B.data();
         auto cptr = res.data();
@@ -238,7 +238,10 @@ void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         tensor_t<ValueType,LayoutType> A(shape_t{M, K},1.);
         tensor_t<ValueType,LayoutType> B(shape_t{K, N},1.);
         tensor_t<ValueType,LayoutType> res(shape_t{M, N});
-        auto bench_fn = amt::mtm(res, A, B, std::nullopt,sz);
+        // std::iota(A.begin(), A.end(),1);
+        // std::iota(B.begin(), B.end(),1);
+        // std::cerr<<A<<'\n';
+        auto bench_fn = amt::mtm(res, A, B, std::nullopt);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
         metric_data.update((ops / st));
@@ -325,6 +328,8 @@ void eigen_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         double const ops = static_cast<double>(M * N * (2 * K - 1));
         Matrix<ValueType,-1,-1,eigen_layout> A(M,K);
         Matrix<ValueType,-1,-1,eigen_layout> B(K,N);
+        A.setOnes();
+        B.setOnes();
         Matrix<ValueType,-1,-1,eigen_layout> res(M,N);
         double st = amt::benchmark<MaxIter>(bench_fn, res, A, B);
         metric_data.update((ops / st));
@@ -367,8 +372,8 @@ int main(){
     using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
 
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     
     std::vector<double> x;
 
@@ -378,18 +383,19 @@ int main(){
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
     [[maybe_unused]]constexpr double max_value = 1024ul;
-    amt::range(x, 32., max_value, 32., std::plus<>{});
+    constexpr double sz = 32;
+    amt::range(x, sz, max_value, sz, std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<14;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
-    // ublas_gemm<value_type,layout_t,max_iter>(x,m);
+    // ublas_gemm<value_type,layout_t,1ul>(x,m);
     // openblas_gemm<value_type,layout_t,max_iter>(x,m);
     // blis_gemm<value_type,layout_t,max_iter>(x,m);
     // mkl_gemm<value_type,layout_t,max_iter>(x,m);
     openmp_gemm<value_type,layout_t,max_iter>(x,m);
-    eigen_gemm<value_type,layout_t,max_iter>(x,m);
+    // eigen_gemm<value_type,layout_t,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
