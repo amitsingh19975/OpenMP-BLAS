@@ -30,7 +30,7 @@ namespace amt {
             }
             
             constexpr static size_type nc() noexcept{
-                auto sz = cache_manager::size(2) / (data_size * 6);
+                auto sz = cache_manager::size(2) / (data_size << 2);
                 return nearest_power_of_two(sz / kc());
             }
             
@@ -54,7 +54,7 @@ namespace amt {
             }
             
             constexpr static size_type nc() noexcept{
-                auto sz = cache_manager::size(2) / (data_size * 6);
+                auto sz = cache_manager::size(2) / (data_size << 2);
                 return nearest_power_of_two(sz / kc());
             }
             
