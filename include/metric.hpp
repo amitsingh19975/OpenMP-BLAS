@@ -450,6 +450,29 @@ namespace amt{
             f.close();
         }
 
+        void csv(std::string_view filename = "raw_data.csv"){
+            std::ofstream f(filename.data());
+            auto j = 0ul;
+            auto cols = m_data.size();
+            std::vector<std::reference_wrapper<flops_data>> col_data;
+            for(auto& [k,v] : m_data){
+                f << std::quoted(k);
+                if(j != cols - 1ul) f<<',';
+                else f <<'\n';
+                col_data.emplace_back(std::ref(v));
+                ++j;
+            }
+
+            for(auto i = 0ul; i < m_total; ++i){
+                for(j = 0ul; j < cols; ++j){
+                    f << col_data[j].get().plot[i];
+                    if(j != cols - 1ul) f<<',';
+                    else f <<'\n';
+                }
+            }
+            f.close();
+        }
+
         friend std::ostream& operator<<(std::ostream& os, metric const& m){
             return os << m.str();
         }
