@@ -28,6 +28,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_ICELAKE>{
     constexpr static double mul_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
     constexpr static double add_latency = ( VecLen == 256ul ? 4. : 0. );
     constexpr static double add_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+    constexpr static double load_latency = ( VecLen == 256ul ? 7. : 0. );
+    constexpr static double load_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
 };
 
 template<std::size_t VecLen>
@@ -38,6 +40,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_SKYLAKE>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 4;
     constexpr static double add_throughput = 0.5;
+    constexpr static double load_latency = ( VecLen == 256ul ? 7. : 6. );
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -48,6 +52,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_BROADWELL>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -58,6 +64,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_HASWELL>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -68,6 +76,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_IVY_BRIDGE>{
     constexpr static double mul_throughput = 1;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 1;
 };
 
 template<std::size_t VecLen>
@@ -78,6 +88,8 @@ struct cpu_info<float, VecLen, CPUFamily::INTEL_KNIGHTS_LANDING>{
     constexpr static double mul_throughput = 0;
     constexpr static double add_latency = 0;
     constexpr static double add_throughput = 0;
+    constexpr static double load_latency = 0;
+    constexpr static double load_throughput = 0;
 };
 
 template<std::size_t VecLen>
@@ -88,6 +100,8 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_ICELAKE>{
     constexpr static double mul_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
     constexpr static double add_latency = ( VecLen == 256ul ? 4. : 0. );
     constexpr static double add_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
+    constexpr static double load_latency = ( VecLen == 256ul ? 7. : 0. );
+    constexpr static double load_throughput = ( VecLen >= 256 ? ( static_cast<double>(VecLen)/512. ) : 0. );
 };
 
 template<std::size_t VecLen>
@@ -98,6 +112,8 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_SKYLAKE>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 4;
     constexpr static double add_throughput = 0.5;
+    constexpr static double load_latency = ( VecLen == 256ul ? 7. : 6. );
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -108,6 +124,8 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_BROADWELL>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -118,6 +136,8 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_HASWELL>{
     constexpr static double mul_throughput = 0.5;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 0.5;
 };
 
 template<std::size_t VecLen>
@@ -128,6 +148,8 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_IVY_BRIDGE>{
     constexpr static double mul_throughput = 1;
     constexpr static double add_latency = 3;
     constexpr static double add_throughput = 1;
+    constexpr static double load_latency = 1;
+    constexpr static double load_throughput = 1;
 };
 
 template<std::size_t VecLen>
@@ -138,15 +160,17 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_KNIGHTS_LANDING>{
     constexpr static double mul_throughput = 0;
     constexpr static double add_latency = 0;
     constexpr static double add_throughput = 0;
+    constexpr static double load_latency = 0;
+    constexpr static double load_throughput = 0;
 };
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_latency() noexcept{
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
-        return cpu_type::fma_latency;
+        return cpu_type::fma_latency + cpu_type::load_latency;
     }else{
-        return cpu_type::mul_latency + cpu_type::add_latency;
+        return cpu_type::mul_latency + cpu_type::add_latency + cpu_type::load_latency;
     }
 }
 
@@ -154,9 +178,9 @@ template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_throughput() noexcept{
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
-        return cpu_type::fma_throughput;
+        return cpu_type::fma_throughput + cpu_type::load_throughput;
     }else{
-        return cpu_type::mul_throughput + cpu_type::add_throughput;
+        return cpu_type::mul_throughput + cpu_type::add_throughput + cpu_type::load_throughput;
     }
 }
 
@@ -167,25 +191,20 @@ constexpr T ceil(U num) noexcept{
 }
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
-constexpr double calculate_nr() noexcept{
-    constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
-    constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
-    constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
-    constexpr auto sq = ct_sqrt(static_cast<std::size_t>(lat * thr * elements));
-    return sq;
-}
-
-template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double calculate_mr() noexcept{
     constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
     constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
-    constexpr double num = lat * thr * elements;
-    constexpr double mr_ratio = static_cast<double>(calculate_nr<ValueType,VecLen,CPUType>()) / elements;
-    constexpr double mr = ceil<double>(mr_ratio);
-    constexpr auto ratio = num / mr;
-    constexpr auto factor = ceil<std::size_t>(ratio);
-    return factor;
+    return ceil<std::size_t>(ct_sqrt(elements * lat * thr) / elements) * elements;
+}
+
+template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
+constexpr double calculate_nr() noexcept{
+    constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
+    constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
+    constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
+    constexpr auto mr = calculate_mr<ValueType,VecLen,CPUType>();
+    return (elements * lat * thr) / mr;
 }
 
 } // namespace amt
