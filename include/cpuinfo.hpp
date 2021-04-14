@@ -204,7 +204,7 @@ constexpr double calculate_nr() noexcept{
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
     constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
     constexpr auto mr = calculate_mr<ValueType,VecLen,CPUType>();
-    return (elements * lat * thr) / mr;
+    return ceil<double>((elements * lat * thr) / mr);
 }
 
 } // namespace amt
