@@ -92,11 +92,7 @@ namespace amt::impl{
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
             auto const ldc = std::max(wc[0],wc[1]);
-            if constexpr(std::is_same_v<ValueType,float>){
-                helper_float(buff,a,b,K,mr,nr);
-            }else{
-                helper_double(buff,a,b,K,mr,nr,OutLayout{});
-            }
+            helper(buff,a,b,K,mr,nr);
             copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
         
@@ -104,7 +100,7 @@ namespace amt::impl{
     private:
         
         template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void helper_float(
+        AMT_ALWAYS_INLINE void helper(
             ValueType* c,
             ValueType const* a,
             ValueType const* b,
@@ -116,37 +112,14 @@ namespace amt::impl{
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
-                #pragma omp simd
                 for(auto j = 0ul; j < NR; ++j){
-                    for(auto i = 0ul; i < MR; ++i){
-                        c[j * MR + i] += bk[j] * ak[i];
-                    }
-                }
-            }
-
-        }
-
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void helper_double(
-            ValueType* c,
-            ValueType const* a,
-            ValueType const* b,
-            SizeType const K,
-            SizeType const mr,
-            SizeType const nr,
-            first_order
-        ) const noexcept{
-
-            for(auto k = 0ul; k < K; ++k){
-                auto ak = a + k * mr;
-                auto bk = b + k * nr;
-                for(auto j = 0ul; j < nr; ++j){
                     #pragma omp simd
                     for(auto i = 0ul; i < MR; ++i){
                         c[j * MR + i] += bk[j] * ak[i];
                     }
                 }
             }
+
         }
 
         template<typename ValueType, typename SizeType>
