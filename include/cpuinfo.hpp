@@ -162,7 +162,8 @@ constexpr double fma_throughput() noexcept{
 
 template<typename T, typename U>
 constexpr T ceil(U num) noexcept{
-    return static_cast<T>( static_cast<std::size_t>(num > static_cast<std::size_t>(num) ? num + 1 : num) );
+    auto int_part = static_cast<std::size_t>(num);
+    return static_cast<T>( static_cast<std::size_t>(num >  static_cast<double>(int_part)? num + 1 : num) );
 }
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
