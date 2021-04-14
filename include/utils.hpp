@@ -50,6 +50,17 @@ namespace amt{
         return 1ul<<p;
     }
 
+    AMT_ALWAYS_INLINE constexpr auto nearest_mul_of_x(std::size_t N, std::size_t M) noexcept{
+        std::size_t p = 0;
+        if (N % M == 0ul)
+            return N;
+        
+        while( N > (M * (p + 1)) ){
+            ++p;
+        }
+        return M * p;
+    }
+
     template<typename T>
     struct is_first_order : std::false_type{};
     
@@ -158,21 +169,21 @@ namespace amt{
 
     } // namespace debug
 
-    constexpr std::size_t ct_sqrt(std::size_t res, std::size_t l, std::size_t r) noexcept{
+    constexpr double ct_sqrt(double res, double l, double r) noexcept{
         if(l == r){
             return r;
         } else {
-            const auto mid = (r + l) / 2;
+            const auto mid = (r + l) / 2.;
 
             if(mid * mid >= res){
                 return ct_sqrt(res, l, mid);
             } else {
-                return ct_sqrt(res, mid + 1, r);
+                return ct_sqrt(res, mid + 1., r);
             }
         }
     }
 
-    constexpr std::size_t ct_sqrt(std::size_t res) noexcept{
+    constexpr double ct_sqrt(double res) noexcept{
         return ct_sqrt(res, 1, res);
     }
 
