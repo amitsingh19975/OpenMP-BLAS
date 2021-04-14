@@ -22,7 +22,7 @@ namespace amt {
             using value_type = T;
             constexpr static size_type data_size = sizeof(value_type);
             constexpr static size_type mr = calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-            constexpr static size_type nr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>() + 1;
+            constexpr static size_type nr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
 
             constexpr static size_type mc() noexcept{
                 auto sz = cache_manager::size(1) / (data_size * 6);
@@ -45,7 +45,7 @@ namespace amt {
             using size_type = std::size_t;
             using value_type = double;
             constexpr static size_type data_size = sizeof(value_type);
-            constexpr static size_type mr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>() + 1;
+            constexpr static size_type mr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
             constexpr static size_type nr = calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
 
             constexpr static size_type mc() noexcept{
