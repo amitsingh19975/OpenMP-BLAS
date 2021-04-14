@@ -92,7 +92,11 @@ namespace amt::impl{
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
             auto const ldc = std::max(wc[0],wc[1]);
-            helper(buff,a,b,K,mr,nr);
+            if constexpr(std::is_same_v<ValueType,double> && is_last_order_v<OutLayout>){
+                helper_double(buff,a,b,K,mr,nr);
+            }else{
+                helper(buff,a,b,K,mr,nr);
+            }
             copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
         
@@ -122,21 +126,20 @@ namespace amt::impl{
 
         }
 
-        template<typename ValueType, typename SizeType>
+        template<typename SizeType>
         AMT_ALWAYS_INLINE void helper_double(
-            ValueType* c,
-            ValueType const* a,
-            ValueType const* b,
+            double* c,
+            double const* a,
+            double const* b,
             SizeType const K,
             SizeType const mr,
-            SizeType const nr,
-            last_order
+            SizeType const nr
         ) const noexcept{
 
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
-                for(auto i = 0ul; i < mr; ++i){
+                for(auto i = 0ul; i < MR; ++i){
                     #pragma omp simd
                     for(auto j = 0ul; j < NR; ++j){
                         c[j + i * NR] += bk[j] * ak[i];
