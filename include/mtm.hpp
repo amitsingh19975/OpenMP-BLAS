@@ -21,8 +21,20 @@ namespace amt {
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type data_size = sizeof(value_type);
-            constexpr static size_type mr = calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-            constexpr static size_type nr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+
+            constexpr static size_type mr() noexcept{
+                if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
+                    return calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                else
+                    return calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+            }
+
+            constexpr static size_type nr() noexcept{
+                if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
+                    return calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                else
+                    return calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+            }
 
             constexpr static size_type mc() noexcept{
                 auto sz = cache_manager::size(1) / (data_size * 6);
@@ -36,31 +48,7 @@ namespace amt {
             
             constexpr static size_type kc() noexcept{
                 auto sz = cache_manager::size(0) / (data_size << 1);
-                return nearest_power_of_two(sz / mr);
-            }
-        };
-        
-        template<std::size_t VecLen>
-        struct matrix_partition<VecLen,double,boost::numeric::ublas::layout::last_order>{
-            using size_type = std::size_t;
-            using value_type = double;
-            constexpr static size_type data_size = sizeof(value_type);
-            constexpr static size_type mr = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-            constexpr static size_type nr = calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-
-            constexpr static size_type mc() noexcept{
-                auto sz = cache_manager::size(1) / (data_size * 6);
-                return nearest_power_of_two(sz / kc());
-            }
-            
-            constexpr static size_type nc() noexcept{
-                auto sz = cache_manager::size(2) / (data_size << 2);
-                return nearest_power_of_two(sz / kc());
-            }
-            
-            constexpr static size_type kc() noexcept{
-                auto sz = cache_manager::size(0) / (data_size << 1);
-                return nearest_power_of_two(sz / mr);
+                return nearest_power_of_two(sz / mr());
             }
         };
         
@@ -72,8 +60,8 @@ namespace amt {
             SizeType const M,   SizeType const N,   SizeType const K
         ) noexcept
         {
-            constexpr auto MR = PartitionType::mr;
-            constexpr auto NR = PartitionType::nr;
+            constexpr auto MR = PartitionType::mr();
+            constexpr auto NR = PartitionType::nr();
             constexpr auto simd_type = SIMD_PROD_TYPE::MTM;
             constexpr auto loop = simd_loop<simd_type,MR,NR>{};
             for(auto j = 0ul; j < N; j += NR){
@@ -123,8 +111,12 @@ namespace amt {
         static auto const MB = partition_type::mc();
         static auto const NB = partition_type::nc();
         static auto const KB = partition_type::kc();
-        constexpr static auto const NR = partition_type::nr;
-        constexpr static auto const MR = partition_type::mr;
+        constexpr static auto const NR = partition_type::nr();
+        constexpr static auto const MR = partition_type::mr();
+
+        std::cerr<<MB<<' '<<NB<<' '<<KB<<'\n';
+        std::cerr<<MR<<' '<<NR<<'\n';
+        exit(0);
 
         static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
         static std::size_t const buffB_sz = KB * ( NB + 1ul );
