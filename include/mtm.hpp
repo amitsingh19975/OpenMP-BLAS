@@ -32,8 +32,14 @@ namespace amt {
             constexpr static size_type nr() noexcept{
                 if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
                     return calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-                else
-                    return calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                else{
+                    constexpr auto temp = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                    if constexpr(std::is_same_v<value_type,float>){
+                        return (temp & 1) ? temp : temp - 1;
+                    }else{
+                        return temp;
+                    }
+                }
             }
 
             constexpr static size_type mc() noexcept{
@@ -42,7 +48,7 @@ namespace amt {
             }
             
             constexpr static size_type nc() noexcept{
-                auto sz = cache_manager::size(2) / (data_size << 2);
+                auto sz = cache_manager::size(2) / (data_size * 6);
                 return nearest_power_of_two(sz / kc());
             }
             
@@ -64,6 +70,8 @@ namespace amt {
             constexpr auto NR = PartitionType::nr();
             constexpr auto simd_type = SIMD_PROD_TYPE::MTM;
             constexpr auto loop = simd_loop<simd_type,MR,NR>{};
+            auto const ldc = std::max(wc[0],wc[1]);
+
             for(auto j = 0ul; j < N; j += NR){
                 auto ai = a;
                 auto bi = b + j * K;
@@ -74,7 +82,7 @@ namespace amt {
                     auto bk = bi;
                     auto ck = ci + wc[0] * i;
                     auto ib = std::min(MR,M-i);
-                    loop(ck,wc,ak,bk,K,ib,jb, OutLayout{});
+                    loop(ck,ldc,ak,bk,K,ib,jb, OutLayout{});
                 }
             }
         }
