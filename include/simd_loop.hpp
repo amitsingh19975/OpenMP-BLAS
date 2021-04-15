@@ -82,7 +82,7 @@ namespace amt::impl{
         
         template<typename OutLayout, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE constexpr void operator()(
-            ValueType* c, SizeType const* wc,
+            ValueType* c, SizeType const ldc,
             ValueType const* a,
             ValueType const* b,
             SizeType const K,
@@ -91,9 +91,8 @@ namespace amt::impl{
             OutLayout
         ) const noexcept{
             ValueType buff[MR * NR] = {0};
-            auto const ldc = std::max(wc[0],wc[1]);
             if constexpr(std::is_same_v<ValueType,double> && is_last_order_v<OutLayout>){
-                helper_double(buff,a,b,K,mr,nr);
+                helper_double_last_order(buff,a,b,K,mr,nr);
             }else{
                 helper(buff,a,b,K,mr,nr);
             }
@@ -127,7 +126,7 @@ namespace amt::impl{
         }
 
         template<typename SizeType>
-        AMT_ALWAYS_INLINE void helper_double(
+        AMT_ALWAYS_INLINE void helper_double_last_order(
             double* c,
             double const* a,
             double const* b,
