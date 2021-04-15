@@ -114,10 +114,6 @@ namespace amt {
         constexpr static auto const NR = partition_type::nr();
         constexpr static auto const MR = partition_type::mr();
 
-        std::cerr<<MB<<' '<<NB<<' '<<KB<<'\n';
-        std::cerr<<MR<<' '<<NR<<'\n';
-        exit(0);
-
         static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
         static std::size_t const buffB_sz = KB * ( NB + 1ul );
 
