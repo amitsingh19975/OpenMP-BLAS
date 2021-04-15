@@ -191,20 +191,20 @@ constexpr T ceil(U num) noexcept{
 }
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
-constexpr double calculate_mr() noexcept{
+constexpr std::size_t calculate_mr() noexcept{
     constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
-    constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
+    constexpr auto elements = VecLen / (sizeof(ValueType) * CHAR_BIT);
     return ceil<std::size_t>(ct_sqrt(elements * lat * thr) / elements) * elements;
 }
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
-constexpr double calculate_nr() noexcept{
+constexpr std::size_t calculate_nr() noexcept{
     constexpr auto lat = fma_latency<ValueType,VecLen,CPUType>();
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
     constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
     constexpr auto mr = calculate_mr<ValueType,VecLen,CPUType>();
-    return ceil<double>((elements * lat * thr) / mr);
+    return ceil<std::size_t>((elements * lat * thr) / mr);
 }
 
 } // namespace amt
