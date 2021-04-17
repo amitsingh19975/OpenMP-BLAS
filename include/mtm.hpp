@@ -43,18 +43,33 @@ namespace amt {
             }
 
             constexpr static size_type mc() noexcept{
+                auto k = nearest_power_of_two(kc());
                 auto sz = cache_manager::size(1) / (data_size * 6);
-                return nearest_power_of_two(sz / kc());
+                return nearest_power_of_two(sz / k);
             }
             
             constexpr static size_type nc() noexcept{
+                auto k = nearest_power_of_two(kc());
                 auto sz = cache_manager::size(2) / (data_size * 6);
-                return nearest_power_of_two(sz / kc());
+                return (sz / k);
             }
             
             constexpr static size_type kc() noexcept{
-                auto sz = cache_manager::size(0) / (data_size << 1);
-                return nearest_power_of_two(sz / mr());
+                // FIXME: Get the right set-associative on the MacOS
+                auto assoc = (cache_manager::assoc(0) == 1 ? 8ul : cache_manager::assoc(0));
+                auto line = cache_manager::line_size(0);
+                auto size = cache_manager::size(0);
+                auto sets = size / (line * assoc);
+
+                // CA = ceil( (W - 1) / (1 + nr / mr) )
+                auto W = static_cast<double>(assoc);
+                auto ratio = static_cast<double>(nr()) / static_cast<double>(mr());
+
+                auto num = W - 1.;
+                auto den = 1. + ratio;
+
+                auto CA = static_cast<size_type>(std::ceil(num / den));
+                return (CA * sets * line) / (mr() * data_size);
             }
         };
         
