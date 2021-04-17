@@ -90,21 +90,19 @@ namespace amt::impl{
             SizeType const nr,
             OutLayout
         ) const noexcept{
-            ValueType buff[MR * NR] = {0};
             if constexpr(std::is_same_v<ValueType,double> && is_last_order_v<OutLayout>){
-                helper_double_last_order(buff,a,b,K,mr,nr);
+                helper_double_last_order<OutLayout>(c,ldc,a,b,K,mr,nr);
             }else{
-                helper(buff,a,b,K,mr,nr);
+                helper<OutLayout>(c,ldc,a,b,K,mr,nr);
             }
-            copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
         
 
     private:
         
-        template<typename ValueType, typename SizeType>
+        template<typename OutLayout, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void helper(
-            ValueType* c,
+            ValueType* c, SizeType const ldc,
             ValueType const* a,
             ValueType const* b,
             SizeType const K,
@@ -112,28 +110,32 @@ namespace amt::impl{
             SizeType const nr
         ) const noexcept{
 
+            ValueType buff[MR * NR] = {0};
+
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
                 for(auto j = 0ul; j < NR; ++j){
                     #pragma omp simd
                     for(auto i = 0ul; i < MR; ++i){
-                        c[j * MR + i] += bk[j] * ak[i];
+                        buff[j * MR + i] += bk[j] * ak[i];
                     }
                 }
             }
-
+            copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
 
-        template<typename SizeType>
+        template<typename OutLayout, typename SizeType>
         AMT_ALWAYS_INLINE void helper_double_last_order(
-            double* c,
+            double* c, SizeType const ldc,
             double const* a,
             double const* b,
             SizeType const K,
             SizeType const mr,
             SizeType const nr
         ) const noexcept{
+            
+            double buff[MR * NR] = {0};
 
             for(auto k = 0ul; k < K; ++k){
                 auto ak = a + k * mr;
@@ -141,10 +143,12 @@ namespace amt::impl{
                 for(auto i = 0ul; i < MR; ++i){
                     #pragma omp simd
                     for(auto j = 0ul; j < NR; ++j){
-                        c[j + i * NR] += bk[j] * ak[i];
+                        buff[j + i * NR] += bk[j] * ak[i];
                     }
                 }
             }
+
+            copy_from_buff(c,ldc,buff,mr,nr,OutLayout{});
         }
 
         template<typename ValueType, typename SizeType>
