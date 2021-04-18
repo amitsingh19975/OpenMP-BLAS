@@ -7,14 +7,10 @@ build/
 !assets/
 !test/
 !test/*
-!assets/mtv
-!assets/mtv/col_major
-!assets/mtv/row_major
-!assets/mtv/col_major/*.png
-!assets/mtv/row_major/*.png
+!assets/
+!assets/*
 !include/*.hpp
 !doc/
-!doc/assets
 !doc/*.tex
 !doc/*.bib
 !doc/*.pdf
