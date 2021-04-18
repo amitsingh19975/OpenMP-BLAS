@@ -51,14 +51,7 @@ namespace amt{
     }
 
     AMT_ALWAYS_INLINE constexpr auto nearest_mul_of_x(std::size_t N, std::size_t M) noexcept{
-        std::size_t p = 0;
-        if (N % M == 0ul)
-            return N;
-        
-        while( N > (M * (p + 1)) ){
-            ++p;
-        }
-        return M * p;
+        return N - (N % M);
     }
 
     template<typename T>
