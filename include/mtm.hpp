@@ -21,37 +21,33 @@ namespace amt {
             using size_type = std::size_t;
             using value_type = T;
             constexpr static size_type data_size = sizeof(value_type);
+            constexpr static auto cpu_family = CPUFamily::INTEL_SKYLAKE;
 
             constexpr static size_type mr() noexcept{
                 if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
-                    return calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                    return calculate_nr<value_type,VecLen,cpu_family>() + 1;
                 else
-                    return calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                    return calculate_mr<value_type,VecLen,cpu_family>();
             }
 
             constexpr static size_type nr() noexcept{
                 if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
-                    return calculate_mr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                    return calculate_mr<value_type,VecLen,cpu_family>();
                 else{
-                    constexpr auto temp = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
-                    if constexpr(std::is_same_v<value_type,float>){
-                        return (temp & 1) ? temp : temp + 1;
-                    }else{
-                        return temp;
-                    }
+                    return calculate_nr<value_type,VecLen,cpu_family>() + 1;
                 }
             }
 
             constexpr static size_type mc() noexcept{
-                auto factor = kc() * calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                auto factor = nearest_power_of_two(kc()) * nr();
                 auto sz = cache_manager::size(1) / (data_size * factor);
                 return nearest_power_of_two(sz);
             }
             
             constexpr static size_type nc() noexcept{
-                auto factor = kc() * calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                auto factor = nearest_power_of_two(kc()) * nr();
                 auto sz = cache_manager::size(2) / (data_size * factor);
-                return nearest_mul_of_x(sz,nr());
+                return nearest_power_of_two(sz);
             }
             
             constexpr static size_type kc() noexcept{
@@ -136,6 +132,8 @@ namespace amt {
         static auto const KB = partition_type::kc();
         constexpr static auto const NR = partition_type::nr();
         constexpr static auto const MR = partition_type::mr();
+
+        // std::cerr<<MB<<' '<<NB<<' '<<KB<<' '<<NR<<' '<<MR<<std::endl;exit(0);
 
         static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
         static std::size_t const buffB_sz = KB * ( NB + 1ul );
