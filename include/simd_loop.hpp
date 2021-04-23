@@ -141,9 +141,11 @@ namespace amt::impl{
                 auto ak = a + k * mr;
                 auto bk = b + k * nr;
                 for(auto i = 0ul; i < MR; ++i){
+                    auto aval = ak[i];
+                    auto cj = buff + i * NR;
                     #pragma omp simd
                     for(auto j = 0ul; j < NR; ++j){
-                        buff[j + i * NR] += bk[j] * ak[i];
+                        cj[j] += bk[j] * aval;
                     }
                 }
             }

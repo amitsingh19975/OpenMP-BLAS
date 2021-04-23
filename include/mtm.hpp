@@ -35,7 +35,7 @@ namespace amt {
                 else{
                     constexpr auto temp = calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
                     if constexpr(std::is_same_v<value_type,float>){
-                        return (temp & 1) ? temp : temp - 1;
+                        return (temp & 1) ? temp : temp + 1;
                     }else{
                         return temp;
                     }
@@ -43,15 +43,15 @@ namespace amt {
             }
 
             constexpr static size_type mc() noexcept{
-                auto k = nearest_power_of_two(kc());
-                auto sz = cache_manager::size(1) / (data_size * 6);
-                return nearest_power_of_two(sz / k);
+                auto factor = kc() * calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                auto sz = cache_manager::size(1) / (data_size * factor);
+                return nearest_power_of_two(sz);
             }
             
             constexpr static size_type nc() noexcept{
-                auto k = nearest_power_of_two(kc());
-                auto sz = cache_manager::size(2) / (data_size * 6);
-                return (sz / k);
+                auto factor = kc() * calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
+                auto sz = cache_manager::size(2) / (data_size * factor);
+                return nearest_power_of_two(sz);
             }
             
             constexpr static size_type kc() noexcept{
