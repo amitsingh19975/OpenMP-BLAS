@@ -39,15 +39,15 @@ namespace amt {
             }
 
             constexpr static size_type mc() noexcept{
-                auto factor = nearest_power_of_two(kc()) * nr();
+                auto factor = nearest_power_of_two(kc()) * calculate_nr<value_type,VecLen,cpu_family>();
                 auto sz = cache_manager::size(1) / (data_size * factor);
                 return nearest_power_of_two(sz);
             }
             
             constexpr static size_type nc() noexcept{
-                auto factor = nearest_power_of_two(kc()) * nr();
+                auto factor = nearest_power_of_two(kc()) * calculate_nr<value_type,VecLen,cpu_family>();
                 auto sz = cache_manager::size(2) / (data_size * factor);
-                return nearest_power_of_two(sz);
+                return nearest_mul_of_x(sz,nr());
             }
             
             constexpr static size_type kc() noexcept{
@@ -59,7 +59,7 @@ namespace amt {
 
                 // CA = ceil( (W - 1) / (1 + nr / mr) )
                 auto W = static_cast<double>(assoc);
-                auto ratio = static_cast<double>(nr()) / static_cast<double>(mr());
+                auto ratio = static_cast<double>(calculate_nr<value_type,VecLen,cpu_family>()) / static_cast<double>(mr());
 
                 auto num = W - 1.;
                 auto den = 1. + ratio;
