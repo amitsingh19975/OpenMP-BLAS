@@ -11,7 +11,7 @@ namespace amt{
         using clock_type = std::chrono::steady_clock;
         using base_type = decltype(clock_type::now());
 
-        constexpr double operator()() noexcept{
+        double operator()() noexcept{
             if(!m_stopped){
                 m_end = clock_type::now();
                 m_stopped = true;
@@ -80,16 +80,16 @@ namespace amt{
             return str<std::chrono::minutes>();
         }
 
-        constexpr double stop() noexcept{
+        double stop() noexcept{
             return this->operator()();
         }
 
-        constexpr void start() noexcept{
+        void start() noexcept{
             m_start = clock_type::now();
             m_stopped = false;
         }
 
-        constexpr operator double(){
+        operator double(){
             return this->operator()();
         }
 
