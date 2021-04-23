@@ -51,7 +51,7 @@ namespace amt {
             constexpr static size_type nc() noexcept{
                 auto factor = kc() * calculate_nr<value_type,VecLen,CPUFamily::INTEL_SKYLAKE>();
                 auto sz = cache_manager::size(2) / (data_size * factor);
-                return nearest_power_of_two(sz);
+                return nearest_mul_of_x(sz,nr());
             }
             
             constexpr static size_type kc() noexcept{
