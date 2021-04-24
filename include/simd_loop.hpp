@@ -111,14 +111,15 @@ namespace amt::impl{
         ) const noexcept{
 
             ValueType buff[MR * NR] = {0};
-
-            for(auto k = 0ul; k < K; ++k){
-                auto ak = a + k * mr;
-                auto bk = b + k * nr;
-                for(auto j = 0ul; j < NR; ++j){
+            auto ak = a;
+            auto bk = b;
+            constexpr auto halfNR = NR >> 1;
+            for(auto k = 0ul; k < K; ++k, ak += mr, bk += nr){
+                for(auto j = 0ul; j < halfNR; ++j){
                     #pragma omp simd
                     for(auto i = 0ul; i < MR; ++i){
-                        buff[j * MR + i] += bk[j] * ak[i];
+                        buff[(j + 0)        * MR + i] += bk[j + 0]        * ak[i];
+                        buff[(j + halfNR)   * MR + i] += bk[j + halfNR]   * ak[i];
                     }
                 }
             }
@@ -137,13 +138,15 @@ namespace amt::impl{
             
             double buff[MR * NR] = {0};
 
-            for(auto k = 0ul; k < K; ++k){
-                auto ak = a + k * mr;
-                auto bk = b + k * nr;
-                for(auto i = 0ul; i < MR; ++i){
+            auto ak = a;
+            auto bk = b;
+            constexpr auto halfMR = MR >> 1;
+            for(auto k = 0ul; k < K; ++k, ak += mr, bk += nr){
+                for(auto i = 0ul; i < halfMR; ++i){
                     #pragma omp simd
                     for(auto j = 0ul; j < NR; ++j){
-                        buff[j + i * NR] += bk[j] * ak[i];
+                        buff[j + ( i + 0 )      * NR] += bk[j] * ak[i + 0];
+                        buff[j + ( i + halfMR ) * NR] += bk[j] * ak[i + halfMR];
                     }
                 }
             }
@@ -153,9 +156,11 @@ namespace amt::impl{
 
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const wo, ValueType const* in, SizeType const mr, SizeType const nr, first_order) const noexcept{
-            for(auto j = 0ul; j < nr; ++j){
-                auto ai = in + j * MR;
-                auto ci = out + j * wo;
+            auto aj = in;
+            auto cj = out;
+            for(auto j = 0ul; j < nr; ++j, aj += MR, cj += wo){
+                auto ai = aj;
+                auto ci = cj;
                 #pragma omp simd
                 for(auto i = 0ul; i < mr; ++i){
                     ci[i] += ai[i];
@@ -165,12 +170,18 @@ namespace amt::impl{
 
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void copy_from_buff(ValueType* out, SizeType const wo, ValueType const* in, SizeType const mr, SizeType const nr, last_order) const noexcept{
-            for(auto i = 0ul; i < mr; ++i){
-                auto aj = in + i * ( std::is_same_v<ValueType,float> ? 1ul : NR ) ;
-                auto cj = out + i * wo;
+            constexpr auto is_float = std::is_same_v<ValueType,float>;
+            constexpr auto wa0 = ( is_float ? 1ul : NR );
+            constexpr auto wa1 = ( is_float ? MR : 1ul );
+
+            auto ai = in;
+            auto ci = out;
+            for(auto i = 0ul; i < mr; ++i, ai += wa0, ci += wo){
+                auto aj = ai;
+                auto cj = ci;
                 #pragma omp simd
                 for(auto j = 0ul; j < nr; ++j){
-                    cj[j] += aj[j * ( std::is_same_v<ValueType,float> ? MR : 1ul )];
+                    cj[j] += aj[j * wa1];
                 }
             }
         }
