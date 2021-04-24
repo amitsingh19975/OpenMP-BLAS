@@ -25,7 +25,7 @@ namespace amt {
 
             constexpr static size_type mr() noexcept{
                 if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
-                    return calculate_nr<value_type,VecLen,cpu_family>() + 1;
+                    return calculate_nr<value_type,VecLen,cpu_family>();
                 else
                     return calculate_mr<value_type,VecLen,cpu_family>();
             }
@@ -39,15 +39,26 @@ namespace amt {
             }
 
             constexpr static size_type mc() noexcept{
-                auto factor = nearest_power_of_two(kc()) * calculate_nr<value_type,VecLen,cpu_family>();
-                auto sz = cache_manager::size(1) / (data_size * factor);
+                auto assoc = cache_manager::assoc(1);
+                auto line = cache_manager::line_size(1);
+                auto size = cache_manager::size(1);
+                auto sets = size / (line * assoc);
+                // CA = (W - 1) / 2 <= (W - 1)/( 1 + nr / mc )
+                auto CA = (assoc - 1) >> 1;
+                auto sz = (CA * sets * line) / (kc() * data_size);
                 return nearest_power_of_two(sz);
             }
             
             constexpr static size_type nc() noexcept{
-                auto factor = nearest_power_of_two(kc()) * calculate_nr<value_type,VecLen,cpu_family>();
-                auto sz = cache_manager::size(2) / (data_size * factor);
-                return nearest_mul_of_x(sz,nr());
+                // FIXME: Get the right set-associative on the MacOS
+                auto assoc = (cache_manager::assoc(2) == 1 ? 16ul : cache_manager::assoc(2));
+                auto line = cache_manager::line_size(2);
+                auto size = cache_manager::size(2);
+                auto sets = size / (line * assoc);
+                // CB = (W - 1) / 2 <= (W - 1)/( 1 + mc / nc )
+                auto CB = (assoc - 1) >> 1;
+                auto sz = (CB * sets * line) / (kc() * data_size);
+                return nearest_power_of_two(sz);
             }
             
             constexpr static size_type kc() noexcept{
@@ -132,8 +143,6 @@ namespace amt {
         static auto const KB = partition_type::kc();
         constexpr static auto const NR = partition_type::nr();
         constexpr static auto const MR = partition_type::mr();
-
-        // std::cerr<<MB<<' '<<NB<<' '<<KB<<' '<<NR<<' '<<MR<<std::endl;exit(0);
 
         static std::size_t const buffA_sz = KB * ( MB + 1ul ) * static_cast<std::size_t>(threads::get_max_threads());
         static std::size_t const buffB_sz = KB * ( NB + 1ul );
