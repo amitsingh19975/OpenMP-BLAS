@@ -34,7 +34,7 @@ namespace amt {
                 if constexpr(std::is_same_v<value_type,double> && is_last_order_v<L>)
                     return calculate_mr<value_type,VecLen,cpu_family>();
                 else{
-                    return calculate_nr<value_type,VecLen,cpu_family>() + 1;
+                    return calculate_nr<value_type,VecLen,cpu_family>();
                 }
             }
 
