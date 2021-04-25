@@ -70,7 +70,7 @@ namespace amt {
 
                 // CA = ceil( (W - 1) / (1 + nr / mr) )
                 auto W = static_cast<double>(assoc);
-                auto ratio = static_cast<double>(calculate_nr<value_type,VecLen,cpu_family>()) / static_cast<double>(mr());
+                auto ratio = static_cast<double>(nr()) / static_cast<double>(mr());
 
                 auto num = W - 1.;
                 auto den = 1. + ratio;
