@@ -46,7 +46,7 @@ namespace amt {
                 // CA = (W - 1) / 2 <= (W - 1)/( 1 + nr / mc )
                 auto CA = (assoc - 1) >> 1;
                 auto sz = (CA * sets * line) / (kc() * data_size);
-                return nearest_power_of_two(sz);
+                return nearest_mul_of_x(sz, mr());
             }
             
             constexpr static size_type nc() noexcept{
@@ -58,7 +58,7 @@ namespace amt {
                 // CB = (W - 1) / 2 <= (W - 1)/( 1 + mc / nc )
                 auto CB = (assoc - 1) >> 1;
                 auto sz = (CB * sets * line) / (kc() * data_size);
-                return nearest_power_of_two(sz);
+                return nearest_mul_of_x(sz,nr());
             }
             
             constexpr static size_type kc() noexcept{
