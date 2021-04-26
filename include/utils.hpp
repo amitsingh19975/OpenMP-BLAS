@@ -74,6 +74,8 @@ namespace amt{
 
     namespace tag{
         struct trans{};
+        struct inplace{};
+        struct outplace{};
     }
 
     template<typename ValueType, typename SizeType>

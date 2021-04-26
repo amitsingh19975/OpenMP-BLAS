@@ -11,7 +11,8 @@ namespace amt::impl{
         INNER,
         OUTER,
         MTV,
-        MTM
+        MTM,
+        TRANS
     };
 
     template<SIMD_PROD_TYPE OPType,std::size_t... Ns>
@@ -186,6 +187,81 @@ namespace amt::impl{
             }
         }
 
+    };
+    template<>
+    struct simd_loop<SIMD_PROD_TYPE::TRANS>{
+        constexpr static auto type = SIMD_PROD_TYPE::TRANS;
+        
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void operator()(
+            ValueType* c, SizeType const* wc,
+            ValueType* a, SizeType const* wa,
+            SizeType const mr,
+            SizeType const nr,
+            bool has_same_address,
+            tag::inplace
+        ) const noexcept{
+            auto WC0 = wc[0];
+            auto WC1 = wc[1];
+            auto WA0 = wa[0];
+            auto WA1 = wa[1];
+
+            constexpr auto same_address = [](
+                ValueType* c, SizeType const , SizeType const wc1,
+                ValueType* a, SizeType const wa0, SizeType const wa1,
+                SizeType mr,
+                SizeType nr
+            ){
+                for(auto i = 0ul; i < mr; ++i){
+                    auto cj = c + wc1 * i;
+                    auto aj = a + wa0 * i;
+                    #pragma omp simd
+                    for(auto j = i; j < nr; ++j){
+                        std::swap(cj[j],aj[j * wa1]);
+                    }
+                }
+            };
+
+            constexpr auto different_address = [](
+                ValueType* c, SizeType const , SizeType const wc1,
+                ValueType* a, SizeType const wa0, SizeType const wa1,
+                SizeType mr,
+                SizeType nr
+            ){
+                for(auto i = 0ul; i < mr; ++i){
+                    auto cj = c + wc1 * i;
+                    auto aj = a + wa0 * i;
+                    #pragma omp simd
+                    for(auto j = 0ul; j < nr; ++j){
+                        std::swap(cj[j],aj[j * wa1]);
+                    }
+                }
+            };
+
+            switch(static_cast<int>(has_same_address)){
+                case 0: different_address(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
+                default: same_address(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
+            }
+
+        }
+
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void operator()(
+            ValueType* c, SizeType const* wc,
+            ValueType const* a, SizeType const* wa,
+            SizeType const mr,
+            SizeType const nr,
+            tag::outplace
+        ) const noexcept{
+            for(auto i = 0ul; i < mr; ++i){
+                auto cj = c + wc[1] * i;
+                auto aj = a + wa[0] * i;
+                #pragma omp simd
+                for(auto j = 0ul; j < nr; ++j){
+                    cj[j * wc[0]] = aj[j * wa[1]];
+                }
+            }
+        }
     };
 
 
