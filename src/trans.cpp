@@ -95,7 +95,7 @@ void ublas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
+void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::outplace){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "intel MKL";
@@ -134,6 +134,50 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto ldc = std::max(res.strides()[0], res.strides()[1]);
         double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, one, aptr, lda, cptr, ldc);
         amt::no_opt(res);
+        // std::cerr<<res<<'\n'; exit(0);
+        metric_data.update((ops / st));
+    }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    // exit(0);
+}
+
+template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
+void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::inplace){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr std::string_view fn_name = "intel MKL";
+    
+    auto& metric_data = m[fn_name];
+    constexpr auto bench_fn = [](
+        const char ordering, const char trans,
+        std::size_t rows, std::size_t cols,
+        const auto alpha,
+        auto* A, std::size_t lda, std::size_t ldb
+    ){
+        if constexpr(std::is_same_v<ValueType,float>){
+            mkl_simatcopy(ordering, trans, rows, cols, alpha, A, lda, ldb);
+        }else if constexpr(std::is_same_v<ValueType,double>){
+            mkl_dimatcopy(ordering, trans, rows, cols, alpha, A, lda, ldb);
+        }
+    };
+
+    constexpr auto mkl_layout = std::is_same_v<ub::layout::first_order,LayoutType> ? 'C' : 'R';
+
+    auto t = amt::timer{};  
+    for(auto const& el : x){
+        auto sz = static_cast<std::size_t>(el);
+        auto one = ValueType(1);
+        auto const M = Mset(sz);
+        auto const N = Nset(sz);
+        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
+        // std::iota(A.begin(), A.end(),1);
+        // std::cerr<<A<<'\n';
+        auto* aptr = A.data();
+        auto lda = std::max(A.strides()[0], A.strides()[1]);
+        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, one, aptr, lda, lda);
+        amt::no_opt(A);
         // std::cerr<<res<<'\n'; exit(0);
         metric_data.update((ops / st));
     }
@@ -261,6 +305,9 @@ int main(){
     
     show_cache_info(std::cout);
 
+    using algo_type = amt::tag::inplace;
+    // using algo_type = amt::tag::outplace;
+
     using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
 
@@ -282,10 +329,10 @@ int main(){
 
     auto m = amt::metric<value_type>(x.size());
 
-    ublas_transpose<value_type,layout_t,max_iter>(x,m);
-    openmp_transpose<value_type,layout_t,max_iter>(x,m,amt::tag::outplace{});
-    mkl_transpose<value_type,layout_t,max_iter>(x,m);
-    eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    // ublas_transpose<value_type,layout_t,max_iter>(x,m);
+    // eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    openmp_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
+    mkl_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
