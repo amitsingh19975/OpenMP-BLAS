@@ -5,6 +5,8 @@ build/
 *
 !include/
 !assets/
+!src/
+!src/*
 !test/
 !test/*
 !assets/
