@@ -12,7 +12,7 @@ and the result matrix be $C$.
 
 Hence, the dimensions of the matrix $C$ will be $m \times n$.
 
-$
+\[
 A= 
 \begin{bmatrix}
     a_{00}  & a_{01}    & \dots     & a_{0k}\\
@@ -36,7 +36,7 @@ C=
     \vdots  & \vdots    & \ddots    & \vdots\\
     c_{m0}  & c_{m1}    & \dots     & c_{mn}\\
 \end{bmatrix}
-$
+\]
 
 \vspace*{0.5cm}
 
@@ -72,6 +72,12 @@ $
 \begin{equation}
     c_{i,j} = \sum_{l=0}^k (a_{i,l} \times b_{l,j})
 \end{equation}
+
+\clearpage
+
+\section{Algorithm}
+
+
 
 \clearpage
 
@@ -126,9 +132,9 @@ $
         \hline
         OpenBLAS    & $4$ & $0$ \\
         \hline
-        Eigen       & $2$ & $0$ \\
+        Eigen       & $3$ & $0$ \\
         \hline
-        Blis        & $5$ & $3$ \\
+        Blis        & $5$ & $4$ \\
         \hline
         Intel's MKL & $0$ & $0$ \\
         \hline
@@ -162,7 +168,7 @@ $
         \hline
         Blis        & $6$ & $2$ \\
         \hline
-        Intel's MKL & $2$ & $0$ \\
+        Intel's MKL & $1$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -181,3 +187,121 @@ $
     \end{tabular}
 \end{table}
 
+\clearpage
+\subsection*{Range[Start: $32$, End: $8Ki$, Step: $32$]}
+
+\begin{table}[ht]
+    \centering
+    \caption{GFLOPS For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Boost.uBLAS.Tensor  & $698.297$& $577.354272$ \\
+        \hline
+        Intel's MKL         & $755.743$& $664.758359$ \\
+        \hline
+        OpenBLAS            & $739.551$& $607.188286$ \\
+        \hline
+        Blis                & $721.793$& $602.726757$ \\
+        \hline
+        Eigen               & $699.169$& $589.249039$ \\
+        \hline
+    \end{tabular}
+
+    \vspace*{1 cm}
+
+    \centering
+    \caption{GFLOPS For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Boost.uBLAS.Tensor  & $318.398$& $264.381474$ \\
+        \hline
+        Intel's MKL         & $368.052$& $312.992397$ \\
+        \hline
+        OpenBLAS            & $341.611$& $253.483622$ \\
+        \hline
+        Blis                & $342.725$& $278.499451$ \\
+        \hline
+        Eigen               & $320.632$& $268.866619$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Utilization[\%] For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Boost.uBLAS.Tensor  & $118.596637$& $98.056092$ \\
+        \hline
+        Intel's MKL         & $128.353091$& $112.900537$ \\
+        \hline
+        OpenBLAS            & $125.603091$& $103.123011$ \\
+        \hline
+        Blis                & $122.587126$& $102.365278$ \\
+        \hline
+        Eigen               & $118.744735$& $100.076263$ \\
+        \hline
+    \end{tabular}
+
+    \vspace*{1 cm}
+
+    \centering
+    \caption{Utilization[\%] For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Boost.uBLAS.Tensor  & $108.151495$& $89.803490$ \\
+        \hline
+        Intel's MKL         & $125.017663$& $106.315352$ \\
+        \hline
+        OpenBLAS            & $116.036345$& $86.101774$ \\
+        \hline
+        Blis                & $116.414742$& $94.598998$ \\
+        \hline
+        Eigen               & $108.910326$& $91.326976$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \caption{Speedup(Boost.uBLAS.Tensor) For Single-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Intel's MKL         & $0.923987$& $0.868518$ \\
+        \hline
+        OpenBLAS            & $0.944218$& $0.950865$ \\
+        \hline
+        Blis                & $0.967448$& $0.957904$ \\
+        \hline
+        Eigen               & $0.998753$& $0.979814$ \\
+        \hline
+    \end{tabular}
+
+    \vspace*{1 cm}
+
+    \centering
+    \caption{Speedup(Boost.uBLAS.Tensor) For Double-Precision}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
+        \hline
+        Intel's MKL         & $0.865090$& $0.844690$ \\
+        \hline
+        OpenBLAS            & $0.932048$& $1.042992$ \\
+        \hline
+        Blis                & $0.929019$& $0.949307$ \\
+        \hline
+        Eigen               & $0.993033$& $0.983318$ \\
+        \hline
+    \end{tabular}
+\end{table}
