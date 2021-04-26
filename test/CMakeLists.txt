@@ -20,6 +20,7 @@ if ( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_list.cmake" )
                                     catch_main
                                     ${OPENMP_LIB}
                                     ${BLIS_LIB}
+                                    Eigen3::Eigen
                                     Boost::filesystem
                         )
 

@@ -1,4 +1,5 @@
 set(TEST_LIST
+    "test.trans.cpp"
     "test.pack.cpp"
     "test.mtm.cpp"
     "test.mtv.cpp"
