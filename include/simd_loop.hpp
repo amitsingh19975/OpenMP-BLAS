@@ -207,7 +207,7 @@ namespace amt::impl{
             auto WA1 = wa[1];
 
             constexpr auto same_address = [](
-                ValueType* c, SizeType const , SizeType const wc1,
+                ValueType* c, SizeType const wc0, SizeType const wc1,
                 ValueType* a, SizeType const wa0, SizeType const wa1,
                 SizeType mr,
                 SizeType nr
@@ -217,13 +217,13 @@ namespace amt::impl{
                     auto aj = a + wa0 * i;
                     #pragma omp simd
                     for(auto j = i; j < nr; ++j){
-                        std::swap(cj[j],aj[j * wa1]);
+                        std::swap(cj[j * wc0],aj[j * wa1]);
                     }
                 }
             };
 
             constexpr auto different_address = [](
-                ValueType* c, SizeType const , SizeType const wc1,
+                ValueType* c, SizeType const wc0, SizeType const wc1,
                 ValueType* a, SizeType const wa0, SizeType const wa1,
                 SizeType mr,
                 SizeType nr
@@ -233,7 +233,7 @@ namespace amt::impl{
                     auto aj = a + wa0 * i;
                     #pragma omp simd
                     for(auto j = 0ul; j < nr; ++j){
-                        std::swap(cj[j],aj[j * wa1]);
+                        std::swap(cj[j * wc0],aj[j * wa1]);
                     }
                 }
             };
