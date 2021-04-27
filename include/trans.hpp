@@ -42,8 +42,8 @@ namespace amt {
         constexpr auto simd_loop = impl::simd_loop<simd_type>{};
 
         auto const num_threads = threads::get_num_threads();
-        auto const max_blocks = static_cast<int>(na[0] / block);
-        auto const max_threads = std::max(max_blocks, num_threads);
+        auto const max_blocks = std::max(1, static_cast<int>(na[0] / block));
+        auto const max_threads = std::min(max_blocks, num_threads);
         
         #pragma omp parallel for num_threads(max_threads) schedule(dynamic) if(na[0] > block)
         for(auto i = 0ul; i < na[0]; i += block){
@@ -72,8 +72,8 @@ namespace amt {
         constexpr auto simd_loop = impl::simd_loop<simd_type>{};
         
         auto const num_threads = threads::get_num_threads();
-        auto const max_blocks = static_cast<int>(na[0] / block);
-        auto const max_threads = std::max(max_blocks, num_threads);
+        auto const max_blocks = std::max(1, static_cast<int>(na[0] / block));
+        auto const max_threads = std::min(max_blocks, num_threads);
 
         auto ai = a;
         auto ci = c;
