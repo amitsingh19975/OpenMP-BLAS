@@ -20,7 +20,7 @@ namespace amt {
             constexpr static auto data_size = sizeof(value_type);
 
             constexpr static size_type block() noexcept{
-                auto size = cache_manager::size(0) / ( data_size );
+                auto size = cache_manager::size(0) / ( data_size << 1 );
                 auto const [root, _] = sqrt_pow_of_two(size);
                 return root;
             }
