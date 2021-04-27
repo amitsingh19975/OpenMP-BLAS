@@ -7,6 +7,7 @@
 #include <functional>
 #include <boost/dll/shared_library.hpp>
 #include <boost/core/demangle.hpp>
+#include <utils.hpp>
 
 using blasint = int;
 
@@ -45,6 +46,20 @@ namespace amt{
             const float alpha, const float *A, const blasint lda, const float *B, const blasint ldb, const float beta, float *C, const blasint ldc)> sgemm = nullptr;
             std::function<void (const ORDER Order, const TRANSPOSE TransA, const TRANSPOSE TransB, const blasint M, const blasint N, const blasint K,
             const double alpha, const double *A, const blasint lda, const double *B, const blasint ldb, const double beta, double *C, const blasint ldc)> dgemm = nullptr;
+
+            // inplace matrix copy
+            std::function<void (const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const float calpha, float *a, 
+		     const blasint clda, const blasint cldb) > simatcopy = nullptr; 
+
+            std::function<void (const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const double calpha, double *a,
+		     const blasint clda, const blasint cldb) > dimatcopy= nullptr; 
+            
+            // outplace matrix copy
+            std::function<void (const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const float calpha, const float *a, 
+		     const blasint clda, float *b, const blasint cldb) > somatcopy = nullptr; 
+
+            std::function<void (const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const double calpha, const double *a,
+		     const blasint clda, double *b, const blasint cldb) > domatcopy= nullptr; 
         }
 
         template<typename ValueType>
@@ -102,6 +117,32 @@ namespace amt{
             }
         }
 
+        template<typename ValueType>
+        void trans(const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const ValueType calpha, ValueType *a, 
+		     const blasint clda, const blasint cldb, tag::inplace
+        ){
+            static_assert(std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType must be of type float or double");
+            
+            if constexpr( std::is_same_v<ValueType,float> ){
+                return detail::simatcopy(CORDER, CTRANS, crows, ccols, calpha, a, clda, cldb);
+            }else{
+                return detail::dimatcopy(CORDER, CTRANS, crows, ccols, calpha, a, clda, cldb);
+            }
+        }
+
+        template<typename ValueType>
+        void trans(const ORDER CORDER, const TRANSPOSE CTRANS, const blasint crows, const blasint ccols, const ValueType calpha, ValueType const *a, 
+		     const blasint clda, ValueType *b, const blasint cldb, tag::outplace
+        ){
+            static_assert(std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType must be of type float or double");
+            
+            if constexpr( std::is_same_v<ValueType,float> ){
+                return detail::somatcopy(CORDER, CTRANS, crows, ccols, calpha, a, clda, b, cldb);
+            }else{
+                return detail::domatcopy(CORDER, CTRANS, crows, ccols, calpha, a, clda, b, cldb);
+            }
+        }
+
     }
 
     namespace detail{
@@ -137,6 +178,10 @@ namespace amt{
                 get_fn(blas::detail::dgemv, "cblas_dgemv");
                 get_fn(blas::detail::sgemm, "cblas_sgemm");
                 get_fn(blas::detail::dgemm, "cblas_dgemm");
+                get_fn(blas::detail::simatcopy, "cblas_simatcopy");
+                get_fn(blas::detail::dimatcopy, "cblas_dimatcopy");
+                get_fn(blas::detail::somatcopy, "cblas_somatcopy");
+                get_fn(blas::detail::domatcopy, "cblas_domatcopy");
             }
         }
         OpenBlasFnLoader(OpenBlasFnLoader const& other) = delete;
