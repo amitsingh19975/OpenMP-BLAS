@@ -70,7 +70,7 @@ template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void ublas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
-    constexpr std::string_view fn_name = "Boost.ublas";
+    constexpr std::string_view fn_name = "Boost.ublas outplace";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](auto& res, auto const& A) -> auto&{
@@ -98,7 +98,7 @@ template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::outplace){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    constexpr std::string_view fn_name = "intel MKL";
+    constexpr std::string_view fn_name = "intel MKL outplace";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](
@@ -146,7 +146,7 @@ template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::inplace){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    constexpr std::string_view fn_name = "intel MKL";
+    constexpr std::string_view fn_name = "intel MKL inplace";
     
     auto& metric_data = m[fn_name];
     constexpr auto bench_fn = [](
@@ -187,10 +187,84 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt:
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
+void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::inplace){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr std::string_view fn_name = "OpenBLAS inplace";
+    
+    auto& metric_data = m[fn_name];
+    constexpr auto bench_fn = [](auto&&... args){
+        amt::blas::trans(std::forward<decltype(args)>(args)...);
+    };
+
+    constexpr auto layout = std::is_same_v<ub::layout::first_order,LayoutType> ? amt::blas::ORDER::ColMajor : amt::blas::ORDER::RowMajor;
+
+    auto t = amt::timer{};  
+    for(auto const& el : x){
+        auto sz = static_cast<std::size_t>(el);
+        auto one = ValueType(1);
+        auto const M = static_cast<blasint>(Mset(sz));
+        auto const N = static_cast<blasint>(Nset(sz));
+        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
+        // std::iota(A.begin(), A.end(),1);
+        // std::cerr<<A<<'\n';
+        auto* aptr = A.data();
+        auto lda = static_cast<blasint>(std::max(A.strides()[0], A.strides()[1]));
+        double st = amt::benchmark<MaxIter>(bench_fn, layout, amt::blas::TRANSPOSE::Trans, M, N, one, aptr, lda, lda, amt::tag::inplace{});
+        amt::no_opt(A);
+        // std::cerr<<res<<'\n'; exit(0);
+        metric_data.update((ops / st));
+    }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    // exit(0);
+}
+
+template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
+void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::outplace){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr std::string_view fn_name = "OpenBLAS outplace";
+    
+    auto& metric_data = m[fn_name];
+    constexpr auto bench_fn = [](auto&&... args){
+        amt::blas::trans(std::forward<decltype(args)>(args)...);
+    };
+
+    constexpr auto layout = std::is_same_v<ub::layout::first_order,LayoutType> ? amt::blas::ORDER::ColMajor : amt::blas::ORDER::RowMajor;
+
+    auto t = amt::timer{};  
+    for(auto const& el : x){
+        auto sz = static_cast<std::size_t>(el);
+        auto one = ValueType(1);
+        auto const M = static_cast<blasint>(Mset(sz));
+        auto const N = static_cast<blasint>(Nset(sz));
+        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
+        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        // std::iota(A.begin(), A.end(),1);
+        // std::cerr<<A<<'\n';
+        auto* cptr = res.data();
+        auto const* aptr = A.data();
+        auto lda = static_cast<blasint>( std::max(A.strides()[0], A.strides()[1]) );
+        auto ldc = static_cast<blasint>( std::max(res.strides()[0], res.strides()[1]) );
+
+        double st = amt::benchmark<MaxIter>(bench_fn, layout, amt::blas::TRANSPOSE::Trans, M, N, one, aptr, lda, cptr, ldc, amt::tag::outplace{});
+        amt::no_opt(res);
+        // std::cerr<<res<<'\n'; exit(0);
+        metric_data.update((ops / st));
+    }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    // exit(0);
+}
+
+template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::outplace){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    constexpr std::string_view fn_name = "Boost.ublas.tensor";
+    constexpr std::string_view fn_name = "Boost.ublas.tensor outplace";
     
     auto& metric_data = m[fn_name];
 
@@ -218,7 +292,7 @@ template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt::tag::inplace){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    constexpr std::string_view fn_name = "Boost.ublas.tensor";
+    constexpr std::string_view fn_name = "Boost.ublas.tensor inplace";
     
     auto& metric_data = m[fn_name];
 
@@ -246,7 +320,7 @@ void eigen_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
-    constexpr std::string_view fn_name = "Eigen";
+    constexpr std::string_view fn_name = "Eigen outplace";
     Eigen::initParallel();
     Eigen::setNbThreads(omp_get_max_threads());
     
@@ -273,6 +347,53 @@ void eigen_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
     t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
 }
+
+template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
+void blis_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr std::string_view fn_name = "Blis outplace";
+    
+    auto& metric_data = m[fn_name];
+    constexpr auto bench_fn = [](auto&&... args){
+        if constexpr(std::is_same_v<ValueType,float>){
+            bli_scopym(std::forward<decltype(args)>(args)...);
+        }else if constexpr(std::is_same_v<ValueType,double>){
+            bli_dcopym(std::forward<decltype(args)>(args)...);
+        }
+    };
+
+    auto t = amt::timer{};
+    for(auto const& el : x){
+        auto sz = static_cast<std::size_t>(el);
+        auto const M = static_cast<dim_t>(Mset(sz));
+        auto const N = static_cast<dim_t>(Nset(sz));
+        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 1.);
+        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(N), static_cast<std::size_t>(M)});
+        auto* aptr = A.data();
+        auto* cptr = res.data();
+        auto rsa = static_cast<inc_t>(A.strides()[0]);
+        auto csa = static_cast<inc_t>(A.strides()[1]);
+        auto rsc = static_cast<inc_t>(res.strides()[0]);
+        auto csc = static_cast<inc_t>(res.strides()[1]);
+
+        double st = amt::benchmark<MaxIter>(bench_fn, 
+            0,
+            BLIS_NONUNIT_DIAG,
+            BLIS_DENSE,
+            BLIS_TRANSPOSE,
+            M,
+            N,
+            aptr, rsa, csa,
+            cptr, rsc, csc
+        );
+        metric_data.update((ops / st));
+    }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+}
+
 
 
 void show_cache_info(std::ostream& os){
@@ -305,8 +426,8 @@ int main(){
     
     show_cache_info(std::cout);
 
-    using algo_type = amt::tag::inplace;
-    // using algo_type = amt::tag::outplace;
+    // using algo_type = amt::tag::inplace;
+    using algo_type = amt::tag::outplace;
 
     using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
@@ -329,10 +450,12 @@ int main(){
 
     auto m = amt::metric<value_type>(x.size());
 
-    // ublas_transpose<value_type,layout_t,max_iter>(x,m);
-    // eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    ublas_transpose<value_type,layout_t,max_iter>(x,m);
+    eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    blis_transpose<value_type,layout_t,max_iter>(x,m);
     openmp_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     mkl_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
+    openblas_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
