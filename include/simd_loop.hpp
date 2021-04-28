@@ -198,7 +198,7 @@ namespace amt::impl{
             ValueType* a, SizeType const* wa,
             SizeType const mr,
             SizeType const nr,
-            bool has_same_address,
+            bool has_same_block,
             tag::inplace
         ) const noexcept{
             auto WC0 = wc[0];
@@ -206,13 +206,13 @@ namespace amt::impl{
             auto WA0 = wa[0];
             auto WA1 = wa[1];
 
-            constexpr auto same_address = [](
+            constexpr auto same_block = [](
                 ValueType* c, SizeType const wc0, SizeType const wc1,
                 ValueType* a, SizeType const wa0, SizeType const wa1,
                 SizeType mr,
                 SizeType nr
             ){
-                for(auto i = 0ul; i < mr; ++i){
+                for(auto i = 0ul; i < mr && i < nr; ++i){
                     auto cj = c + wc1 * i;
                     auto aj = a + wa0 * i;
                     #pragma omp simd
@@ -222,13 +222,13 @@ namespace amt::impl{
                 }
             };
 
-            constexpr auto different_address = [](
+            constexpr auto different_block = [](
                 ValueType* c, SizeType const wc0, SizeType const wc1,
                 ValueType* a, SizeType const wa0, SizeType const wa1,
                 SizeType mr,
                 SizeType nr
             ){
-                for(auto i = 0ul; i < mr; ++i){
+                for(auto i = 0ul; i < mr && nr > 0ul; ++i){
                     auto cj = c + wc1 * i;
                     auto aj = a + wa0 * i;
                     #pragma omp simd
@@ -238,9 +238,9 @@ namespace amt::impl{
                 }
             };
 
-            switch(static_cast<int>(has_same_address)){
-                case 0: different_address(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
-                default: same_address(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
+            switch(static_cast<int>(has_same_block)){
+                case 0: different_block(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
+                default: same_block(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
             }
 
         }
@@ -253,7 +253,7 @@ namespace amt::impl{
             SizeType const nr,
             tag::outplace
         ) const noexcept{
-            for(auto i = 0ul; i < mr; ++i){
+            for(auto i = 0ul; i < mr && nr > 0ul; ++i){
                 auto cj = c + wc[1] * i;
                 auto aj = a + wa[0] * i;
                 #pragma omp simd
