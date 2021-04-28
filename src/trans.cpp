@@ -83,7 +83,7 @@ void ublas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto sz = static_cast<std::size_t>(el);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         ub::matrix<ValueType,LayoutType> A(M,N);
         ub::matrix<ValueType,LayoutType> res(N,M);
 
@@ -123,7 +123,7 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt:
         auto one = ValueType(1);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
         tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(N), static_cast<std::size_t>(M)});
         // std::iota(A.begin(), A.end(),1);
@@ -170,13 +170,14 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt:
         auto one = ValueType(1);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto* aptr = A.data();
-        auto lda = std::max(A.strides()[0], A.strides()[1]);
-        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, one, aptr, lda, lda);
+        auto lda = (mkl_layout == 'C' ? M : N);
+        auto ldc = (mkl_layout == 'R' ? N : M);
+        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, one, aptr, lda, ldc);
         amt::no_opt(A);
         // std::cerr<<res<<'\n'; exit(0);
         metric_data.update((ops / st));
@@ -205,15 +206,13 @@ void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m,
         auto one = ValueType(1);
         auto const M = static_cast<blasint>(Mset(sz));
         auto const N = static_cast<blasint>(Nset(sz));
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
-        // std::iota(A.begin(), A.end(),1);
-        // std::cerr<<A<<'\n';
+        auto lda = (layout == amt::blas::ORDER::ColMajor ? M : N);
+        auto ldc = (layout == amt::blas::ORDER::RowMajor ? N : M);
         auto* aptr = A.data();
-        auto lda = static_cast<blasint>(std::max(A.strides()[0], A.strides()[1]));
-        double st = amt::benchmark<MaxIter>(bench_fn, layout, amt::blas::TRANSPOSE::Trans, M, N, one, aptr, lda, lda, amt::tag::inplace{});
+        double st = amt::benchmark<MaxIter>(bench_fn, layout, amt::blas::TRANSPOSE::Trans, M, N, one, aptr, lda, ldc, amt::tag::inplace{});
         amt::no_opt(A);
-        // std::cerr<<res<<'\n'; exit(0);
         metric_data.update((ops / st));
     }
     t.stop();
@@ -240,7 +239,7 @@ void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m,
         auto one = ValueType(1);
         auto const M = static_cast<blasint>(Mset(sz));
         auto const N = static_cast<blasint>(Nset(sz));
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
         tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         // std::iota(A.begin(), A.end(),1);
@@ -273,7 +272,7 @@ void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, a
         auto sz = static_cast<std::size_t>(el);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{M, N},1.);
         [[maybe_unused]] tensor_t<ValueType,LayoutType> res(shape_t{N, M});
         // std::iota(A.begin(), A.end(),1);
@@ -301,7 +300,7 @@ void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, a
         auto sz = static_cast<std::size_t>(el);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{M, N},1.);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
@@ -337,7 +336,7 @@ void eigen_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto sz = static_cast<std::size_t>(el);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         Matrix<ValueType,-1,-1,eigen_layout> A(M,N);
         Matrix<ValueType,-1,-1,eigen_layout> res(N,M);
         A.setOnes();
@@ -368,7 +367,7 @@ void blis_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto sz = static_cast<std::size_t>(el);
         auto const M = static_cast<dim_t>(Mset(sz));
         auto const N = static_cast<dim_t>(Nset(sz));
-        double const ops = static_cast<double>(M) * static_cast<double>(N);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
         tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 1.);
         tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(N), static_cast<std::size_t>(M)});
         auto* aptr = A.data();
@@ -426,8 +425,8 @@ int main(){
     
     show_cache_info(std::cout);
 
-    // using algo_type = amt::tag::inplace;
-    using algo_type = amt::tag::outplace;
+    using algo_type = amt::tag::inplace;
+    // using algo_type = amt::tag::outplace;
 
     using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
@@ -450,12 +449,12 @@ int main(){
 
     auto m = amt::metric<value_type>(x.size());
 
-    ublas_transpose<value_type,layout_t,max_iter>(x,m);
-    eigen_transpose<value_type,layout_t,max_iter>(x,m);
-    blis_transpose<value_type,layout_t,max_iter>(x,m);
+    // ublas_transpose<value_type,layout_t,max_iter>(x,m);
+    // eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    // blis_transpose<value_type,layout_t,max_iter>(x,m);
     openmp_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     mkl_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
-    openblas_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
+    // openblas_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
@@ -468,19 +467,19 @@ int main(){
 
     // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
-    // m.csv("tensor.csv");
+    m.csv("trans.csv");
 
     #ifndef DISABLE_PLOT
         constexpr std::string_view plot_xlable = "Size [n = m = n], " SIZE_SUFFIX " iterating";
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x, "Performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable);
-            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]");
+            m.plot(x, "Performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
+            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", "Percentage[%] of ", "GiB/s");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable);
-            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]");
-            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable);
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
+            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", "Percentage[%] of ", "GiB/s");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
             amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
