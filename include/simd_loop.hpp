@@ -206,41 +206,14 @@ namespace amt::impl{
             auto WA0 = wa[0];
             auto WA1 = wa[1];
 
-            constexpr auto same_block = [](
-                ValueType* c, SizeType const wc0, SizeType const wc1,
-                ValueType* a, SizeType const wa0, SizeType const wa1,
-                SizeType mr,
-                SizeType nr
-            ){
-                for(auto i = 0ul; i < mr && i < nr; ++i){
-                    auto cj = c + wc1 * i;
-                    auto aj = a + wa0 * i;
-                    #pragma omp simd
-                    for(auto j = i; j < nr; ++j){
-                        std::swap(cj[j * wc0],aj[j * wa1]);
-                    }
+            for(auto i = 0ul; i < mr && nr > (i * has_same_block); ++i){
+                auto cj = c + WC1 * i;
+                auto aj = a + WA0 * i;
+                auto idx = i * has_same_block;
+                #pragma omp simd
+                for(auto j = idx; j < nr; ++j){
+                    std::swap(cj[j * WC0],aj[j * WA1]);
                 }
-            };
-
-            constexpr auto different_block = [](
-                ValueType* c, SizeType const wc0, SizeType const wc1,
-                ValueType* a, SizeType const wa0, SizeType const wa1,
-                SizeType mr,
-                SizeType nr
-            ){
-                for(auto i = 0ul; i < mr && nr > 0ul; ++i){
-                    auto cj = c + wc1 * i;
-                    auto aj = a + wa0 * i;
-                    #pragma omp simd
-                    for(auto j = 0ul; j < nr; ++j){
-                        std::swap(cj[j * wc0],aj[j * wa1]);
-                    }
-                }
-            };
-
-            switch(static_cast<int>(has_same_block)){
-                case 0: different_block(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
-                default: same_block(c, WC0, WC1, a, WA0, WA1, mr, nr); return;
             }
 
         }
