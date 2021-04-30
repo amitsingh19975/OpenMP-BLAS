@@ -117,7 +117,7 @@ namespace amt::impl{
             constexpr auto halfNR = NR >> 1;
             for(auto k = 0ul; k < K; ++k, ak += mr, bk += nr){
                 for(auto j = 0ul; j < halfNR; ++j){
-                    #pragma omp simd aligned(ak)
+                    #pragma omp simd
                     for(auto i = 0ul; i < MR; ++i){
                         buff[(j + 0)        * MR + i] += bk[j + 0]        * ak[i];
                         buff[(j + halfNR)   * MR + i] += bk[j + halfNR]   * ak[i];
@@ -144,7 +144,7 @@ namespace amt::impl{
             constexpr auto halfMR = MR >> 1;
             for(auto k = 0ul; k < K; ++k, ak += mr, bk += nr){
                 for(auto i = 0ul; i < halfMR; ++i){
-                    #pragma omp simd aligned(bk)
+                    #pragma omp simd
                     for(auto j = 0ul; j < NR; ++j){
                         buff[j + ( i + 0 )      * NR] += bk[j] * ak[i + 0];
                         buff[j + ( i + halfMR ) * NR] += bk[j] * ak[i + halfMR];
