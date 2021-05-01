@@ -104,8 +104,8 @@ provided by the paper.
         \assignln{half_{N_r}}{\frac{N_r}{2}}
         \For{\assign{k}{0} \KwTo $k_c$ \KwBy $1$}{
             \For{\assign{j}{0} \KwTo $half_{N_r}$ \KwBy $1$}{
-                \openmp{simd aligned(ak)}
-                \For{\assign{j}{0} \KwTo $M_r$ \KwBy $1$}{
+                \openmp{simd}
+                \For{\assign{i}{0} \KwTo $M_r$ \KwBy $1$}{
                     \assignln{buff[j \times M_r + i]}{buff[j \times M_r + i] + bk[j] \times ak[i]}
                     \assignln{buff[(j + half_{N_r}) \times M_r + i]}{buff[j \times M_r + i] + bk[j + half_{N_r}] \times ak[i]}
                 }
