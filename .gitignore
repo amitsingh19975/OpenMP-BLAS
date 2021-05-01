@@ -10,7 +10,7 @@ build/
 !test/
 !test/*
 !assets/
-!assets/*
+!assets/**
 !include/*.hpp
 !doc/
 !doc/*.tex
