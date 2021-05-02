@@ -60,6 +60,12 @@ every with the corresponding block.
 
 \subsection{Out-Of-Place Transpose}
 
+\begin{figure}[htb]
+    \centering
+    \caption*{Block Diagram for Out-Of-Place Transpose}
+    \includegraphics[width=8cm]{../assets/transpose/outplace/outplace_trans.png}%
+\end{figure}
+
 \begin{algorithm}[H]
     \SetAlgoLined
     \SetKwFunction{SIMDFn}{$simd\_loop$}
@@ -121,6 +127,14 @@ every with the corresponding block.
 \end{algorithm}
 
 \subsection{In-Place Transpose}
+
+\begin{figure}[htb]
+    \centering
+    \caption*{Block Diagram for In-Place Transpose}
+    \subfloat[\centering Blocks are Different]{{\includegraphics[width=8cm]{../assets/transpose/inplace/inplace_trans1.png} }}%
+    \qquad
+    \subfloat[\centering Blocks are Same]{{\includegraphics[width=8cm]{../assets/transpose/inplace/inplace_trans2.png} }}%
+\end{figure}
 
 \begin{algorithm}[H]
     \SetAlgoLined
