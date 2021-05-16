@@ -255,9 +255,9 @@ namespace amt {
         auto const* wc_ptr = c.strides().data();
         auto const* wa_ptr = a.strides().data();
         auto const* wb_ptr = b.strides().data();
-        auto const* nc_ptr = nc.data();
-        auto const* na_ptr = na.data();
-        auto const* nb_ptr = nb.data();
+        auto const* nc_ptr = boost::numeric::ublas::data(nc);
+        auto const* na_ptr = boost::numeric::ublas::data(na);
+        auto const* nb_ptr = boost::numeric::ublas::data(nb);
 
         return [c_ptr,a_ptr,b_ptr,wc_ptr,wa_ptr,wb_ptr,nc_ptr,na_ptr,nb_ptr]{
             mtm_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, b_ptr, nb_ptr, wb_ptr, 

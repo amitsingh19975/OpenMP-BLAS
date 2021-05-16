@@ -23,6 +23,8 @@
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
+template<typename T, typename L = ub::layout::first_order>
+using tensor_t = ub::fixed_rank_tensor<T,2,L>;
 
 
 static std::size_t fixed_size = 1024ul;
@@ -114,9 +116,9 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const M = static_cast<MKL_INT>(lset(sz));
         auto const N = static_cast<MKL_INT>(rset(sz));
         auto one = ValueType(1);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)}, one);
-        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)}, one);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        tensor_t<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)}, one);
+        tensor_t<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)}, one);
+        tensor_t<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto const* aptr = v1.data();
         auto const* bptr = v2.data();
         auto* cptr = res.data();
@@ -148,9 +150,9 @@ void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m
         auto inc = static_cast<blasint>(1);
         auto const M = static_cast<blasint>(lset(sz));
         auto const N = static_cast<blasint>(rset(sz));
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
-        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        tensor_t<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
+        tensor_t<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
+        tensor_t<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto aptr = v1.data();
         auto bptr = v2.data();
         auto cptr = res.data();
@@ -177,9 +179,9 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto sz = static_cast<std::size_t>(el);
         auto const M = lset(sz);
         auto const N = rset(sz);
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, M},1.);
-        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, N},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{M, N});
+        tensor_t<ValueType> v1(shape_t{1ul, M},1.);
+        tensor_t<ValueType> v2(shape_t{1ul, N},1.);
+        tensor_t<ValueType> res(shape_t{M, N});
     
         auto bench_fn = amt::outer_prod(res,v1,v2,std::nullopt);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
@@ -213,9 +215,9 @@ void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto alpha = ValueType{1};
         auto const M = static_cast<inc_t>(lset(sz));
         auto const N = static_cast<inc_t>(rset(sz));
-        ub::dynamic_tensor<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
-        ub::dynamic_tensor<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
-        ub::dynamic_tensor<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        tensor_t<ValueType> v1(shape_t{1ul, static_cast<std::size_t>(M)},1.);
+        tensor_t<ValueType> v2(shape_t{1ul, static_cast<std::size_t>(N)},1.);
+        tensor_t<ValueType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
         auto rsa = static_cast<inc_t>(res.strides()[0]);
         auto csa = static_cast<inc_t>(res.strides()[1]);
         auto aptr = v1.data();

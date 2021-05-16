@@ -214,8 +214,8 @@ namespace amt {
         }
         auto const* aptr = a.data();
         auto const* bptr = b.data();
-        auto const* na_ptr = na.data();
-        auto const* nb_ptr = nb.data();
+        auto const* na_ptr = boost::numeric::ublas::data(na);
+        auto const* nb_ptr = boost::numeric::ublas::data(nb);
     
         return [&c,aptr,bptr,na_ptr,nb_ptr,nths]{
             dot_prod_helper(&c,aptr,na_ptr,bptr,nb_ptr,nths);

@@ -287,6 +287,32 @@ namespace amt{
             plt::show();
         }
 
+        template<bool Smooth = false>
+        void plot_speedup_semilogy(std::vector<double> const& x_coord, std::string title, std::string_view xlabel = "Size", std::string_view ylabel = "SpeedUP") const{
+
+            namespace plt = matplot;
+
+            title += type_name;
+            plt::title(title);
+            
+            plt::cla();
+            plt::xlabel(xlabel);
+            plt::ylabel(ylabel);
+            plt::hold(plt::on);
+
+            std::vector<double> speed(m_total);
+
+            for(auto&& [k,v] : m_data){
+                auto l = plt::semilogy(x_coord, v.plot);
+                l->display_name(k);
+                l->marker_face(true);
+            }
+            plt::grid(plt::on);
+            plt::hold(plt::off);
+            plt::legend();
+            plt::show();
+        }
+
         template<bool InterPoint = false, PLOT_TYPE PT = PLOT_TYPE::SCATTER, std::size_t Width = 2ul>
         auto plot_speedup_per(std::string_view pattern, std::string title, std::string xlabel = "Percentage[%] of ", std::string_view ylabel = "SpeedUP") const
         {

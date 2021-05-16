@@ -132,8 +132,8 @@ namespace amt {
         auto const* a_ptr = a.data();
         auto const* wc_ptr = c.strides().data();
         auto const* wa_ptr = a.strides().data();
-        auto const* na_ptr = na.data();
-        auto const* nc_ptr = na.data();
+        auto const* na_ptr = boost::numeric::ublas::data(na);
+        auto const* nc_ptr = boost::numeric::ublas::data(na);
 
         return [c_ptr,a_ptr,wc_ptr,wa_ptr,na_ptr,nc_ptr]{
             transpose_helper(c_ptr, nc_ptr, wc_ptr, a_ptr, na_ptr, wa_ptr, tag::outplace{});
@@ -158,7 +158,7 @@ namespace amt {
         threads::set_num_threads(num_threads);
 
         auto* a_ptr = a.data();
-        auto const* na_ptr = na.data();
+        auto const* na_ptr = boost::numeric::ublas::data(na);
 
         return [a_ptr,na_ptr]{
             using size_type = std::decay_t< std::remove_pointer_t<decltype(na_ptr)> >;

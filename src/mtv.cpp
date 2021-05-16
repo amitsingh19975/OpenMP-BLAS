@@ -24,7 +24,7 @@ namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
 template<typename T, typename L>
-using tensor_t = ub::dynamic_tensor<T,L>;
+using tensor_t = ub::fixed_rank_tensor<T,2,L>;
 
 
 static std::size_t fixed_size = 1024ul;

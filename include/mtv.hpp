@@ -85,7 +85,7 @@ namespace amt {
         [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
         [[maybe_unused]] static auto [small_block,count] = sqrt_pow_of_two(number_of_el_l1);
         [[maybe_unused]] static SizeType k_factor = nearest_power_of_two(number_of_el_l1 / std::max(1ul,count));
-        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : small_block);
+        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : number_of_el_l1 >> count);
         [[maybe_unused]] SizeType const max_size = std::max(NA,NB);
         [[maybe_unused]] SizeType const block2 = std::max(1ul, (small_block >> (max_size / k_factor)));
 
@@ -178,14 +178,14 @@ namespace amt {
             );
         }
 
-        using size_type = std::decay_t< std::remove_pointer_t<decltype(na.data())> >;
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(boost::numeric::ublas::data(na))> >;
 
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto na_ptr = na.data();
-        auto nb_ptr = nb.data();
-        auto nc_ptr = nc.data();
+        auto na_ptr = boost::numeric::ublas::data(na);
+        auto nb_ptr = boost::numeric::ublas::data(nb);
+        auto nc_ptr = boost::numeric::ublas::data(nc);
         std::array<size_type,2> wa = {na[1], 1ul};
         
         if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) wa = {1ul, na[0]};
@@ -244,7 +244,7 @@ namespace amt {
         
         constexpr bool is_first_order = std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order>;
 
-        using size_type = std::decay_t< std::remove_pointer_t<decltype(na.data())> >;
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(boost::numeric::ublas::data(na))> >;
         using other_layout_type = std::conditional_t<
             is_first_order,
             boost::numeric::ublas::layout::last_order,
@@ -254,8 +254,8 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto nb_ptr = nb.data();
-        auto nc_ptr = nc.data();
+        auto nb_ptr = boost::numeric::ublas::data(nb);
+        auto nc_ptr = boost::numeric::ublas::data(nc);
         std::array<size_type,2> new_na = {na[1],na[0]};
         std::array<size_type,2> wa = {new_na[1], 1ul};
         
@@ -265,7 +265,7 @@ namespace amt {
         // c = vA^T
 
         return [cptr,nc_ptr,aptr,new_na,wa,bptr,nb_ptr,nths]{
-            mtv_helper(cptr,nc_ptr,aptr,new_na.data(),wa.data(),bptr,nb_ptr,nths, other_layout_type{});
+            mtv_helper(cptr,nc_ptr,aptr,new_na,wa.data(),bptr,nb_ptr,nths, other_layout_type{});
         };
 
     }

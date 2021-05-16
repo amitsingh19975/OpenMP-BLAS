@@ -23,7 +23,7 @@ namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
 template<typename T, typename L>
-using tensor_t = ub::dynamic_tensor<T,L>;
+using tensor_t = ub::fixed_rank_tensor<T,2,L>;
 
 
 static std::size_t fixed_size = 1024ul;
@@ -251,6 +251,33 @@ void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
+void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m, std::size_t M){
+    static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
+    
+    constexpr std::string_view fn_name = "Boost.ublas.tensor";
+    
+    auto& metric_data = m[fn_name];
+
+    auto t = amt::timer{};
+    for(auto const& el : x){
+        auto sz = static_cast<std::size_t>(el);
+        // auto const M = Mset(sz);
+        auto const N = M;//Nset(sz);
+        auto const K = M;//Kset(sz);
+        double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
+        tensor_t<ValueType,LayoutType> A(shape_t{M, K},1.);
+        tensor_t<ValueType,LayoutType> B(shape_t{K, N},1.);
+        tensor_t<ValueType,LayoutType> res(shape_t{M, N});
+        auto bench_fn = amt::mtm(res, A, B, std::nullopt,sz);
+        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
+        amt::no_opt(res);
+        metric_data.update((ops / st));
+    }
+    t.stop();
+    std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+}
+
+template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
 void blis_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
@@ -352,10 +379,10 @@ void show_cache_info(std::ostream& os){
 
 
 #ifdef SIZE_KiB
-    #define SIZE_SUFFIX "[KiB]"
+    #define SIZE_SUFFIX "[Ki]"
 #else
     #define SIZE_KiB false
-    #define SIZE_SUFFIX "[MiB]"
+    #define SIZE_SUFFIX "[Mi]"
 #endif
 
 constexpr double size_conv(double val) noexcept{ 
@@ -382,19 +409,20 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 3 * 1024ul;
+    [[maybe_unused]]constexpr double max_value = 3 * 1024;
     constexpr double sz = 32;
-    amt::range(x, sz, max_value, sz, std::plus<>{});
+    amt::range(x, 32., max_value, sz, std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<14;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
 
     // ublas_gemm<value_type,layout_t,1ul>(x,m);
-    openblas_gemm<value_type,layout_t,max_iter>(x,m);
-    blis_gemm<value_type,layout_t,max_iter>(x,m);
-    mkl_gemm<value_type,layout_t,max_iter>(x,m);
+    // openblas_gemm<value_type,layout_t,max_iter>(x,m);
+    // blis_gemm<value_type,layout_t,max_iter>(x,m);
+    // mkl_gemm<value_type,layout_t,max_iter>(x,m);
     openmp_gemm<value_type,layout_t,max_iter>(x,m);
+    sleep(5);
     eigen_gemm<value_type,layout_t,max_iter>(x,m);
     // std::cout<<m.tail();
 
@@ -408,21 +436,21 @@ int main(){
 
     // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
+    m.csv("tensor.csv");
     #ifndef DISABLE_PLOT
         constexpr std::string_view plot_xlable = "Size [n = m = n], " SIZE_SUFFIX " iterating";
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot(x, "Performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]", plot_xlable);
-            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]");
+            m.plot(x, "Performance of Boost.uBLAS.Tensor for the gemm-operation [iter=4]", plot_xlable);
+            m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the gemm-operation [iter=4]");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the gemv-operation [iter=4]", plot_xlable);
-            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the gemv-operation [iter=4]");
-            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the gemv-operation [iter=4]", plot_xlable);
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the gemm-operation [iter=4]", plot_xlable);
+            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the gemm-operation [iter=4]");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the gemm-operation [iter=4]", plot_xlable);
             amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
-    // m.raw();
     return 0;
 
 }

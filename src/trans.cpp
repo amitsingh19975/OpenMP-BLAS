@@ -23,7 +23,7 @@ namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
 using shape_t = ub::extents<2u>;
 template<typename T, typename L>
-using tensor_t = ub::dynamic_tensor<T,L>;
+using tensor_t = ub::fixed_rank_tensor<T,2,L>;
 
 
 static std::size_t fixed_size = 1024ul;
@@ -425,14 +425,14 @@ int main(){
     
     show_cache_info(std::cout);
 
-    using algo_type = amt::tag::inplace;
-    // using algo_type = amt::tag::outplace;
+    // using algo_type = amt::tag::inplace;
+    using algo_type = amt::tag::outplace;
 
     using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
 
-    using value_type = float;
-    // using value_type = double;
+    // using value_type = float;
+    using value_type = double;
     
     std::vector<double> x;
 
@@ -441,7 +441,7 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 4 * 1024;
+    [[maybe_unused]]constexpr double max_value = 16 * 1024;
     constexpr double sz = 32;
     amt::range(x, 32., max_value, sz, std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<14;
@@ -449,12 +449,12 @@ int main(){
 
     auto m = amt::metric<value_type>(x.size());
 
-    // ublas_transpose<value_type,layout_t,max_iter>(x,m);
-    // eigen_transpose<value_type,layout_t,max_iter>(x,m);
-    // blis_transpose<value_type,layout_t,max_iter>(x,m);
     openmp_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     mkl_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
-    // openblas_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
+    ublas_transpose<value_type,layout_t,max_iter>(x,m);
+    eigen_transpose<value_type,layout_t,max_iter>(x,m);
+    blis_transpose<value_type,layout_t,max_iter>(x,m);
+    openblas_transpose<value_type,layout_t,max_iter>(x,m,algo_type{});
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
@@ -470,16 +470,16 @@ int main(){
     m.csv("trans.csv");
 
     #ifndef DISABLE_PLOT
-        constexpr std::string_view plot_xlable = "Size [n = m = n], " SIZE_SUFFIX " iterating";
+        constexpr std::string_view plot_xlable = "Size [n = m], " SIZE_SUFFIX " iterating";
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x, "Performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
             m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", "Percentage[%] of ", "GiB/s");
         #endif
         
         #if defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
-            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
-            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", "Percentage[%] of ", "GiB/s");
-            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable, "GiB/s");
+            m.plot_speedup(comp_name,x,"Speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable);
+            auto inter_pts = m.plot_speedup_per<true>(comp_name,"Sorted speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", "Percentage[%] of ");
+            m.plot_speedup_semilogy<true>(comp_name,x,"Semilogy speedup of Boost.uBLAS.Tensor for the transpose-operation [iter=4]", plot_xlable);
             amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
