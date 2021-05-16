@@ -317,7 +317,7 @@ int main(){
 
     fixed_size = 1<<11;
     // is_lrect_matrix = true;
-    // is_rrect_matrix = true;
+    is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 10ul;
     [[maybe_unused]]constexpr double max_value = 4 * 1024;
@@ -338,11 +338,11 @@ int main(){
     constexpr std::string_view comp_name = "tensor";
 
     constexpr std::string_view plot_xlable = "Size [n = m], " SIZE_SUFFIX " iterating";
-    std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
-        double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
-        // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
-        return size_conv(lsz);
-    });
+    // std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
+    //     double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
+    //     // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
+    //     return size_conv(lsz);
+    // });
 
     // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
