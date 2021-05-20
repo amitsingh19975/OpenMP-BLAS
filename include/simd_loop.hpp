@@ -101,7 +101,6 @@ namespace amt::impl{
                 default: return;
             }
         }
-
     private:
         template<std::size_t MR, typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void helper(ValueType* c, ValueType const* a, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{

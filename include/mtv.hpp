@@ -8,65 +8,9 @@
 #include <array>
 #include <thread_utils.hpp>
 #include <simd_loop.hpp>
+#include <cpuinfo.hpp>
 
 namespace amt {
-
-    namespace impl{        
-
-        template<typename ValueType, typename SizeType, typename SIMDLoop>
-        AMT_ALWAYS_INLINE void mtv_helper_loop(ValueType* c, 
-            ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
-            SizeType const nb, SizeType const block, SIMDLoop const& simd_loop
-        ) noexcept{
-            static_assert(SIMDLoop::type == impl::SIMD_PROD_TYPE::MTV);
-            if(nb == 0ul) return;
-            auto ai = a;
-            auto bi = b;
-            auto ci = c;
-            #pragma omp for schedule(dynamic)
-            for(auto i = 0ul; i < na; i += block){
-                auto aj = ai + i;
-                auto bj = bi;
-                auto cj = ci + i;
-                auto ib = std::min(block,na-i);
-                for(auto j = 0ul; j < nb; ++j){
-                    auto jw = j * SIMDLoop::size;
-                    auto ak = aj + jw * wa;
-                    auto bk = bj + jw;
-                    auto ck = cj;
-                    simd_loop(ck, ak, bk, ib, wa);
-                }
-            }
-        }
-
-        template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void mtv_helper_switch(ValueType* c, 
-            ValueType const* a, SizeType const wa, SizeType const na, ValueType const* b, 
-            SizeType const nb, SizeType const block, SizeType const small_block
-        ) noexcept{
-            constexpr auto simd_type = impl::SIMD_PROD_TYPE::MTV;
-
-            auto wraped_fn = [a,b,c,wa,na,nb,block](auto&& loop){
-                impl::mtv_helper_loop(c,a,wa,na,b,nb,block,std::forward<decltype(loop)>(loop));
-            };
-            switch(small_block){
-                case 0: break;
-                case 1: wraped_fn(impl::simd_loop<simd_type,1ul>{}); break;
-                case 2: wraped_fn(impl::simd_loop<simd_type,2ul>{}); break;
-                case 4: wraped_fn(impl::simd_loop<simd_type,4ul>{}); break;
-                case 8: wraped_fn(impl::simd_loop<simd_type,8ul>{}); break;
-                case 16: wraped_fn(impl::simd_loop<simd_type,16ul>{}); break;
-                case 32: wraped_fn(impl::simd_loop<simd_type,32ul>{}); break;
-                case 64: wraped_fn(impl::simd_loop<simd_type,64ul>{}); break;
-                case 128: wraped_fn(impl::simd_loop<simd_type,128ul>{}); break;
-                case 256: wraped_fn(impl::simd_loop<simd_type,256ul>{}); break;
-                case 512: wraped_fn(impl::simd_loop<simd_type,512ul>{}); break;
-                default: assert(false && "Unknown block size");
-            }
-        }
-
-    } // namespace impl
-    
 
     template<typename ValueType, typename SizeType>
     AMT_ALWAYS_INLINE void mtv_helper(
@@ -79,29 +23,44 @@ namespace amt {
     {
         auto const NA = nc[0] * nc[1];
         auto const NB = nb[0] * nb[1];
-        auto const WA = std::max(wa[0],wa[1]);
+
+        constexpr auto cpu_fam = CPUFamily::INTEL_SKYLAKE;
+        constexpr auto vec_len = 256ul;
 
         [[maybe_unused]] static SizeType const number_of_el_l1 = cache_manager::size(0) / sizeof(ValueType);
-        [[maybe_unused]] static SizeType const half_block = number_of_el_l1>>1;
-        [[maybe_unused]] static auto [small_block,count] = sqrt_pow_of_two(number_of_el_l1);
-        [[maybe_unused]] static SizeType k_factor = nearest_power_of_two(number_of_el_l1 / std::max(1ul,count));
-        [[maybe_unused]] SizeType const block1 = (NA > number_of_el_l1 ? half_block : number_of_el_l1 >> count);
-        [[maybe_unused]] SizeType const max_size = std::max(NA,NB);
-        [[maybe_unused]] SizeType const block2 = std::max(1ul, (small_block >> (max_size / k_factor)));
+        [[maybe_unused]] static SizeType const assoc_l1 = ( cache_manager::assoc(0) == 1 ? 8ul : cache_manager::assoc(0) );
+        [[maybe_unused]] static SizeType const line_size = cache_manager::line_size(0);
+        [[maybe_unused]] static SizeType const sets = cache_manager::size(0) / (assoc_l1 * line_size);
 
-        auto ai = a;
-        auto bi = b;
-        auto ci = c;
-        auto Nitr = NB / block2;
-        auto Nrem = NB % block2;
+        constexpr auto MR = calculate_mr<ValueType,vec_len,cpu_fam>();
+        static SizeType const KB = ( assoc_l1 - 1 ) * ( sets * line_size ) / (sizeof(ValueType) * MR);
+        static SizeType const MB = nearest_mul_of_x( ( (cache_manager::assoc(1) - 1) * cache_manager::sets(1) * cache_manager::line_size(1) ) / ( sizeof(ValueType) * KB ), MR );
 
         #pragma omp parallel
         {
-            impl::mtv_helper_switch(ci,ai,WA,NA,bi,Nrem,block1,1ul);
-            impl::mtv_helper_switch(ci,ai + Nrem * WA,WA,NA,bi + Nrem,Nitr, block1, block2);
-        }
+            #pragma omp for
+            for(auto i = 0ul; i < NA; i += MB){
+                auto const ib = std::min(NA-i,MB);
+                auto ai = a + i * wa[0];
+                auto bi = b;
+                auto ci = c + i;
 
-        
+                for(auto k = 0ul; k < NB; k += KB){
+                    auto const kb = std::min(NB - k, KB);
+                    auto ak = ai + k * wa[1];
+                    auto bk = bi + k;
+                    auto ck = ci;
+
+                    for(auto ii = 0ul; ii < ib; ii += MR){
+                        auto const iib = std::min(ib - ii, MR);
+                        auto ap = ak + ii * wa[0];
+                        auto bp = bk;
+                        auto cp = ck + ii;
+                        impl::simd_loop<impl::SIMD_PROD_TYPE::MTV,MR>{}(cp, ap, iib, wa, bp, kb);
+                    }
+                }
+            }
+        }
     }
 
     template<typename ValueType, typename SizeType>
@@ -265,7 +224,7 @@ namespace amt {
         // c = vA^T
 
         return [cptr,nc_ptr,aptr,new_na,wa,bptr,nb_ptr,nths]{
-            mtv_helper(cptr,nc_ptr,aptr,new_na,wa.data(),bptr,nb_ptr,nths, other_layout_type{});
+            mtv_helper(cptr,nc_ptr,aptr,new_na.data(),wa.data(),bptr,nb_ptr,nths, other_layout_type{});
         };
 
     }
