@@ -205,6 +205,7 @@ namespace amt{
         constexpr static size_type assoc(size_type k) { return static_cast<size_type>(m_data[k].associativity); }
         constexpr static size_type line_size(size_type k) { return static_cast<size_type>(m_data[k].line_size); }
         constexpr static size_type line_size() { return line_size(0); }
+        constexpr static size_type sets(size_type k) { return size(k) / (line_size(k) * assoc(k)); }
         
         constexpr static reference l1() noexcept{ return m_data[0ul]; }
         

@@ -1,5 +1,5 @@
-#if !defined(AMT_BENCHMARK_MTV_PRODUCT_HPP)
-#define AMT_BENCHMARK_MTV_PRODUCT_HPP
+#if !defined(AMT_BENCHMARK_MTM_PRODUCT_HPP)
+#define AMT_BENCHMARK_MTM_PRODUCT_HPP
 
 #include <boost/numeric/ublas/tensor.hpp>
 #include <optional>
@@ -268,4 +268,4 @@ namespace amt {
 
 } // namespace amt
 
-#endif // AMT_BENCHMARK_MTV_PRODUCT_HPP
+#endif // AMT_BENCHMARK_MTM_PRODUCT_HPP
