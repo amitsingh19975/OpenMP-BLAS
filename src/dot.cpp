@@ -61,7 +61,8 @@ void mkl_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
+        auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
+        auto v2 = amt::make_tensor<ValueType>(1ul,sz,1.);
         double st = amt::benchmark<MaxIter>(bench_fn, static_cast<MKL_INT>(sz),v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
@@ -83,7 +84,8 @@ void openblas_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
+        auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
+        auto v2 = amt::make_tensor<ValueType>(1ul,sz,1.);
         double st = amt::benchmark<MaxIter>(bench_fn, static_cast<blasint>(sz), v1.data(), 1, v2.data(), 1);
         metric_data.update((ops / st));
     }
@@ -102,7 +104,8 @@ void openmp_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
+        auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
+        auto v2 = amt::make_tensor<ValueType>(1ul,sz,1.);
         auto bench_fn = amt::dot_prod(ret,v1,v2,std::nullopt);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         metric_data.update((ops / st));
@@ -128,7 +131,8 @@ void blis_dot_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         double const ops = 2. * el;
         auto sz = static_cast<std::size_t>(el);
-        ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz}), v2(ub::extents<>{1ul, sz});
+        auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
+        auto v2 = amt::make_tensor<ValueType>(1ul,sz,1.);
         double st = amt::benchmark<MaxIter>(bench_fn, BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, static_cast<dim_t>(sz), v1.data(), 1, v2.data(), 1, &ret);
         metric_data.update((ops / st));
     }

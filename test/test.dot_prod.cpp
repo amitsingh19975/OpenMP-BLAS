@@ -6,8 +6,6 @@
 #include <dot.hpp>
 #include <openblas.hpp>
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using VectorType = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
 
 TEMPLATE_TEST_CASE( "Vector Vector Inner Product for Range[Start: 2, End: 2^17, Step: 1]", "[dot_prod]", float, double ) {
     namespace ub = boost::numeric::ublas;
@@ -20,7 +18,7 @@ TEMPLATE_TEST_CASE( "Vector Vector Inner Product for Range[Start: 2, End: 2^17, 
 
 
     for(auto const& s : sizes){
-        VectorType<TestType> a(ub::extents<2>{1,s});
+        auto a = amt::make_tensor<TestType>(1ul,s);
         std::iota(a.begin(), a.end(), 1);
         TestType my_res{};
         auto openblas_res = amt::blas::dot_prod<TestType>(static_cast<blasint>(s), a.data(), 1, a.data(), 1);

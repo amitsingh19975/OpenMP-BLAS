@@ -21,10 +21,6 @@
 
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
-using shape_t = ub::extents<2u>;
-template<typename T, typename L>
-using tensor_t = ub::fixed_rank_tensor<T,2,L>;
-
 
 static std::size_t fixed_size = 1024ul;
 static bool is_Mrect_matrix = false;
@@ -120,19 +116,18 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt:
     auto t = amt::timer{};  
     for(auto const& el : x){
         auto sz = static_cast<std::size_t>(el);
-        auto one = ValueType(1);
         auto const M = Mset(sz);
         auto const N = Nset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(N), static_cast<std::size_t>(M)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(N,M);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto* cptr = res.data();
         auto const* aptr = A.data();
         auto lda = std::max(A.strides()[0], A.strides()[1]);
         auto ldc = std::max(res.strides()[0], res.strides()[1]);
-        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, one, aptr, lda, cptr, ldc);
+        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, 'T', M, N, ValueType(1), aptr, lda, cptr, ldc);
         amt::no_opt(res);
         // std::cerr<<res<<'\n'; exit(0);
         metric_data.update((ops / st));
@@ -171,7 +166,7 @@ void mkl_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, amt:
         auto const M = Mset(sz);
         auto const N = Nset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto* aptr = A.data();
@@ -207,7 +202,7 @@ void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m,
         auto const M = static_cast<blasint>(Mset(sz));
         auto const N = static_cast<blasint>(Nset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
         auto lda = (layout == amt::blas::ORDER::ColMajor ? M : N);
         auto ldc = (layout == amt::blas::ORDER::RowMajor ? N : M);
         auto* aptr = A.data();
@@ -240,8 +235,8 @@ void openblas_transpose(std::vector<double> const& x, amt::metric<ValueType>& m,
         auto const M = static_cast<blasint>(Mset(sz));
         auto const N = static_cast<blasint>(Nset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, one);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(N,M);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto* cptr = res.data();
@@ -273,8 +268,8 @@ void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, a
         auto const M = Mset(sz);
         auto const N = Nset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{M, N},1.);
-        [[maybe_unused]] tensor_t<ValueType,LayoutType> res(shape_t{N, M});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(N,M);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto bench_fn = amt::transpose(res, A, std::nullopt);
@@ -301,7 +296,7 @@ void openmp_transpose(std::vector<double> const& x, amt::metric<ValueType>& m, a
         auto const M = Mset(sz);
         auto const N = Nset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{M, N},1.);
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
         // std::iota(A.begin(), A.end(),1);
         // std::cerr<<A<<'\n';
         auto bench_fn = amt::transpose(A, std::nullopt);
@@ -368,8 +363,8 @@ void blis_transpose(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const M = static_cast<dim_t>(Mset(sz));
         auto const N = static_cast<dim_t>(Nset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * sizeof(ValueType);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)}, 1.);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(N), static_cast<std::size_t>(M)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(N,M);
         auto* aptr = A.data();
         auto* cptr = res.data();
         auto rsa = static_cast<inc_t>(A.strides()[0]);

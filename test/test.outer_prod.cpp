@@ -9,9 +9,6 @@
 #include <blis.h>
 #include "test_utils.hpp"
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using VectorType = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
-
 template<typename ValueType>
 constexpr auto blis_ger(conj_t  conjx,
                         conj_t  conjy,
@@ -37,11 +34,11 @@ TEMPLATE_TEST_CASE( "First Order Square Vector Vector Outer Product for Range[St
     constexpr std::size_t step = 1;
     
     for(auto sz = start; sz < max_size; sz += step){
-        VectorType<TestType> a(ub::extents<2>{1,sz});
-        VectorType<TestType> b(ub::extents<2>{1,sz});
+        auto a = amt::make_tensor<TestType>(1ul,sz);
+        auto b = amt::make_tensor<TestType>(1ul,sz);
         
-        ub::dynamic_tensor<TestType> lres(ub::extents<>{sz, sz});
-        ub::dynamic_tensor<TestType> rres(ub::extents<>{sz, sz});
+        auto lres = amt::make_tensor<TestType>(sz, sz);
+        auto rres = amt::make_tensor<TestType>(sz, sz);
         rand_gen<TestType>(a);
         rand_gen<TestType>(b);
         
@@ -72,11 +69,11 @@ TEMPLATE_TEST_CASE( "Last Order Square Vector Vector Outer Product for Range[Sta
     constexpr std::size_t step = 1;
     
     for(auto sz = start; sz < max_size; sz += step){
-        VectorType<TestType> a(ub::extents<2>{1,sz});
-        VectorType<TestType> b(ub::extents<2>{1,sz});
+        auto a = amt::make_tensor<TestType>(1,sz);
+        auto b = amt::make_tensor<TestType>(1,sz);
         
-        ub::dynamic_tensor<TestType, ub::layout::last_order> lres(ub::extents<>{sz, sz});
-        ub::dynamic_tensor<TestType, ub::layout::last_order> rres(ub::extents<>{sz, sz});
+        auto lres = amt::make_tensor<TestType, ub::layout::last_order>(sz, sz);
+        auto rres = amt::make_tensor<TestType, ub::layout::last_order>(sz, sz);
         rand_gen<TestType>(a);
         rand_gen<TestType>(b);
         
@@ -109,14 +106,14 @@ TEMPLATE_TEST_CASE( "First Order Rectangular Vector Vector Outer Product for Ran
 
 
     for(auto const& m : sizes){
-        VectorType<TestType> a(ub::extents<2>{1,m});
+        auto a = amt::make_tensor<TestType>(1,m);
         rand_gen<TestType>(a);
         for(auto const& n : sizes){
-            VectorType<TestType> b(ub::extents<2>{1,n});
+            auto b = amt::make_tensor<TestType>(1,n);
             rand_gen<TestType>(b);
             
-            ub::dynamic_tensor<TestType> lres(ub::extents<>{m, n});
-            ub::dynamic_tensor<TestType> rres(ub::extents<>{m, n});
+            auto lres = amt::make_tensor<TestType>(m, n);
+            auto rres = amt::make_tensor<TestType>(m, n);
             
             auto inc = static_cast<inc_t>(1);
             auto M = static_cast<inc_t>(m);
@@ -152,14 +149,14 @@ TEMPLATE_TEST_CASE( "Last Order Rectangular Vector Vector Outer Product for Rang
 
 
     for(auto const& m : sizes){
-        VectorType<TestType> a(ub::extents<2>{1,m});
+        auto a = amt::make_tensor<TestType>(1,m);
         rand_gen<TestType>(a);
         for(auto const& n : sizes){
-            VectorType<TestType> b(ub::extents<2>{1,n});
+            auto b = amt::make_tensor<TestType>(1,n);
             rand_gen<TestType>(b);
             
-            ub::dynamic_tensor<TestType, ub::layout::last_order> lres(ub::extents<>{m, n});
-            ub::dynamic_tensor<TestType, ub::layout::last_order> rres(ub::extents<>{m, n});
+            auto lres = amt::make_tensor<TestType, ub::layout::last_order>(m, n);
+            auto rres = amt::make_tensor<TestType, ub::layout::last_order>(m, n);
             
             auto inc = static_cast<inc_t>(1);
             auto M = static_cast<inc_t>(m);

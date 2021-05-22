@@ -7,10 +7,28 @@
 #include <tuple>
 #include <type_traits>
 #include <macros.hpp>
-#include <boost/numeric/ublas/tensor/layout.hpp>
+#include <boost/numeric/ublas/tensor.hpp>
 #include <iomanip>
 
 namespace amt{
+
+    namespace ub = boost::numeric::ublas;
+    using shape_t = ub::extents<2u>;
+
+    template<typename T, typename L>
+    using tensor_t = ub::tensor_static_rank<T,2,L>;
+
+    template<typename T, typename L = ub::layout::first_order>
+    auto make_tensor(ub::integral auto M, ub::integral auto N){
+        return tensor_t<T,L>( static_cast<std::size_t>(M), static_cast<std::size_t>(N) );
+    }
+
+    template<typename T, typename L = ub::layout::first_order>
+    auto make_tensor(ub::integral auto M, ub::integral auto N, T val){
+        auto ret = tensor_t<T,L>( static_cast<std::size_t>(M), static_cast<std::size_t>(N) );
+        std::fill(ret.begin(), ret.end(), val);
+        return ret;
+    }
 
     struct speed_t{
         std::size_t one{};

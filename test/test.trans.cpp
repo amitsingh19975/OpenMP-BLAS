@@ -8,10 +8,6 @@
 #include "test_utils.hpp"
 #include <Eigen/Dense>
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using tensor_t = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
-using shape_t = boost::numeric::ublas::extents<2>;
-
 TEMPLATE_TEST_CASE( "Out-Of-Place Matrix Transpose for Range[Start: 2, End: 32, Step: 1]", "[outplace_transpose]", float, double ) {
     namespace ub = boost::numeric::ublas;
     using namespace Eigen;
@@ -23,8 +19,8 @@ TEMPLATE_TEST_CASE( "Out-Of-Place Matrix Transpose for Range[Start: 2, End: 32, 
 
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto tA = tensor_t<TestType>(shape_t{sz,sz});
-        auto tres = tensor_t<TestType>(shape_t{sz,sz});
+        auto tA = amt::make_tensor<TestType>(sz,sz);
+        auto tres = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(tA);
         
@@ -56,7 +52,7 @@ TEMPLATE_TEST_CASE( "In-Place Matrix Transpose for Range[Start: 2, End: 32, Step
 
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto tA = tensor_t<TestType>(shape_t{sz,sz});
+        auto tA = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(tA);
         

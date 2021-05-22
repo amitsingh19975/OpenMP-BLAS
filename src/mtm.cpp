@@ -21,10 +21,6 @@
 
 namespace plt = matplot;
 namespace ub = boost::numeric::ublas;
-using shape_t = ub::extents<2u>;
-template<typename T, typename L>
-using tensor_t = ub::fixed_rank_tensor<T,2,L>;
-
 
 static std::size_t fixed_size = 1024ul;
 static bool is_Mrect_matrix = false;
@@ -112,14 +108,6 @@ void mkl_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         }
     };
 
-    // constexpr auto blis_test = [](auto&&... args){
-    //     if constexpr(std::is_same_v<ValueType,float>){
-    //         bli_sgemm(std::forward<decltype(args)>(args)...);
-    //     }else if constexpr(std::is_same_v<ValueType,double>){
-    //         bli_dgemm(std::forward<decltype(args)>(args)...);
-    //     }
-    // };
-
     constexpr auto mkl_layout = std::is_same_v<ub::layout::first_order,LayoutType> ? CblasColMajor : CblasRowMajor;
 
     auto t = amt::timer{};  
@@ -130,10 +118,9 @@ void mkl_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const K = static_cast<MKL_INT>(Kset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
         auto one = ValueType(1);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(K)}, one);
-        tensor_t<ValueType,LayoutType> B(shape_t{static_cast<std::size_t>(K), static_cast<std::size_t>(M)}, one);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
-        tensor_t<ValueType,LayoutType> res2(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,K,1.);
+        auto B = amt::make_tensor<ValueType,LayoutType>(K,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(M,N);
         auto* aptr = A.data();
         auto* bptr = B.data();
         auto* cptr = res.data();
@@ -146,27 +133,6 @@ void mkl_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         );
         metric_data.update((ops / st));
 
-        // auto rsa = static_cast<inc_t>(A.strides()[0]);
-        // auto csa = static_cast<inc_t>(A.strides()[1]);
-        // auto rsb = static_cast<inc_t>(B.strides()[0]);
-        // auto csb = static_cast<inc_t>(B.strides()[1]);
-        // auto rsc = static_cast<inc_t>(res.strides()[0]);
-        // auto csc = static_cast<inc_t>(res.strides()[1]);
-
-        // std::invoke(blis_test, 
-        //     BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE, 
-        //     M, N, K,
-        //     &one, 
-        //     aptr, rsa, csa,
-        //     bptr, rsb, csb,
-        //     &one,
-        //     res2.data(), rsc, csc
-        // );
-        // std::cerr<<M<<' '<<N<<' '<<K<<std::endl;
-        // std::cerr<<res<<std::endl;
-        // std::cerr<<res2<<std::endl;
-        // check(res==res2,"Wrong Result");
-        // std::cerr<<"=================\n\n\n";
     }
     t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
@@ -197,9 +163,9 @@ void openblas_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const K = static_cast<blasint>(Kset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
         auto one = ValueType(1);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(K)}, one);
-        tensor_t<ValueType,LayoutType> B(shape_t{static_cast<std::size_t>(K), static_cast<std::size_t>(M)}, one);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,K,1.);
+        auto B = amt::make_tensor<ValueType,LayoutType>(K,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(M,N);
 
         auto const* aptr = A.data();
         auto const* bptr = B.data();
@@ -235,12 +201,9 @@ void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
         auto const N = Nset(sz);
         auto const K = Kset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
-        tensor_t<ValueType,LayoutType> A(shape_t{M, K},1.);
-        tensor_t<ValueType,LayoutType> B(shape_t{K, N},1.);
-        tensor_t<ValueType,LayoutType> res(shape_t{M, N});
-        // std::iota(A.begin(), A.end(),1);
-        // std::iota(B.begin(), B.end(),1);
-        // std::cerr<<A<<'\n';
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,K,1.);
+        auto B = amt::make_tensor<ValueType,LayoutType>(K,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(M,N);
         auto bench_fn = amt::mtm(res, A, B, std::nullopt);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
@@ -265,9 +228,9 @@ void openmp_gemm(std::vector<double> const& x, amt::metric<ValueType>& m, std::s
         auto const N = M;//Nset(sz);
         auto const K = M;//Kset(sz);
         double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
-        tensor_t<ValueType,LayoutType> A(shape_t{M, K},1.);
-        tensor_t<ValueType,LayoutType> B(shape_t{K, N},1.);
-        tensor_t<ValueType,LayoutType> res(shape_t{M, N});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,K,1.);
+        auto B = amt::make_tensor<ValueType,LayoutType>(K,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(M,N);
         auto bench_fn = amt::mtm(res, A, B, std::nullopt,sz);
         double st = amt::benchmark<MaxIter>(std::move(bench_fn));
         amt::no_opt(res);
@@ -296,14 +259,13 @@ void blis_gemm(std::vector<double> const& x, amt::metric<ValueType>& m){
     for(auto const& el : x){
         auto sz = static_cast<std::size_t>(el);
         auto alpha = ValueType{1};
-        auto one = ValueType(1);
         auto const M = static_cast<dim_t>(Mset(sz));
         auto const N = static_cast<dim_t>(Nset(sz));
         auto const K = static_cast<dim_t>(Kset(sz));
         double const ops = static_cast<double>(M) * static_cast<double>(N) * (2. * static_cast<double>(K) - 1.);
-        tensor_t<ValueType,LayoutType> A(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(K)}, one);
-        tensor_t<ValueType,LayoutType> B(shape_t{static_cast<std::size_t>(K), static_cast<std::size_t>(M)}, one);
-        tensor_t<ValueType,LayoutType> res(shape_t{static_cast<std::size_t>(M), static_cast<std::size_t>(N)});
+        auto A = amt::make_tensor<ValueType,LayoutType>(M,K,1.);
+        auto B = amt::make_tensor<ValueType,LayoutType>(K,N,1.);
+        auto res = amt::make_tensor<ValueType,LayoutType>(M,N);
         auto* aptr = A.data();
         auto* bptr = B.data();
         auto* cptr = res.data();

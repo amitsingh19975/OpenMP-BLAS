@@ -137,14 +137,14 @@ namespace amt {
             );
         }
 
-        using size_type = std::decay_t< std::remove_pointer_t<decltype(boost::numeric::ublas::data(na))> >;
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(na.data())> >;
 
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto na_ptr = boost::numeric::ublas::data(na);
-        auto nb_ptr = boost::numeric::ublas::data(nb);
-        auto nc_ptr = boost::numeric::ublas::data(nc);
+        auto na_ptr = na.data();
+        auto nb_ptr = nb.data();
+        auto nc_ptr = nc.data();
         std::array<size_type,2> wa = {na[1], 1ul};
         
         if constexpr( std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order> ) wa = {1ul, na[0]};
@@ -203,7 +203,7 @@ namespace amt {
         
         constexpr bool is_first_order = std::is_same_v<layout_type, boost::numeric::ublas::layout::first_order>;
 
-        using size_type = std::decay_t< std::remove_pointer_t<decltype(boost::numeric::ublas::data(na))> >;
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(na.data())> >;
         using other_layout_type = std::conditional_t<
             is_first_order,
             boost::numeric::ublas::layout::last_order,
@@ -213,8 +213,8 @@ namespace amt {
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto nb_ptr = boost::numeric::ublas::data(nb);
-        auto nc_ptr = boost::numeric::ublas::data(nc);
+        auto nb_ptr = nb.data();
+        auto nc_ptr = nc.data();
         std::array<size_type,2> new_na = {na[1],na[0]};
         std::array<size_type,2> wa = {new_na[1], 1ul};
         

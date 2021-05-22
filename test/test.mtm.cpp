@@ -7,11 +7,6 @@
 #include <blis.h>
 #include "test_utils.hpp"
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using tensor_t = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
-using shape_t = boost::numeric::ublas::extents<2>;
-
-
 template<typename ValueType>
 constexpr auto blis_gemv(
        trans_t transa,
@@ -39,14 +34,14 @@ TEMPLATE_TEST_CASE( "(FFF) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType>(shape_t{sz,sz});
-        auto B = tensor_t<TestType>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType>(sz,sz);
+        auto B = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType>(sz,sz);
+        auto rres = amt::make_tensor<TestType>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -93,14 +88,14 @@ TEMPLATE_TEST_CASE( "(FFL) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType>(shape_t{sz,sz});
-        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType>(sz,sz);
+        auto B = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType>(sz,sz);
+        auto rres = amt::make_tensor<TestType>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -147,14 +142,14 @@ TEMPLATE_TEST_CASE( "(FLF) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto B = tensor_t<TestType>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto B = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType>(sz,sz);
+        auto rres = amt::make_tensor<TestType>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -201,14 +196,14 @@ TEMPLATE_TEST_CASE( "(LFF) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType>(shape_t{sz,sz});
-        auto B = tensor_t<TestType>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType>(sz,sz);
+        auto B = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto rres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -255,14 +250,14 @@ TEMPLATE_TEST_CASE( "(FLL) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto B = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType>(sz,sz);
+        auto rres = amt::make_tensor<TestType>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -309,14 +304,14 @@ TEMPLATE_TEST_CASE( "(LFL) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType>(shape_t{sz,sz});
-        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType>(sz,sz);
+        auto B = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto rres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -363,14 +358,14 @@ TEMPLATE_TEST_CASE( "(LLF) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto B = tensor_t<TestType>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto B = amt::make_tensor<TestType>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto rres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));
@@ -417,14 +412,14 @@ TEMPLATE_TEST_CASE( "(LLL) Matrix Matrix Product for Range[Start: 2, End: 32, St
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto B = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto A = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto B = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(B);
 
-        auto lres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
-        auto rres = tensor_t<TestType,ub::layout::last_order>(shape_t{sz,sz});
+        auto lres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
+        auto rres = amt::make_tensor<TestType,ub::layout::last_order>(sz,sz);
 
         auto alpha = TestType(1);
         auto M = static_cast<dim_t>(A.size(0));

@@ -7,11 +7,6 @@
 #include <blis.h>
 #include "test_utils.hpp"
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using tensor_t = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
-using shape_t = boost::numeric::ublas::extents<2>;
-
-
 template<typename ValueType>
 constexpr auto blis_gemv(
         trans_t transa,
@@ -38,14 +33,14 @@ TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Range[Start: 2, End: 
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType>(shape_t{sz,sz});
-        auto v = tensor_t<TestType>(shape_t{1,sz});
+        auto A = amt::make_tensor<TestType>(sz,sz);
+        auto v = amt::make_tensor<TestType>(1,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(v);
 
-        auto lres = tensor_t<TestType>(shape_t{1,sz});
-        auto rres = tensor_t<TestType>(shape_t{1,sz});
+        auto lres = amt::make_tensor<TestType>(1,sz);
+        auto rres = amt::make_tensor<TestType>(1,sz);
 
         auto alpha = TestType(1);
         auto inc = static_cast<inc_t>(1);
@@ -88,14 +83,14 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Range[Start: 2, End: 5
     constexpr auto Step = 1ul;
 
     for(auto sz = MinSize; sz < MaxSize; sz += Step){
-        auto A = tensor_t<TestType, layout_type>(shape_t{sz,sz});
-        auto v = tensor_t<TestType>(shape_t{1,sz});
+        auto A = amt::make_tensor<TestType, layout_type>(sz,sz);
+        auto v = amt::make_tensor<TestType>(1,sz);
 
         rand_gen<TestType>(A);
         rand_gen<TestType>(v);
 
-        auto lres = tensor_t<TestType>(shape_t{1,sz});
-        auto rres = tensor_t<TestType>(shape_t{1,sz});
+        auto lres = amt::make_tensor<TestType>(1,sz);
+        auto rres = amt::make_tensor<TestType>(1,sz);
 
         auto alpha = TestType(1);
         auto inc = static_cast<inc_t>(1);
@@ -132,14 +127,14 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Range[Start: 2, End: 5
 TEMPLATE_TEST_CASE( "First Order Vector Matrix Product for Size 32Kib", "[first_order_vtm_large]", float, double ) {
     namespace ub = boost::numeric::ublas;
     constexpr auto sz = 32 * 1024ul;
-    auto A = tensor_t<TestType>(shape_t{sz,sz});
-    auto v = tensor_t<TestType>(shape_t{1,sz});
+    auto A = amt::make_tensor<TestType>(sz,sz);
+    auto v = amt::make_tensor<TestType>(1,sz);
 
     rand_gen<TestType>(A);
     rand_gen<TestType>(v);
 
-    auto lres = tensor_t<TestType>(shape_t{1,sz});
-    auto rres = tensor_t<TestType>(shape_t{1,sz});
+    auto lres = amt::make_tensor<TestType>(1,sz);
+    auto rres = amt::make_tensor<TestType>(1,sz);
 
     auto alpha = TestType(1);
     auto inc = static_cast<inc_t>(1);
@@ -176,14 +171,14 @@ TEMPLATE_TEST_CASE( "Last Order Vector Matrix Product for Size 32Kib", "[last_or
     using layout_type = ub::layout::last_order;
 
     constexpr auto sz = 32 * 1024ul;
-    auto A = tensor_t<TestType,layout_type>(shape_t{sz,sz});
-    auto v = tensor_t<TestType>(shape_t{1,sz});
+    auto A = amt::make_tensor<TestType,layout_type>(sz,sz);
+    auto v = amt::make_tensor<TestType>(1,sz);
 
     rand_gen<TestType>(A);
     rand_gen<TestType>(v);
 
-    auto lres = tensor_t<TestType>(shape_t{1,sz});
-    auto rres = tensor_t<TestType>(shape_t{1,sz});
+    auto lres = amt::make_tensor<TestType>(1,sz);
+    auto rres = amt::make_tensor<TestType>(1,sz);
 
     auto alpha = TestType(1);
     auto inc = static_cast<inc_t>(1);

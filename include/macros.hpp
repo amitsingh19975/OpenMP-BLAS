@@ -38,4 +38,8 @@
     #define AMT_CACHELINE_SIZE 64
 #endif
 
+#define DEFER_MACRO_VAR(NAME) NAME##__LINE__
+
+#define defer(START,END) for(int DEFER_MACRO_VAR(_i_) = (START,0); !DEFER_MACRO_VAR(_i_); (DEFER_MACRO_VAR(_i_) += 1), END)
+
 #endif // AMT_BENCHMARK_MACROS_HPP

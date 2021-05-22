@@ -37,13 +37,16 @@ constexpr auto benchmark(FnType&& fn, FnArgs&&... args) noexcept{
     auto t = timer{};
     using ret_type = std::invoke_result_t<FnType,FnArgs...>;
     for(auto i = 0ul; i < MaxIter; ++i){
-        t.start();
-        if constexpr(std::is_same_v<ret_type,void>){
-            std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...);
-        }else{
-            no_opt(std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...));
+        
+        defer(t.start(), t.stop()){
+            if constexpr(std::is_same_v<ret_type,void>){
+                std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...);
+            }else{
+                no_opt(std::invoke(std::forward<FnType>(fn), std::forward<FnArgs>(args)...));
+            }
         }
-        time += t.stop();
+
+        time += t();
     }
     return time / static_cast<double>(MaxIter);
 }

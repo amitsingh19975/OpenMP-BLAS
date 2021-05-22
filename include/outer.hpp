@@ -93,14 +93,14 @@ namespace amt {
             );
         }
 
-        using size_type = std::decay_t< std::remove_pointer_t<decltype(boost::numeric::ublas::data(nc))> >;
+        using size_type = std::decay_t< std::remove_pointer_t<decltype(nc.data())> >;
 
         auto const* aptr = a.data();
         auto const* bptr = b.data();
         auto* cptr = c.data();
-        auto const* na_ptr = boost::numeric::ublas::data(na);
-        auto const* nb_ptr = boost::numeric::ublas::data(nb);
-        auto const* nc_ptr = boost::numeric::ublas::data(nc);
+        auto const* na_ptr = na.data();
+        auto const* nb_ptr = nb.data();
+        auto const* nc_ptr = nc.data();
         std::array<size_type,2> wc = {1ul, nc_ptr[0]};
         
         

@@ -58,7 +58,7 @@ void openmp_dot_prod(std::size_t N, std::size_t B1, std::size_t B2, std::size_t 
     if constexpr(BPos < 0){
         for(auto const& el : x){
             auto sz = static_cast<std::size_t>(el);
-            ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, sz});
+            auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
             auto v2 = v1;
             double const ops = 2. * el;
             auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, B1, B2, B3, std::nullopt);
@@ -67,10 +67,10 @@ void openmp_dot_prod(std::size_t N, std::size_t B1, std::size_t B2, std::size_t 
         }
     }else{
         for(auto const& el : x){
-            ub::dynamic_tensor<ValueType> v1(ub::extents<>{1ul, N});
+            auto sz = static_cast<std::size_t>(el);
+            auto v1 = amt::make_tensor<ValueType>(1ul,sz,1.);
             auto v2 = v1;
             double const ops = 2. * static_cast<double>(N);
-            auto sz = static_cast<std::size_t>(el);
             double st{};
             if constexpr( BPos == 0 ){
                 auto bench_fn = amt::dot_prod_tuning_param(ret, v1, v2, sz, B2, B3, std::nullopt);

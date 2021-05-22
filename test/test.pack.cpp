@@ -5,11 +5,6 @@
 #include <boost/numeric/ublas/tensor.hpp>
 #include <utils.hpp>
 
-template<typename T, typename L = boost::numeric::ublas::layout::first_order>
-using tensor_t = boost::numeric::ublas::fixed_rank_tensor<T,2u,L>;
-using shape_t = boost::numeric::ublas::extents<2>;
-
-
 TEST_CASE( "Pack [3,3] ", "[pack_mtm3x3]" ) {
     constexpr auto MR = 2ul;
     
@@ -21,10 +16,10 @@ TEST_CASE( "Pack [3,3] ", "[pack_mtm3x3]" ) {
     //      2 7 6
     //      4 8 9
 
-    auto in = tensor_t<float>(shape_t{3,3});
+    auto in = amt::make_tensor<float>(3,3);
     std::iota(in.begin(), in.end(),1.f);
     
-    auto out = tensor_t<float>(shape_t{3,3});
+    auto out = amt::make_tensor<float>(3,3);
     std::iota(out.begin(), out.end(),1.f);
 
     auto const& n = in.extents();
@@ -60,10 +55,10 @@ TEST_CASE( "Transposed Pack [3,3] ", "[pack_mtm3x3_trans]" ) {
     //      4 3 8
     //      2 6 9
 
-    auto in = tensor_t<float>(shape_t{3,3});
+    auto in = amt::make_tensor<float>(3,3);
     std::iota(in.begin(), in.end(),1.f);
     
-    auto out = tensor_t<float>(shape_t{3,3});
+    auto out = amt::make_tensor<float>(3,3);
     std::iota(out.begin(), out.end(),1.f);
 
     auto const& n = in.extents();
