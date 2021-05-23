@@ -49,54 +49,29 @@ namespace amt::impl{
 
     };
 
-    // template<std::size_t N>
-    // struct simd_loop<SIMD_PROD_TYPE::MTV,N>{
-    //     constexpr static auto type = SIMD_PROD_TYPE::MTV;
-    //     constexpr static std::size_t size = N;
-    //     // static_assert(
-    //     //     N && !(N & (N - 1)),
-    //     //     "N should be a power of 2 and greater than 0"
-    //     // );
-
-    //     template<typename ValueType, typename SizeType>
-    //     AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, ValueType const* b, SizeType const n, SizeType const w) const noexcept{
-    //         auto const cst = b[0];
-    //         #pragma omp simd
-    //         for(auto i = 0ul; i < n; ++i){
-    //             c[i] += a[i] * cst;
-    //             if constexpr(N > 1){
-    //                 #pragma unroll(N-1)
-    //                 for(auto j = 1ul; j < N; ++j){
-    //                     c[i] += a[i + w * j] * b[j];
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    // };
-
     template<std::size_t MR>
     struct simd_loop<SIMD_PROD_TYPE::MTV,MR>{
         constexpr static auto type = SIMD_PROD_TYPE::MTV;
 
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
+            auto const W = w[1];
             #pragma omp simd reduction(+:c[0:MR])
             for(auto k = 0ul; k < n; ++k){
                 for(auto i = 0ul; i < MR; ++i){
-                    c[i] += a[ i + k * w[1]] * b[k];
+                    c[i] += a[ i + k * W] * b[k];
                 }
             }
         }
 
         template<typename ValueType, typename SizeType>
         AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, SizeType const m, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
-            for(auto k = 0ul; k < n && m != 0; ++k){
-                auto bval = b[k];
-                auto atemp = a + k * w[1];
-                #pragma omp simd
-                for(auto i = 0ul; i < m; ++i){
-                    c[i] += atemp[ i ] * bval;
+            auto const W = w[1];
+            #pragma omp simd reduction(+:c[0:MR])
+            for(auto i = 0ul; i < m; ++i){
+                auto atemp = a + i;
+                for(auto k = 0ul; k < n; ++k){
+                    c[i] += atemp[ k * W ] * b[k];
                 }
             }
         }
