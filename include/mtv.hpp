@@ -50,13 +50,19 @@ namespace amt {
                     auto ak = ai + k * wa[1];
                     auto bk = bi + k;
                     auto ck = ci;
+                    auto const Mitr = ib / MR;
+                    auto const Mrem = ib % MR;
+                    
+                    impl::simd_loop<impl::SIMD_PROD_TYPE::MTV,MR>{}(ck, ak, Mrem, wa, bk, kb);
 
-                    for(auto ii = 0ul; ii < ib; ii += MR){
-                        auto const iib = std::min(ib - ii, MR);
-                        auto ap = ak + ii * wa[0];
+                    ak += Mrem * wa[0];
+                    ck += Mrem;
+
+                    for(auto ii = 0ul; ii < Mitr; ++ii){
+                        auto ap = ak + ii * wa[0] * MR;
                         auto bp = bk;
-                        auto cp = ck + ii;
-                        impl::simd_loop<impl::SIMD_PROD_TYPE::MTV,MR>{}(cp, ap, iib, wa, bp, kb);
+                        auto cp = ck + ii * MR;
+                        impl::simd_loop<impl::SIMD_PROD_TYPE::MTV,MR>{}(cp, ap, wa, bp, kb);
                     }
                 }
             }

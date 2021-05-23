@@ -75,39 +75,28 @@ namespace amt::impl{
 
     // };
 
-    template<std::size_t N>
-    struct simd_loop<SIMD_PROD_TYPE::MTV,N>{
+    template<std::size_t MR>
+    struct simd_loop<SIMD_PROD_TYPE::MTV,MR>{
         constexpr static auto type = SIMD_PROD_TYPE::MTV;
 
         template<typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, SizeType const m, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
-            switch(m){
-                case  1: this->helper< 1>(c, a, w, b, n); return;
-                case  2: this->helper< 2>(c, a, w, b, n); return;
-                case  3: this->helper< 3>(c, a, w, b, n); return;
-                case  4: this->helper< 4>(c, a, w, b, n); return;
-                case  5: this->helper< 5>(c, a, w, b, n); return;
-                case  6: this->helper< 6>(c, a, w, b, n); return;
-                case  7: this->helper< 7>(c, a, w, b, n); return;
-                case  8: this->helper< 8>(c, a, w, b, n); return;
-                case  9: this->helper< 9>(c, a, w, b, n); return;
-                case 10: this->helper<10>(c, a, w, b, n); return;
-                case 11: this->helper<11>(c, a, w, b, n); return;
-                case 12: this->helper<12>(c, a, w, b, n); return;
-                case 13: this->helper<13>(c, a, w, b, n); return;
-                case 14: this->helper<14>(c, a, w, b, n); return;
-                case 15: this->helper<15>(c, a, w, b, n); return;
-                case 16: this->helper<16>(c, a, w, b, n); return;
-                default: return;
-            }
-        }
-    private:
-        template<std::size_t MR, typename ValueType, typename SizeType>
-        AMT_ALWAYS_INLINE void helper(ValueType* c, ValueType const* a, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
+        AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
             #pragma omp simd reduction(+:c[0:MR])
             for(auto k = 0ul; k < n; ++k){
                 for(auto i = 0ul; i < MR; ++i){
                     c[i] += a[ i + k * w[1]] * b[k];
+                }
+            }
+        }
+
+        template<typename ValueType, typename SizeType>
+        AMT_ALWAYS_INLINE void operator()(ValueType* c, ValueType const* a, SizeType const m, SizeType const* w, ValueType const* b, SizeType const n) const noexcept{
+            for(auto k = 0ul; k < n && m != 0; ++k){
+                auto bval = b[k];
+                auto atemp = a + k * w[1];
+                #pragma omp simd
+                for(auto i = 0ul; i < m; ++i){
+                    c[i] += atemp[ i ] * bval;
                 }
             }
         }
