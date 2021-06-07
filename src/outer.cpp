@@ -57,7 +57,7 @@ void check(bool cond, std::string_view mess = "") noexcept{
 
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
     constexpr std::string_view fn_name = "Boost.ublas";
@@ -69,24 +69,26 @@ void ublas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     };
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        ub::vector<ValueType> v1(M);
-        ub::vector<ValueType> v2(N);
-        ub::matrix<ValueType> res(M,N);
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            ub::vector<ValueType> v1(M);
+            ub::vector<ValueType> v2(N);
+            ub::matrix<ValueType> res(M,N);
 
-        double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
-        metric_data.update((ops / st));
+            double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "ublas.csv";
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "intel MKL";
@@ -104,30 +106,32 @@ void mkl_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
         return a;
     };
 
-    auto t = amt::timer{};  
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto inc = static_cast<MKL_INT>(1);
-        auto const M = static_cast<MKL_INT>(lset(sz));
-        auto const N = static_cast<MKL_INT>(rset(sz));
-        auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
-        auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
-        auto res = amt::make_tensor<ValueType>(M,N);
-        auto const* aptr = v1.data();
-        auto const* bptr = v2.data();
-        auto* cptr = res.data();
-        auto lda = M;
-        double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, ValueType(1), aptr, inc, bptr, inc, cptr, lda);
-        metric_data.update((ops / st));
+    auto t = amt::timer{};
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto inc = static_cast<MKL_INT>(1);
+            auto const M = static_cast<MKL_INT>(lset(sz));
+            auto const N = static_cast<MKL_INT>(rset(sz));
+            auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
+            auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
+            auto res = amt::make_tensor<ValueType>(M,N);
+            auto const* aptr = v1.data();
+            auto const* bptr = v2.data();
+            auto* cptr = res.data();
+            auto lda = M;
+            double st = amt::benchmark<MaxIter>(bench_fn, CblasColMajor, M, N, ValueType(1), aptr, inc, bptr, inc, cptr, lda);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "mkl.csv";
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     openblas_set_num_threads(omp_get_max_threads());
@@ -139,29 +143,31 @@ void openblas_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m
     };
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto inc = static_cast<blasint>(1);
-        auto const M = static_cast<blasint>(lset(sz));
-        auto const N = static_cast<blasint>(rset(sz));
-        auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
-        auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
-        auto res = amt::make_tensor<ValueType>(M,N);
-        auto aptr = v1.data();
-        auto bptr = v2.data();
-        auto cptr = res.data();
-        auto lda = M;
-        double st = amt::benchmark<MaxIter>(bench_fn, amt::blas::ColMajor, M, N, ValueType{1}, aptr, inc, bptr, inc, cptr, lda);
-        metric_data.update((ops / st));
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto inc = static_cast<blasint>(1);
+            auto const M = static_cast<blasint>(lset(sz));
+            auto const N = static_cast<blasint>(rset(sz));
+            auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
+            auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
+            auto res = amt::make_tensor<ValueType>(M,N);
+            auto aptr = v1.data();
+            auto bptr = v2.data();
+            auto cptr = res.data();
+            auto lda = M;
+            double st = amt::benchmark<MaxIter>(bench_fn, amt::blas::ColMajor, M, N, ValueType{1}, aptr, inc, bptr, inc, cptr, lda);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "openblas.csv";
 }
 #endif
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "Boost.ublas.tensor";
@@ -169,26 +175,28 @@ void openmp_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     auto& metric_data = m[fn_name];
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
-        auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
-        auto res = amt::make_tensor<ValueType>(M,N);
-    
-        auto bench_fn = amt::outer_prod(res,v1,v2,std::nullopt);
-        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
-        amt::no_opt(res);
-        metric_data.update((ops / st));
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
+            auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
+            auto res = amt::make_tensor<ValueType>(M,N);
+        
+            auto bench_fn = amt::outer_prod(res,v1,v2,std::nullopt);
+            double st = amt::benchmark<MaxIter>(std::move(bench_fn));
+            amt::no_opt(res);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "tensor.csv";
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "Blis";
@@ -203,38 +211,40 @@ void blis_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     };
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto inc = static_cast<inc_t>(1);
-        auto alpha = ValueType{1};
-        auto const M = static_cast<inc_t>(lset(sz));
-        auto const N = static_cast<inc_t>(rset(sz));
-        auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
-        auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
-        auto res = amt::make_tensor<ValueType>(M,N);
-        auto rsa = static_cast<inc_t>(res.strides()[0]);
-        auto csa = static_cast<inc_t>(res.strides()[1]);
-        auto aptr = v1.data();
-        auto bptr = v2.data();
-        auto cptr = res.data();
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto inc = static_cast<inc_t>(1);
+            auto alpha = ValueType{1};
+            auto const M = static_cast<inc_t>(lset(sz));
+            auto const N = static_cast<inc_t>(rset(sz));
+            auto v1 = amt::make_tensor<ValueType>(1ul,M,1.);
+            auto v2 = amt::make_tensor<ValueType>(1ul,N,1.);
+            auto res = amt::make_tensor<ValueType>(M,N);
+            auto rsa = static_cast<inc_t>(res.strides()[0]);
+            auto csa = static_cast<inc_t>(res.strides()[1]);
+            auto aptr = v1.data();
+            auto bptr = v2.data();
+            auto cptr = res.data();
 
-        double st = amt::benchmark<MaxIter>(bench_fn, 
-            BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, 
-            M, N, 
-            &alpha, 
-            aptr, inc,
-            bptr, inc, 
-            cptr, rsa, csa
-        );
-        metric_data.update((ops / st));
+            double st = amt::benchmark<MaxIter>(bench_fn, 
+                BLIS_NO_CONJUGATE, BLIS_NO_CONJUGATE, 
+                M, N, 
+                &alpha, 
+                aptr, inc,
+                bptr, inc, 
+                cptr, rsa, csa
+            );
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "blis.csv";
 }
 
 template<typename ValueType, std::size_t MaxIter = 100ul>
-void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
@@ -250,18 +260,20 @@ void eigen_outer_prod(std::vector<double> const& x, amt::metric<ValueType>& m){
     };
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        double const ops = el * el;
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        vector_type v1(M), v2(N);
-        Matrix<ValueType,-1,-1> res(M,N);
-        double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
-        metric_data.update((ops / st));
+    defer(t.start(), t.stop()){
+        for(auto const& el : x){
+            double const ops = el * el;
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            vector_type v1(M), v2(N);
+            Matrix<ValueType,-1,-1> res(M,N);
+            double st = amt::benchmark<MaxIter>(bench_fn, res, v1, v2);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "eigen.csv";
 }
 
 
@@ -271,7 +283,7 @@ void show_cache_info(std::ostream& os){
         << "\tL3: " << (amt::cache_manager::size(2) / (1024ul * 1024ul)) << "MiB\n";
 }
 
-// #define DISABLE_PLOT
+#define DISABLE_PLOT
 // #define SPEEDUP_PLOT
 #define PLOT_ALL
 #define SIZE_KiB true
@@ -306,24 +318,23 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 4ul;
-    [[maybe_unused]]constexpr double max_value = 4 * 1024;
+    [[maybe_unused]]constexpr double max_value = 16382;//4 * 1024;
     amt::range(x, 32., max_value, 32., std::plus<>{});
     // [[maybe_unused]]constexpr double max_value = 1<<16;
     // amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
-
-    // ublas_outer_prod<value_type,max_iter>(x,m);
-    openblas_outer_prod<value_type,max_iter>(x,m);
-    blis_outer_prod<value_type,max_iter>(x,m);
-    mkl_outer_prod<value_type,max_iter>(x,m);
-    openmp_outer_prod<value_type,max_iter>(x,m);
-    // eigen_outer_prod<value_type,max_iter>(x,m);
+    std::string_view fn_name;
+    // fn_name = ublas_outer_prod<value_type,max_iter>(x,m);
+    // fn_name = openblas_outer_prod<value_type,max_iter>(x,m);
+    // fn_name = blis_outer_prod<value_type,max_iter>(x,m);
+    // fn_name = mkl_outer_prod<value_type,max_iter>(x,m);
+    // fn_name = openmp_outer_prod<value_type,max_iter>(x,m);
+    fn_name = eigen_outer_prod<value_type,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
 
-    constexpr std::string_view plot_xlable = "Size [n = m]" SIZE_SUFFIX;
     std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
         double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
         // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
@@ -332,7 +343,9 @@ int main(){
 
     // std::cout<<m.tail()<<'\n';
     std::cout<<m.str(comp_name)<<'\n';
+    m.csv(fn_name);
     #ifndef DISABLE_PLOT
+        constexpr std::string_view plot_xlable = "Size [n = m]" SIZE_SUFFIX;
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x, "Performance of Boost.uBLAS.Tensor for the outer-operation [iter=4]", plot_xlable);
             m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the outer-operation [iter=4]");

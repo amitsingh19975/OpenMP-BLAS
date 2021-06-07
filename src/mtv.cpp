@@ -57,7 +57,7 @@ void check(bool cond, std::string_view mess = "") noexcept{
 
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void ublas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view ublas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
 
     constexpr std::string_view fn_name = "Boost.ublas";
@@ -69,24 +69,26 @@ void ublas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     };
     
     auto t = amt::timer{};
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        ub::matrix<ValueType,LayoutType> A(M,N);
-        ub::vector<ValueType> v(N);
-        ub::vector<ValueType> res(M);
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            ub::matrix<ValueType,LayoutType> A(M,N);
+            ub::vector<ValueType> v(N);
+            ub::vector<ValueType> res(M);
 
-        double st = amt::benchmark<MaxIter>(bench_fn, res, A, v);
-        metric_data.update((ops / st));
+            double st = amt::benchmark<MaxIter>(bench_fn, res, A, v);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "ublas.csv";
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void mkl_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view mkl_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "intel MKL";
@@ -104,30 +106,32 @@ void mkl_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     constexpr auto mkl_layout = std::is_same_v<ub::layout::first_order,LayoutType> ? CblasColMajor : CblasRowMajor;
 
     auto t = amt::timer{};  
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = static_cast<MKL_INT>(lset(sz));
-        auto const N = static_cast<MKL_INT>(rset(sz));
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        auto inc = static_cast<MKL_INT>(1);
-        auto one = ValueType(1);
-        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
-        auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
-        auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
-        auto const* aptr = A.data();
-        auto const* bptr = v.data();
-        auto* cptr = res.data();
-        auto lda = static_cast<MKL_INT>(std::max(A.strides()[0], A.strides()[1]));
-        double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, CblasNoTrans, M, N, one, aptr, lda, bptr, inc, one, cptr, inc);
-        metric_data.update((ops / st));
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = static_cast<MKL_INT>(lset(sz));
+            auto const N = static_cast<MKL_INT>(rset(sz));
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            auto inc = static_cast<MKL_INT>(1);
+            auto one = ValueType(1);
+            auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
+            auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
+            auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
+            auto const* aptr = A.data();
+            auto const* bptr = v.data();
+            auto* cptr = res.data();
+            auto lda = static_cast<MKL_INT>(std::max(A.strides()[0], A.strides()[1]));
+            double st = amt::benchmark<MaxIter>(bench_fn, mkl_layout, CblasNoTrans, M, N, one, aptr, lda, bptr, inc, one, cptr, inc);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "mkl.csv";
 }
 
 #ifdef AMT_BENCHMARK_OPENBLAS_HPP
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void openblas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view openblas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "OpenBlas";
@@ -142,30 +146,32 @@ void openblas_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     constexpr auto open_layout = std::is_same_v<ub::layout::first_order,LayoutType> ? amt::blas::ColMajor : amt::blas::RowMajor;
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = static_cast<blasint>(lset(sz));
-        auto const N = static_cast<blasint>(rset(sz));
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        auto inc = static_cast<blasint>(1);
-        auto one = ValueType(1);
-        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
-        auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
-        auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
-        auto const* aptr = A.data();
-        auto const* bptr = v.data();
-        auto cptr = res.data();
-        auto lda = static_cast<blasint>(std::max(A.strides()[0], A.strides()[1]));
-        double st = amt::benchmark<MaxIter>(bench_fn, open_layout, amt::blas::NoTrans, M, N, one, aptr, lda, bptr, inc, one, cptr, inc);
-        metric_data.update((ops / st));
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = static_cast<blasint>(lset(sz));
+            auto const N = static_cast<blasint>(rset(sz));
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            auto inc = static_cast<blasint>(1);
+            auto one = ValueType(1);
+            auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
+            auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
+            auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
+            auto const* aptr = A.data();
+            auto const* bptr = v.data();
+            auto cptr = res.data();
+            auto lda = static_cast<blasint>(std::max(A.strides()[0], A.strides()[1]));
+            double st = amt::benchmark<MaxIter>(bench_fn, open_layout, amt::blas::NoTrans, M, N, one, aptr, lda, bptr, inc, one, cptr, inc);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "openblas.csv";
 }
 #endif
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void openmp_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view openmp_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "Boost.ublas.tensor";
@@ -173,27 +179,29 @@ void openmp_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     auto& metric_data = m[fn_name];
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
-        auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,1.);
-        auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
-        // std::iota(A.begin(), A.end(), 1.);
-        // std::iota(v.begin(), v.end(), 1.);
-        auto bench_fn = amt::mtv(res, A, v, std::nullopt);
-        double st = amt::benchmark<MaxIter>(std::move(bench_fn));
-        amt::no_opt(res);
-        metric_data.update((ops / st));
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            auto A = amt::make_tensor<ValueType,LayoutType>(M,N,1.);
+            auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,1.);
+            auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
+            // std::iota(A.begin(), A.end(), 1.);
+            // std::iota(v.begin(), v.end(), 1.);
+            auto bench_fn = amt::mtv(res, A, v, std::nullopt);
+            double st = amt::benchmark<MaxIter>(std::move(bench_fn));
+            amt::no_opt(res);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "tensor.csv";
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void blis_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view blis_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
     
     constexpr std::string_view fn_name = "Blis";
@@ -208,40 +216,42 @@ void blis_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     };
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto inc = static_cast<inc_t>(1);
-        auto alpha = ValueType{1};
-        auto one = ValueType(1);
-        auto const M = static_cast<dim_t>(lset(sz));
-        auto const N = static_cast<dim_t>(rset(sz));
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
-        auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
-        auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
-        auto* aptr = A.data();
-        auto* bptr = v.data();
-        auto* cptr = res.data();
-        auto rsa = static_cast<inc_t>(A.strides()[0]);
-        auto csa = static_cast<inc_t>(A.strides()[1]);
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto inc = static_cast<inc_t>(1);
+            auto alpha = ValueType{1};
+            auto one = ValueType(1);
+            auto const M = static_cast<dim_t>(lset(sz));
+            auto const N = static_cast<dim_t>(rset(sz));
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            auto A = amt::make_tensor<ValueType,LayoutType>(M,N,one);
+            auto v = amt::make_tensor<ValueType,LayoutType>(1ul,N,one);
+            auto res = amt::make_tensor<ValueType,LayoutType>(1ul,M);
+            auto* aptr = A.data();
+            auto* bptr = v.data();
+            auto* cptr = res.data();
+            auto rsa = static_cast<inc_t>(A.strides()[0]);
+            auto csa = static_cast<inc_t>(A.strides()[1]);
 
-        double st = amt::benchmark<MaxIter>(bench_fn, 
-            BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
-            M, N, 
-            &alpha, 
-            aptr, rsa, csa,
-            bptr, inc,
-            &alpha,
-            cptr, inc
-        );
-        metric_data.update((ops / st));
+            double st = amt::benchmark<MaxIter>(bench_fn, 
+                BLIS_NO_TRANSPOSE, BLIS_NO_CONJUGATE, 
+                M, N, 
+                &alpha, 
+                aptr, rsa, csa,
+                bptr, inc,
+                &alpha,
+                cptr, inc
+            );
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "blis.csv";
 }
 
 template<typename ValueType, typename LayoutType, std::size_t MaxIter = 100ul>
-void eigen_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
+std::string_view eigen_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     using namespace Eigen;
     using vector_type = Matrix<ValueType,-1,1,ColMajor>;
     static_assert( std::is_same_v<ValueType,float> || std::is_same_v<ValueType,double>, "ValueType not supported" );
@@ -259,18 +269,20 @@ void eigen_gemv(std::vector<double> const& x, amt::metric<ValueType>& m){
     constexpr auto eigen_layout = std::is_same_v<ub::layout::first_order,LayoutType> ?  ColMajor : RowMajor;
 
     auto t = amt::timer{};
-    for(auto const& el : x){
-        auto sz = static_cast<std::size_t>(el);
-        auto const M = lset(sz);
-        auto const N = rset(sz);
-        double const ops = static_cast<double>(M * (2 * N - 1));
-        Matrix<ValueType,-1,-1,eigen_layout> A(M,N);
-        vector_type v(N), res(M);
-        double st = amt::benchmark<MaxIter>(bench_fn, res, A, v);
-        metric_data.update((ops / st));
+    defer(t.start(),t.stop()){
+        for(auto const& el : x){
+            auto sz = static_cast<std::size_t>(el);
+            auto const M = lset(sz);
+            auto const N = rset(sz);
+            double const ops = static_cast<double>(M * (2 * N - 1));
+            Matrix<ValueType,-1,-1,eigen_layout> A(M,N);
+            vector_type v(N), res(M);
+            double st = amt::benchmark<MaxIter>(bench_fn, res, A, v);
+            metric_data.update((ops / st));
+        }
     }
-    t.stop();
     std::cerr<<fn_name<<" has completed! ( "<<t<<" )"<<std::endl;
+    return "eigen.csv";
 }
 
 
@@ -305,8 +317,8 @@ int main(){
     
     show_cache_info(std::cout);
 
-    using layout_t = ub::layout::first_order;
     // using layout_t = ub::layout::last_order;
+    using layout_t = ub::layout::first_order;
 
     using value_type = float;
     // using value_type = double;
@@ -318,33 +330,34 @@ int main(){
     // is_rrect_matrix = true;
 
     [[maybe_unused]]constexpr std::size_t max_iter = 10ul;
-    [[maybe_unused]]constexpr double max_value = 4 * 1024;
-    amt::range(x, 32., max_value, 32., std::plus<>{});
-    // [[maybe_unused]]constexpr double max_value = 1<<16;
-    // amt::range(x, 2., max_value, 2., std::multiplies<>{});
+    // [[maybe_unused]]constexpr double max_value = 1<<12;//16382ul;
+    // amt::range(x, 32., max_value, 32., std::plus<>{});
+    [[maybe_unused]]constexpr double max_value = 1<<16;
+    amt::range(x, 2., max_value, 2., std::multiplies<>{});
 
     auto m = amt::metric<value_type>(x.size());
-
-    // ublas_gemv<value_type,layout_t,max_iter>(x,m);
-    // openblas_gemv<value_type,layout_t,max_iter>(x,m);
-    // blis_gemv<value_type,layout_t,max_iter>(x,m);
-    mkl_gemv<value_type,layout_t,max_iter>(x,m);
-    openmp_gemv<value_type,layout_t,max_iter>(x,m);
-    // eigen_gemv<value_type,layout_t,max_iter>(x,m);
+    [[maybe_unused]] std::string_view fn_name;
+    // fn_name = ublas_gemv<value_type,layout_t,1>(x,m);
+    // fn_name = openblas_gemv<value_type,layout_t,max_iter>(x,m);
+    // fn_name = blis_gemv<value_type,layout_t,max_iter>(x,m);
+    fn_name = mkl_gemv<value_type,layout_t,max_iter>(x,m);
+    fn_name = openmp_gemv<value_type,layout_t,max_iter>(x,m);
+    // fn_name = eigen_gemv<value_type,layout_t,max_iter>(x,m);
     // std::cout<<m.tail();
 
     constexpr std::string_view comp_name = "tensor";
 
-    constexpr std::string_view plot_xlable = "Size [n = m], " SIZE_SUFFIX " iterating";
-    // std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
-    //     double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
-    //     // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
-    //     return size_conv(lsz);
-    // });
+    std::transform(x.begin(), x.end(), x.begin(), [](auto sz){
+        double lsz = static_cast<double>(lset(static_cast<std::size_t>(sz)));
+        // double rsz = static_cast<double>(rset(static_cast<std::size_t>(sz)));
+        return size_conv(lsz);
+    });
 
     // std::cout<<m.tail()<<'\n';
+    // m.csv(fn_name);
     std::cout<<m.str(comp_name)<<'\n';
     #ifndef DISABLE_PLOT
+        constexpr std::string_view plot_xlable = "Size [n = m], " SIZE_SUFFIX " iterating";
         #if !defined(SPEEDUP_PLOT) || defined(PLOT_ALL)
             m.plot(x, "Performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]", plot_xlable);
             m.plot_per("Sorted performance of Boost.uBLAS.Tensor for the gemv-operation [iter=4]");
@@ -357,7 +370,6 @@ int main(){
             amt::show_intersection_pts(std::cout,inter_pts);
         #endif
     #endif
-    // m.raw();
     return 0;
 
 }
