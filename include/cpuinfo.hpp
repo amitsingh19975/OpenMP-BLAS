@@ -166,12 +166,11 @@ struct cpu_info<double, VecLen, CPUFamily::INTEL_KNIGHTS_LANDING>{
 
 template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_latency() noexcept{
-    // Arithmetic Mean
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
-        return ( cpu_type::fma_latency + cpu_type::load_latency ) / 2.;
+        return cpu_type::fma_latency + cpu_type::load_latency ;
     }else{
-        return ( cpu_type::mul_latency + cpu_type::add_latency + cpu_type::load_latency ) / 3.;
+        return cpu_type::mul_latency + cpu_type::add_latency + cpu_type::load_latency;
     }
 }
 
@@ -179,17 +178,17 @@ template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_throughput() noexcept{
     // Harmonic Mean
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
+    constexpr auto tload_save = 1. / (2. * cpu_type::load_throughput);
+
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
         constexpr auto tfma = 1. / cpu_type::fma_throughput;
-        constexpr auto tload = 1. / cpu_type::load_throughput;
-        constexpr auto HM = 2. / ( tfma + tload );
-        return 1. /  HM;
+        constexpr auto HM = 3. / ( tfma + tload_save );
+        return HM;
     }else{
         constexpr auto tmul = 1. / cpu_type::mul_throughput;
         constexpr auto tadd = 1. / cpu_type::add_throughput;
-        constexpr auto tload = 1. / cpu_type::load_throughput;
-        constexpr auto HM = 3. / ( tmul + tadd + tload );
-        return 1. / HM;
+        constexpr auto HM = 3. / ( tmul + tadd + tload_save );
+        return HM;
     }
 }
 
