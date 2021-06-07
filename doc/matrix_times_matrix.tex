@@ -237,12 +237,22 @@ the Load and Store instruction.
 Using equation from the \cite{BLIS}, we get
 
 \begin{equation}
-    M_rN_r \geq N_{VEC} (L_{VFMA} + L_{L/S}) (N_{VFMA} + N_{L/S})
+    M_rN_r \geq N_{VEC} L_{effective} N_{effective}
 \end{equation}
 
+To find the effective latency and throughput, we cannot directly take the 
+algebraic sum, which will give the wrong result. Instead, taking the 
+arithmetic mean of the latency gives the actual effective latency, 
+while taking the harmonic mean gives the effective throughput.
+
 \begin{align*}
-    M_r &= \lceil \frac{ \sqrt{N_{VEC} (L_{VFMA} + L_{L/S}) (N_{VFMA} + N_{L/S})} }{N_{VEC}} \rceil N_{VEC} \\
-    N_r &= \lceil \frac{ N_{VEC} (L_{VFMA} + L_{L/S}) (N_{VFMA} + N_{L/S}) }{M_r} \rceil
+    L_{effective} &= \frac{L_{L/S} + L_{VFMA}}{2}\\
+    \frac{1}{N_{effective}} &= \frac{2}{ \frac{1}{N_{VEC}} + \frac{1}{N_{L/S}} } \\
+\end{align*}
+
+\begin{align*}
+    M_r &= \lceil \frac{ \sqrt{N_{VEC} L_{effective} N_{effective}} }{N_{VEC}} \rceil N_{VEC} \\
+    N_r &= \lceil \frac{ N_{VEC} L_{effective} N_{effective} }{M_r} \rceil
 \end{align*}
 
 
