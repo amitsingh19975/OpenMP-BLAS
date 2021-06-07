@@ -126,66 +126,33 @@ elements placed with a specific stride and hinder the cache locality.
 
 \begin{algorithm}[H]
     \SetAlgoLined
-    \SetKwFunction{SIMDFn}{$simd\_loop_N$}
+    \SetKwFunction{SIMDFnFirst}{$simd\_loop_0$}
+    \SetKwFunction{SIMDFnSecond}{$simd\_loop_1$}
     \SetKwProg{Fn}{Function}{:}{end}
 
     \tcp{$c$ is the pointer to the output vector}
     \tcp{$a$ is the pointer to the input matrix}
     \tcp{$b$ is the pointer to the input vector}
-    \tcp{$block$ is the block of the output vector}
+    \tcp{$k$ is the contracting dimension}
+    \tcp{$m$ is the non-contracting dimension}
     \tcp{$w$ is the leading dimension of the matrix}
-    \tcp{$simd\_loop_N$ is a function where N signifies the amount of the unrolling done}
-    \Fn{\SIMDFn($c$, $a$, $b$, $block$, $w$)}{
-        \openmp{simd}
-        \For{\assign{i}{0} \KwTo $block$ \KwBy $1$}{
-            $    
-            \begin{matrix}
-                c[i] \gets c[i] +  A[i + w * 0] * b[0];\\
-                c[i] \gets c[i] +  A[i + w * 1] * b[1];\\
-                \vdots\\
-                c[i] \gets c[i] +  A[i + w * N] * b[N];\\
-            \end{matrix}
-            $
-        }
-    }
-    \caption{Matrix-Vector Product SIMD Function}
-\end{algorithm}
-
-\begin{algorithm}[H]
-    \SetAlgoLined
-    \SetKwFunction{SIMDFn}{$main\_loop_N$}
-    \SetKwProg{Fn}{Function}{:}{end}
-
-    \tcp{$c$ is the pointer to the output vector}
-    \tcp{$a$ is the pointer to the input matrix}
-    \tcp{$b$ is the pointer to the input vector}
-    \tcp{$n_a$ is the size of the column of the matrix $a$}
-    \tcp{$w_a$ is the leading dimension of the matrix $a$}
-    \tcp{$n_b$ is the size of the vector $b$}
-    \tcp{$block$ is the block of the output vector}
-    \tcp{$main\_loop_N$ is a function where N signifies the amount of the unrolling done}
-    \Fn{\SIMDFn($c$, $a$, $n_a$, $w_a$, $b$, $n_b$, $block$)}{
-        \If{$n_b == 0$}{
-            \KwRet{};
-        }
-        \assignln{ai}{a}
-        \assignln{bi}{b}
-        \assignln{ci}{c}
-        \openmp{for schedule(dynamic)}
-        \For{\assign{i}{0} \KwTo $n_a$ \KwBy $block$}{
-            \assignln{aj}{ai + i}
-            \assignln{bj}{bi}
-            \assignln{cj}{ci + i}
-            \assignln{ib}{min(block,na-i)}
-            \For{\assign{j}{0} \KwTo $n_b$ \KwBy $1$}{
-                \assignln{ak}{a + j \times N \times wa}
-                \assignln{bk}{bk + j \times N}
-                \assignln{ck}{cj}
-                $simd\_loop_N(ck,ak,bk,ib,w_a)$
+    \Fn{\SIMDFnFirst($c$, $a$, $b$, $k$, $w$)}{
+        \openmp{simd reduction$(+:c[0:m_r])$}
+        \For{\assign{i}{0} \KwTo $k$ \KwBy $1$}{
+            \For{\assign{j}{0} \KwTo $m_r$ \KwBy $1$}{
+                \assignln{c[i]}{c[i] + a[j + i * w] * b[i]}
             }
         }
     }
-    \caption{Matrix-Vector Product Loop}
+    \Fn{\SIMDFnSecond($c$, $a$, $b$, $m$, $k$, $w$)}{
+        \openmp{simd reduction$(+:c[0:m_r])$}
+        \For{\assign{j}{0} \KwTo $m$ \KwBy $1$}{
+            \For{\assign{i}{0} \KwTo $k$ \KwBy $1$}{
+                \assignln{c[i]}{c[i] + a[j + i * w] * b[i]}
+            }
+        }
+    }
+    \caption{Matrix-Vector Product SIMD Function}
 \end{algorithm}
 
 \begin{algorithm}[H]
@@ -194,43 +161,49 @@ elements placed with a specific stride and hinder the cache locality.
     \tcp{$c$ is the pointer to the output vector}
     \tcp{$a$ and $b$ are pointer to the matrix}
     \tcp{$b$ are pointer to the vector}
-    \tcp{$n_a$ is the size of the column of the matrix $a$}
-    \tcp{$w_a$ is the leading dimension of the matrix $a$}
+    \tcp{$n_a$ is the pointer to the extents of the matrix $a$}
+    \tcp{$w_a$ is the pointer to the strides of the matrix $a$}
     \tcp{$n_b$ is the size of the vector $b$}
     \tcp{$max\_threads$ is the user provided thread count}
 
     \Begin{
         $omp\_set\_num\_threads(max\_threads)$
-
-        \assignln{number\_el\_L_1}{\lfloor \frac{S_{L_1}}{S_{data}} \rfloor}
-        \assignln{half\_block}{\lfloor \frac{number\_el\_L_1}{2} \rfloor}
-        \assignln{max\_size}{max(na,nb)}
-        \assign{small\_block}{2^{\lfloor \frac{k}{2} \rfloor}}
-        \tcp{Where $2^k$ is a power of two representation of $number\_el\_L_1$}
         
-        \assignln{k\_factor}{nearest\_power\_of\_2(\frac{number\_el\_L_1}{\log_2{small\_block}})}
-        \assignln{block_2}{max(1, \frac{small\_size}{2^{\lfloor \frac{max\_size}{k\_factor} \rfloor}})}
+        \tcp{$m_r$ is the micro-tile}
+        
+        \assignln{M}{n_a[0]}
+        \assignln{N}{n_a[1]}
+        \assignln{lda}{max(w_a[0],w_a[1])}
+        
+        \tcp{$N_b$ macro-tile for contracting dimension}
+        \tcp{$M_b$ macro-tile for non-contracting dimension and should be the multiple of $m_r$}
 
-        \If{$n_a > number\_el\_L_1$}{
-            \assignln{block_1}{half\_block}
+        \openmp{parallel for}
+        \For{\assign{i}{0} \KwTo $M$ \KwBy $M_b$}{
+            \assignln{i_b}{min(M-i,\ m_b)}
+            \assignln{a_i}{a + i \times w_a[0]}
+            \assignln{b_i}{b}
+            \assignln{c_i}{c + i}
+            \For{\assign{k}{0} \KwTo $N$ \KwBy $N_b$}{
+                \assignln{k_b}{min(N-k,\ k_b)}
+                \assignln{a_k}{a_i + k \times w_a[1]}
+                \assignln{b_k}{b_i + k}
+                \assignln{c_k}{c_i}
+                \assignln{M_{iter}}{\lfloor \frac{i_b}{m_r} \rfloor}
+                \assignln{M_{rem}}{i_b - (M_{iter} \times m_r)}
+                $simd\_loop_1(c_k, a_k, b_k, M_{rem}, k_b, lda)$
+                
+                \assignln{a_k}{a_k + M_{rem} \times w_a[0]}
+                \assignln{c_k}{c_k + M_{rem}}
+                
+                \For{\assign{ii}{0} \KwTo $M_{iter}$ \KwBy $1$}{
+                    \assignln{a_p}{a_i + ii \times m_r \times w_a[1]}
+                    \assignln{b_p}{b_i + ii \times m_r}
+                    \assignln{c_p}{c_i}
+                    $simd\_loop_0(c_p, a_p, b_p, k_b, lda)$
+                }
             }
-        \Else{
-            \assignln{block_1}{small\_block}
         }
-
-        \assignln{n_{itr}}{\lfloor \frac{n_b}{block_2} \rfloor}
-        \assign{n_{rem}}{n_b - (block_2 \times \lfloor \frac{n_b}{block_2} \rfloor)}
-        \tcp{This equation gives the remainder}
-
-        \openmp{parallel}
-        \Begin{
-            $main\_loop_1(c,a,w_a,n_a,b,n_{rem},block_1)$
-            
-            \assignln{at}{a + w_a \times n_{rem}}
-            \assignln{bt}{b + n_{rem}}
-            $main\_loop_{block_2}(c,at,w_a,n_a,bt,n_{iter},block_1)$
-        }
-
     }
 
     \caption{Col-Major Matrix-Vector Product}
@@ -245,28 +218,18 @@ from memory, which are place contiguously.
 Each element in the result vector is the product of the 
 matrix's row vector and the whole vector. 
 
-For OpenMP to do its magic, we need to fill the $L_1$ cache with 
-the result vector block, block of the input vector's matrix and block. 
-We divide the load through the threads, where each thread has 
-its private cache, and they calculate a small block of the 
-result vector without hindering the other vectors. 
-The result vector calculation is done by dividing it into 
-smaller chunk or block and handing over the block to each thread, 
-which removes the dependency within the different blocks and 
-eradicates the data races and synchronization. 
-The loop which manages the block for the result 
-vectors must be multithreaded, and each thread needs to fill 
-the $L_1$ cache with the output vector and a column vector of the matrix 
-as large as it can so that the registers can fetch the blocks as fast 
-as possible from the cache rather than fetching from memory, which adds 
-an overhead to the performance. To fit the output vector, the matrix and the vector, 
-we previously discussed fact and the \ref{fig:mtv_col_block_diagram} 
-for the variable convention; we derive the following equation.
+The algorithm for the matrix times vector is similar to Blis' algorithm, 
+which describes the inner working of the matrix times matrix in the paper \cite{BLIS}. 
+However, there are a few differences which are as following:
+\begin{itemize}
+    \item We do not pack the matrix.
+    \item We do not use the micro-tile of the contracting dimension.
+    \item We use two levels of cache.
+\end{itemize}
 
-\begin{equation}
-    S_{L_1} = S_{data}(m_cn_c + m_c + n_c)
-    \label{eq:mtv_col_block} 
-\end{equation}
+We do not pack because of the time complexity of the packing and the matrix times vector 
+complexity. The copying and operation time complexity is $O(N^2)$, but the copying overwhelms 
+the operation and degrades the performance.
 
 \begin{figure}[htb]
     \centering
@@ -275,145 +238,97 @@ for the variable convention; we derive the following equation.
     \label{fig:mtv_col_block_diagram}
 \end{figure}
 
+Let macro-tile of the matrix $A$ be $A_c$, 
+macro-tile of the vector $b$ be $b_c$, 
+micro-tile of the input matrix be $A_r$, 
+micro-tile of the input vector be $b_r$, and 
+micro-tile of the output vector be $c_r$.
 
-For the small length of the result vector, which is less than the L1 
-cache size, to maximize the block in the L1 cache, the row block and 
-column block must be identical, $m_c = n_c$, which makes the matrix a square matrix.
+To maximize the performance, we try to maximize the 
+reuse factors—the innermost micro-tiles, $c_r$, calculated 
+using the equation defined in the paper \cite{BLIS}. Afterwards, 
+we go from cache $L_1$ to cache $L_2$, figuring 
+out the size of the macro-tiles. Then, the macro-tile, 
+$A_c$, is put in the cache $L_2$ to maximize the reuse 
+factor and macro-tile, $b_c$ kept in the cache $L_1$. 
+Finally, we keep the macro-tile $b_c$ in the cache $L_1$ 
+because it avoids bringing the micro-tile $c_r$ multiple 
+times and increasing the reuse of $c_r$, which avoids 
+polluting the cache or evicting the following tile 
+and increases the probability of the next tile to 
+present inside the $L_1$ cache. 
 
-Let $m_c = n_c = B_{small}$
-\begin{align*}
-    S_{L_1} &= S_{data}(m_cn_c + m_c + n_c)\\
-    S_{L_1} &= S_{data}(B_{small} \times B_{small} + B_{small} + B_{small})\\
-    S_{L_1} &= S_{data}(B_{small}^2 + 2B_{small})\\
-\end{align*}
+For finding the $m_r$ and $n_r$ refer to the section \ref{sec:mr_nr_calculation}, where
+we went into much more detail.
 
-\begin{equation}
-    B_{small}^2 + 2B_{small} = \frac{S_{L_1}}{S_{data}}
-    \label{eq:mtv_col_small_block} 
-\end{equation}
+\subsection{Macro-Tiles $n_c$ and $m_c$}
 
-$B_{small}^2$ is much larger than the $2B_{small}$ in \ref{eq:mtv_col_small_block}, so we can ignore the smaller term.
-
-\[B_{small}^2 < \frac{S_{L_1}}{S_{data}}\]
-
-We can represent $\frac{S_{L_1}}{S_{data}}$ in form of power of two because 
-we know both $S_{L_1}$ and $S_{data}$ are power of two. Therefore, the division must 
-produce a power of two. Let the exponent of two be $k$, which gives us
-
-\begin{align*}
-    B_{small}^2 &< 2^k\\
-    B_{small} &< 2^{\frac{k}{2} }
-\end{align*}
-
-Here, $k$ can be both even or odd. We will have a fractional value if $k$ is odd, 
-and we cannot have a fractional value because we have no control over the registers, 
-and registers are always discrete, which is a multiple of a power of two. 
-We try to maximize the register use, and if the value is fractional, 
-it will not fill the registers fully, and it is a wastage of processing power. 
-There might be a case when the register has only one element, and subsequent 
-iteration will have to fill the register with more elements; we could have filled 
-the register with the following elements and had processed more elements rather 
-than waiting for subsequent iteration, which is a wastage of cycles.
-
-\begin{align*}
-    2^{\lfloor \frac{k}{2} \rfloor} &\leq 2^{\frac{k}{2}} \leq 2^{\lceil \frac{k}{2} \rceil}\\
-    \lfloor \frac{k}{2} \rfloor &\leq \frac{k}{2} \leq \lceil \frac{k}{2} \rceil\\
-\end{align*}
-
-using this relation and taking the lower bound, we have
+To find $n_c$, we have to focus on the cache $L_1$. 
+For the $b_c$ not to be evicted from the $L_1$, we 
+want $A_{r_{prev}}$ to replace $A_{r_{next}}$ rather than replacing $b_c$ 
+because we assume the cache replacing algorithm 
+to be LRU, and the old cache line is replaced by the 
+new cache line. Therefore, we have to use $A_r$ to 
+find the size $n_c$ and consider $c_r$, which will go 
+through the caches to load inside the register. 
+When $c_r$ loads, then it will replace the tiles that 
+we put inside the caches in order to maximize the 
+reuse factor and needs a whole one cache line reserved for it.
 
 \begin{equation}
-    B_{small} \leq 2^{\lfloor \frac{k}{2} \rfloor}
-    \label{eq:mtv_col_small_block_simplified} 
+    A_r = S_{data} m_r n_c = C_{A_r}N_{L_1}C_{L_1}
+    \label{eq:mtv_ar}
 \end{equation}
-
-The eqauation \ref{eq:mtv_col_small_block_simplified} is only valid if the length of the output
-vector is less than the $L_1$ cache.
-
-$B_{small}$ is the lower bound, so now, we need to find the upper bound. 
-To find the upper bound, we will use the fact that each thread has its 
-private cache, an $L_1$ cache. Using the equation \ref{eq:mtv_col_block}, 
-we can maximize the output vector's block by putting an 
-input vector element into the register, making the block of 
-the input vector one, $m_c$ by putting an input vector element into the 
-register, which makes the block of the input vector one, $n_c = 1$. We do not need $n_c$
-in the $L_1$ cache, so we remove it from the equation \ref{eq:mtv_col_block}.
-
-\begin{align*}
-    S_{L_1} &= S_{data}(m_cn_c + m_c)\\
-    S_{L_1} &= S_{data}(m_c + m_c)\\
-    S_{L_1} &= S_{data}(2m_c)\\
-    m_c &= \frac{S_{L_1}}{2S_{data}}\\
-\end{align*}
-
-When $M < \frac{S_{L_1}}{S_{data}}$ then $m_c = B_{small}$, otherwise, $m_c = \frac{S_{L_1}}{2S_{data}}$.
-
-\vspace*{0.5 cm}
-Now, we need to find block $n_c$, where $n_c$ is an unrolling factor. 
-The unrolling factor helps to bring the block of column vectors 
-in the cache, and the block is the size of the cache line. 
-If the cache line size and $m_c$ are of the same size, then the 
-cache misses minimized. We found that $n_c$ is a decreasing value 
-through experiments and depends on the maximum dimension, 
-where it reaches the minimum value of one when the maximum dimension 
-is equal to or exceeds the $L_1$ cache size.
-
-We see this behaviour due to the cache misses as the dimension 
-increase in size, the block $n_c$ starts to replace the block of 
-output vector $m_c$ using the LRU policy, so on the subsequent iteration, 
-the replaced block of the output $m_c$ again needs to bring back to the $L_1$ cache.
-
-Let $cm_X$ be the cache miss where $X$ is the size of the block.
-For the large block of $n_c$ and the large dimension.
-
-$Total\ Cache\ Misses = $ cache miss for bringing the block $m_c$ of the output into the cache $+$
-cache miss for bringing the block $m_c \times n_c$ of the matrix $A$ into the cache $+$
-cache miss for bringing the block $m_c - Size(Register)$ of the output into the cache back which was
-replaced due to eviction + cache miss for bringing the block $n_c$ of the input into the cache.
-
-\[Total\ Cache\ Misses = cm_{m_c} + cm_{m_cn_c} + cm_{m_c - Size(Register)} + cm_{n_c}\]
-
-If the $n_c = 1$ for the large length then $cm_{n_c} = 0$ because it will reside inside the register 
-and there is no cache eviction. Therefore, $cm_{m_c - Size(Register)} = 0$, so we have
-\begin{align*}
-    Total\ Cache\ Misses &= cm_{m_c} + cm_{m_c}\\
-    Total\ Cache\ Misses &= 2cm_{m_c}\\
-\end{align*}
-
-Using this fact, we can deduce
-\[1 \leq n_c \leq B_{small}\]
-
-Since $n_c$ is a decreasing value and we decrease $n_c$ by the power of two 
-because we need to use the register efficiently. Let $S_{max}$ be the maximum dimension 
-of the matrix.
-
-\begin{figure}[htb]
-    \centering
-    \caption{Input Vector Block Divison Diagram}
-    \includegraphics[width=15cm]{../assets/mtv/col_major/input_block_diagram.png} %
-\end{figure}
-
-Using the previously derived facts, we know $\frac{B_{small}}{2^k} = 1$ 
-when $\frac{S_{L_1}}{S_{data}} \leq S_{max}$
-
-\[\frac{B_{small}}{2^k} = 1\]
-\[B_{small} = 2^k\]
-\[k = \log_2{B_{small}}\]
-\[kS_{block} = \frac{S_{L_1}}{S_{data}}\]
-\[S_{block} = \frac{S_{L_1}}{kS_{data}}\]
 
 \begin{equation}
-    S_{block} = \frac{S_{L_1}}{S_{data} \log_2{B_{small}}}
+    b_c = S_{data} n_c = C_{b_c}N_{L_1}C_{L_1}
+    \label{eq:mtv_bc}
 \end{equation}
 
-If the $S_{block}$ is not the power of two then get the nearest power of two.
-\[2^q \leq S_{block} \leq 2^{q+1}\]
+Where $C_{A_r}$ is a integral factor and denotes the number of cache-line taken by the
+micro-tile, $A_r$.
 
-Therefore,
 \begin{equation}
-    Block_2 = max(1, \frac{B_{small}}{2^{\lfloor \frac{S_{max}}{S_{block}} \rfloor}})
-    \label{eq:mtv_col_nc_block} 
+    C_{A_r} + C_{b_c} \leq W_{L_1} - 1
+    \label{eq:mtv_W}
 \end{equation}
+
+Dividing the equation \ref{eq:mtv_ar} and \ref{eq:mtv_bc}, we get
+\begin{align*}
+    m_r &= \frac{C_{A_r}}{C_{b_c}}\\
+    C_{b_c} &= \frac{C_{A_r}}{m_r}
+\end{align*}
+
+Substituting in \ref{eq:mtv_W}, we get
+
+\[
+    C_{A_r}(1 + \frac{1}{m_r}) \leq W_{L_1} - 1
+\]
+
+\[
+    C_{A_r} = \lceil \frac{W_{L_1} - 1}{1 + \frac{1}{m_r}} \rceil
+\]
+
+But $1 + \frac{1}{m_r} \approx 1$ because $\frac{1}{m_r}$ tends toward zero for large value of $m_r$ 
+and we can ignore the denominator.
+
+\begin{equation}
+    C_{A_r} = W - 1
+    \label{eq:mtv_car}
+\end{equation}
+
+\begin{align*}
+    n_c = \frac{ (W_{L_1} - 1) N_{L_1}C_{L_1} }{S_{data} m_r }
+\end{align*}
+
+Similarly, we can calculate the $m_c$, and we get
+
+\begin{align*}
+    m_c = \frac{ (W_{L_2} - 1) N_{L_2}C_{L_2} }{S_{data} n_c }
+\end{align*}
+
+But, there is a one difference here we need to worry about the $A_c$ and for others 
+we can reserve one cache-line for them pass through.
 
 \clearpage
 \subsection{Row-Major}
@@ -540,15 +455,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $97$ & $97$ \\
+        Boost.uBLAS & $99$ & $99$ \\
         \hline
-        OpenBLAS    & $98$ & $38$ \\
+        OpenBLAS    & $97$ & $9$ \\
         \hline
-        Eigen       & $97$ & $97$ \\
+        Eigen       & $24$ & $9$ \\
         \hline
         Blis        & $98$ & $98$ \\
         \hline
-        Intel's MKL & $61$ & $1$ \\
+        Intel's MKL & $10$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -558,13 +473,13 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Boost.uBLAS & $0$ & $0$ \\
         \hline
-        OpenBLAS    & $0$ & $0$ \\
+        OpenBLAS    & $3$ & $0$ \\
         \hline
-        Eigen       & $1$ & $1$ \\
+        Eigen       & $76$ & $0$ \\
         \hline
-        Blis        & $7$ & $1$ \\
+        Blis        & $86$ & $0$ \\
         \hline
-        Intel's MKL & $37$ & $0$ \\
+        Intel's MKL & $91$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -576,15 +491,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $98$ & $98$ \\
+        Boost.uBLAS & $99$ & $98$ \\
         \hline
-        OpenBLAS    & $92$ & $47$ \\
+        OpenBLAS    & $89$ & $4$ \\
         \hline
-        Eigen       & $98$ & $96$ \\
+        Eigen       & $98$ & $8$ \\
         \hline
-        Blis        & $87$ & $0$ \\
+        Blis        & $14$ & $3$ \\
         \hline
-        Intel's MKL & $76$ & $1$ \\
+        Intel's MKL & $40$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -594,13 +509,13 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Boost.uBLAS & $0$ & $0$ \\
         \hline
-        OpenBLAS    & $6$ & $0$ \\
+        OpenBLAS    & $9$ & $0$ \\
         \hline
-        Eigen       & $0$ & $0$ \\
+        Eigen       & $1$ & $1$ \\
         \hline
-        Blis        & $11$ & $2$ \\
+        Blis        & $86$ & $1$ \\
         \hline
-        Intel's MKL & $22$ & $1$ \\
+        Intel's MKL & $60$ & $2$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -617,17 +532,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $63.1299$& $16.3994$ \\
+        Boost.uBLAS.Tensor  & $107.22$& $14.4079$ \\
         \hline
-        Boost.uBLAS         & $1.04371$& $0.275396$ \\
+        Boost.uBLAS         & $1.02227$& $0.271$ \\
         \hline
-        Intel's MKL         & $82.2283$& $15.6702$ \\
+        Intel's MKL         & $87.6178$& $15.789$ \\
         \hline
-        OpenBLAS            & $31.4436$& $9.49543$ \\
+        OpenBLAS            & $44.5053$& $8.4120$ \\
         \hline
-        Blis                & $28.142$& $12.4837$ \\
+        Blis                & $36.8396$& $12.9113$ \\
         \hline
-        Eigen               & $7.59804$& $4.15489$ \\
+        Eigen               & $32.9823$& $11.4342$ \\
         \hline
     \end{tabular}
 
@@ -639,17 +554,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $37.9093$ & $7.66141$ \\
+        Boost.uBLAS.Tensor  & $52.144$ & $6.2511$ \\
         \hline
-        Boost.uBLAS         & $0.585254$ & $0.184873$ \\
+        Boost.uBLAS         & $0.6601$ & $0.1828$ \\
         \hline
-        Intel's MKL         & $46.0515$ & $6.78875$ \\
+        Intel's MKL         & $33.6268$ & $6.0042$ \\
         \hline
-        OpenBLAS            & $12.3714$ & $4.69513$ \\
+        OpenBLAS            & $16.1558$ & $4.4325$ \\
         \hline
-        Blis                & $14.4262$ & $5.90106$ \\
+        Blis                & $17.4944$ & $5.41638$ \\
         \hline
-        Eigen               & $5.1347$ & $2.0504$ \\
+        Eigen               & $6.30737$ & $3.26405$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -661,17 +576,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $10.7218$& $2.78522$ \\
+        Boost.uBLAS.Tensor  & $18.2099$& $2.4469$ \\
         \hline
-        Boost.uBLAS         & $0.17726$& $0.0467724$ \\
+        Boost.uBLAS         & $0.17361$& $0.0460$ \\
         \hline
-        Intel's MKL         & $13.9654$& $2.66137$ \\
+        Intel's MKL         & $14.8807$& $2.6816$ \\
         \hline
-        OpenBLAS            & $5.34028$& $1.61268$ \\
+        OpenBLAS            & $7.5586$& $1.4286$ \\
         \hline
-        Blis                & $4.77956$& $2.12019$ \\
+        Blis                & $6.2567$& $2.1928$ \\
         \hline
-        Eigen               & $1.29043$& $0.705654$ \\
+        Eigen               & $5.6016$& $1.9419$ \\
         \hline
     \end{tabular}
 
@@ -683,17 +598,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $12.8768$ & $2.60238$ \\
+        Boost.uBLAS.Tensor  & $17.711$ & $2.1233$ \\
         \hline
-        Boost.uBLAS         & $0.198795$ & $0.0627965$ \\
+        Boost.uBLAS         & $0.2242$ & $0.0620$ \\
         \hline
-        Intel's MKL         & $15.6425$ & $2.30596$ \\
+        Intel's MKL         & $11.4221$ & $2.039$ \\
         \hline
-        OpenBLAS            & $4.20224$ & $1.59481$ \\
+        OpenBLAS            & $5.4877$ & $1.505$ \\
         \hline
-        Blis                & $4.90021$ & $2.00443$ \\
+        Blis                & $5.9423$ & $1.8398$ \\
         \hline
-        Eigen               & $1.74412$ & $0.696469$ \\
+        Eigen               & $2.14244$ & $1.1087$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -705,15 +620,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $60.4862$ & $59.5483$ \\
+        Boost.uBLAS         & $104.884$ & $53.092$ \\
         \hline
-        Intel's MKL         & $0.767739$ & $1.04653$ \\
+        Intel's MKL         & $1.2237$ & $0.9125$ \\
         \hline
-        OpenBLAS            & $2.00772$ & $1.72708$ \\
+        OpenBLAS            & $2.4091$ & $1.7127$ \\
         \hline
-        Blis                & $2.24326$ & $1.31366$ \\
+        Blis                & $2.9104$ & $1.11590$ \\
         \hline
-        Eigen               & $8.30871$ & $3.947$ \\
+        Eigen               & $3.2508$ & $1.26006$ \\
         \hline
     \end{tabular}
 
@@ -725,15 +640,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $64.7741$ & $41.4415$ \\
+        Boost.uBLAS         & $78.9937$ & $34.195$ \\
         \hline
-        Intel's MKL         & $0.823193$ & $1.12854$ \\
+        Intel's MKL         & $1.5506$ & $1.0411$ \\
         \hline
-        OpenBLAS            & $3.06427$ & $1.63178$ \\
+        OpenBLAS            & $3.2275$ & $1.4102$ \\
         \hline
-        Blis                & $2.6278$ & $1.29831$ \\
+        Blis                & $2.9806$ & $1.1541$ \\
         \hline
-        Eigen               & $7.38297$ & $3.73654$ \\
+        Eigen               & $8.2671$ & $1.9151$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -798,15 +713,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $98$ & $98$ \\
+        Boost.uBLAS & $99$ & $99$ \\
         \hline
-        OpenBLAS    & $56$ & $10$ \\
+        OpenBLAS    & $47$ & $7$ \\
         \hline
-        Eigen       & $98$ & $97$ \\
+        Eigen       & $98$ & $36$ \\
         \hline
-        Blis        & $73$ & $9$ \\
+        Blis        & $60$ & $9$ \\
         \hline
-        Intel's MKL & $88$ & $1$ \\
+        Intel's MKL & $89$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -816,13 +731,13 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Boost.uBLAS & $0$ & $0$ \\
         \hline
-        OpenBLAS    & $42$ & $0$ \\
+        OpenBLAS    & $54$ & $0$ \\
         \hline
-        Eigen       & $0$ & $0$ \\
+        Eigen       & $2$ & $0$ \\
         \hline
-        Blis        & $25$ & $0$ \\
+        Blis        & $40$ & $1$ \\
         \hline
-        Intel's MKL & $10$ & $0$ \\
+        Intel's MKL & $11$ & $1$ \\
         \hline
     \end{tabular}
     
@@ -834,15 +749,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $98$ & $98$ \\
+        Boost.uBLAS & $99$ & $99$ \\
         \hline
-        OpenBLAS    & $98$ & $7$ \\
+        OpenBLAS    & $99$ & $5$ \\
         \hline
-        Eigen       & $98$ & $98$ \\
+        Eigen       & $99$ & $33$ \\
         \hline
-        Blis        & $59$ & $9$ \\
+        Blis        & $63$ & $7$ \\
         \hline
-        Intel's MKL & $92$ & $1$ \\
+        Intel's MKL & $46$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -856,9 +771,9 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         Eigen       & $0$ & $0$ \\
         \hline
-        Blis        & $39$ & $0$ \\
+        Blis        & $36$ & $0$ \\
         \hline
-        Intel's MKL & $6$ & $1$ \\
+        Intel's MKL & $53$ & $1$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -875,17 +790,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $114.495$& $19.4496$ \\
+        Boost.uBLAS.Tensor  & $130.099$& $17.812$ \\
         \hline
-        Boost.uBLAS         & $4.86818$& $3.62716$ \\
+        Boost.uBLAS         & $1.7571$& $1.4884$ \\
         \hline
-        Intel's MKL         & $103.86$& $19.2955$ \\
+        Intel's MKL         & $87.2948$& $17.253$ \\
         \hline
-        OpenBLAS            & $39.0813$& $14.0183$ \\
+        OpenBLAS            & $41.5645$& $13.712$ \\
         \hline
-        Blis                & $28.5224$& $12.8971$ \\
+        Blis                & $42.0662$& $12.5435$ \\
         \hline
-        Eigen               & $8.70003$& $4.11144$ \\
+        Eigen               & $13.0251$& $6.5156$ \\
         \hline
     \end{tabular}
 
@@ -897,17 +812,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $48.6174$& $8.13646$ \\
+        Boost.uBLAS.Tensor  & $77.7866$& $8.096$ \\
         \hline
-        Boost.uBLAS         & $2.19048$& $1.82291$ \\
+        Boost.uBLAS         & $0.7437$& $0.666$ \\
         \hline
-        Intel's MKL         & $51.6863$& $8.51818$ \\
+        Intel's MKL         & $49.3442$& $8.396$ \\
         \hline
-        OpenBLAS            & $18.6354$& $5.19158$ \\
+        OpenBLAS            & $25.0278$& $4.4855$ \\
         \hline
-        Blis                & $14.9491$& $6.06728$ \\
+        Blis                & $23.9759$& $5.7617$ \\
         \hline
-        Eigen               & $6.28753$& $2.04718$ \\
+        Eigen               & $5.57867$& $3.0228$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -919,17 +834,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $19.4456$& $3.30327$ \\
+        Boost.uBLAS.Tensor  & $22.095$& $3.0253$ \\
         \hline
-        Boost.uBLAS         & $0.826797$& $0.616026$ \\
+        Boost.uBLAS         & $0.2984$& $0.2527$ \\
         \hline
-        Intel's MKL         & $17.6393$& $3.27708$ \\
+        Intel's MKL         & $14.825$& $2.930$ \\
         \hline
-        OpenBLAS            & $6.63744$& $2.38082$ \\
+        OpenBLAS            & $7.0591$& $2.3289$ \\
         \hline
-        Blis                & $4.84416$& $2.1904$ \\
+        Blis                & $7.1443$& $2.1303$ \\
         \hline
-        Eigen               & $1.47759$& $0.698275$ \\
+        Eigen               & $2.2121$& $1.1066$ \\
         \hline
     \end{tabular}
 
@@ -941,17 +856,17 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $16.5141$& $2.76374$ \\
+        Boost.uBLAS.Tensor  & $26.4220$& $2.750$ \\
         \hline
-        Boost.uBLAS         & $0.744048$& $0.619195$ \\
+        Boost.uBLAS         & $0.2526$& $0.226$ \\
         \hline
-        Intel's MKL         & $17.5565$& $2.89341$ \\
+        Intel's MKL         & $16.7609$& $2.8520$ \\
         \hline
-        OpenBLAS            & $6.32996$& $1.76344$ \\
+        OpenBLAS            & $8.5012$& $1.52362$ \\
         \hline
-        Blis                & $5.07782$& $2.0609$ \\
+        Blis                & $8.1439$& $1.9571$ \\
         \hline
-        Eigen               & $2.13571$& $0.695374$ \\
+        Eigen               & $1.8949$& $1.0267$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -963,15 +878,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $23.5192$& $5.36222$ \\
+        Boost.uBLAS         & $74.041$& $11.9676$ \\
         \hline
-        Intel's MKL         & $1.1024$& $1.00799$ \\
+        Intel's MKL         & $1.4903$& $1.032$ \\
         \hline
-        OpenBLAS            & $2.92968$& $1.38745$ \\
+        OpenBLAS            & $3.1300$& $1.2990$ \\
         \hline
-        Blis                & $4.01423$& $1.50807$ \\
+        Blis                & $3.0927$& $1.4200$ \\
         \hline
-        Eigen               & $13.1604$& $4.73061$ \\
+        Eigen               & $9.9883$& $2.7338$ \\
         \hline
     \end{tabular}
 
@@ -983,15 +898,15 @@ the row-vector and the input vector gives an element of the output vector.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $22.1949$& $4.46344$ \\
+        Boost.uBLAS         & $104.589$& $12.1426$ \\
         \hline
-        Intel's MKL         & $0.940624$& $0.955187$ \\
+        Intel's MKL         & $1.5764$& $0.96423$ \\
         \hline
-        OpenBLAS            & $2.60887$& $1.56724$ \\
+        OpenBLAS            & $3.108$& $1.8049$ \\
         \hline
-        Blis                & $3.25219$& $1.34104$ \\
+        Blis                & $3.2443$& $1.40512$ \\
         \hline
-        Eigen               & $7.73235$& $3.97447$ \\
+        Eigen               & $13.9435$& $2.6783$ \\
         \hline
     \end{tabular}
 \end{table}
