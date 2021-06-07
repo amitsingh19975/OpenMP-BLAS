@@ -262,15 +262,15 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $99$ & $50$ \\
+        Boost.uBLAS & $99$ & $34$ \\
         \hline
-        OpenBLAS    & $99$ & $11$ \\
+        OpenBLAS    & $99$ & $6$ \\
         \hline
-        Eigen       & $99$ & $52$ \\
+        Eigen       & $99$ & $31$ \\
         \hline
-        Blis        & $98$ & $12$ \\
+        Blis        & $93$ & $8$ \\
         \hline
-        Intel's MKL & $95$ & $2$ \\
+        Intel's MKL & $77$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -284,9 +284,9 @@ we start to spawn $m_c$ amount of threads.
         \hline
         Eigen       & $0$ & $0$ \\
         \hline
-        Blis        & $0$ & $0$ \\
+        Blis        & $6$ & $0$ \\
         \hline
-        Intel's MKL & $2$ & $0$ \\
+        Intel's MKL & $22$ & $1$ \\
         \hline
     \end{tabular}
     
@@ -298,15 +298,15 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Speedup $\geq$ 1 [\%]} & \textbf{Speedup $\geq$ 2 [\%]}\\
         \hline
-        Boost.uBLAS & $99$ & $71$ \\
+        Boost.uBLAS & $99$ & $38$ \\
         \hline
-        OpenBLAS    & $99$ & $8$ \\
+        OpenBLAS    & $98$ & $5$ \\
         \hline
-        Eigen       & $99$ & $74$ \\
+        Eigen       & $99$ & $23$ \\
         \hline
-        Blis        & $99$ & $8$ \\
+        Blis        & $76$ & $4$ \\
         \hline
-        Intel's MKL & $94$ & $2$ \\
+        Intel's MKL & $86$ & $0$ \\
         \hline
     \end{tabular}
     
@@ -320,9 +320,9 @@ we start to spawn $m_c$ amount of threads.
         \hline
         Eigen       & $0$ & $0$ \\
         \hline
-        Blis        & $0$ & $0$ \\
+        Blis        & $22$ & $0$ \\
         \hline
-        Intel's MKL & $3$ & $0$ \\
+        Intel's MKL & $13$ & $1$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -339,17 +339,17 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $26.9675$ & $5.00698$ \\
+        Boost.uBLAS.Tensor  & $35.316$ & $5.2823$ \\
         \hline
-        Boost.uBLAS         & $2.82578$ & $2.01385$ \\
+        Boost.uBLAS         & $2.48448$ & $1.8241$ \\
         \hline
-        Intel's MKL         & $27.9$ & $4.89873$ \\
+        Intel's MKL         & $26.8859$ & $4.9064$ \\
         \hline
-        OpenBLAS            & $13.1052$ & $3.4242$ \\
+        OpenBLAS            & $13.4809$ & $3.2026$ \\
         \hline
-        Blis                & $8.35253$ & $3.52469$ \\
+        Blis                & $13.1177$ & $3.5963$ \\
         \hline
-        Eigen               & $5.24754$ & $1.84399$ \\
+        Eigen               & $2.36464$ & $1.8591$ \\
         \hline
     \end{tabular}
 
@@ -361,17 +361,17 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $14.1047$ & $2.17063$ \\
+        Boost.uBLAS.Tensor  & $12.3296$ & $2.2376$ \\
         \hline
-        Boost.uBLAS         & $1.34503$ & $0.925927$ \\
+        Boost.uBLAS         & $1.21345$ & $0.9012$ \\
         \hline
-        Intel's MKL         & $14.4913$ & $2.0621$ \\
+        Intel's MKL         & $11.7715$ & $2.0042$ \\
         \hline
-        OpenBLAS            & $6.35947$ & $1.54396$ \\
+        OpenBLAS            & $7.00484$ & $1.5713$ \\
         \hline
-        Blis                & $4.81067$ & $1.66087$ \\
+        Blis                & $4.9330$ & $1.65328$ \\
         \hline
-        Eigen               & $3.01793$ & $0.926035$ \\
+        Eigen               & $1.2312$ & $0.9391$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -383,17 +383,17 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $4.58008$ & $0.850371$ \\
+        Boost.uBLAS.Tensor  & $5.9979$ & $0.8971$ \\
         \hline
-        Boost.uBLAS         & $0.479922$ & $0.342027$ \\
+        Boost.uBLAS         & $0.4219$ & $0.3098$ \\
         \hline
-        Intel's MKL         & $4.73845$ & $0.831985$ \\
+        Intel's MKL         & $4.5662$ & $0.8333$ \\
         \hline
-        OpenBLAS            & $2.22575$ & $0.581555$ \\
+        OpenBLAS            & $2.2895$ & $0.5439$ \\
         \hline
-        Blis                & $1.41857$ & $0.598622$ \\
+        Blis                & $2.2278$ & $0.6107$ \\
         \hline
-        Eigen               & $0.580557$ & $0.328019$ \\
+        Eigen               & $0.40160$ & $0.3157$ \\
         \hline
     \end{tabular}
 
@@ -405,17 +405,17 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS.Tensor  & $4.79099$ & $0.737305$ \\
+        Boost.uBLAS.Tensor  & $4.1880$ & $0.7600$ \\
         \hline
-        Boost.uBLAS         & $0.456872$ & $0.314513$ \\
+        Boost.uBLAS         & $0.4121$ & $0.306$ \\
         \hline
-        Intel's MKL         & $4.92232$ & $0.700442$ \\
+        Intel's MKL         & $3.998$ & $0.6807$ \\
         \hline
-        OpenBLAS            & $2.16015$ & $0.524444$ \\
+        OpenBLAS            & $2.379$ & $0.5337$ \\
         \hline
-        Blis                & $1.63406$ & $0.564155$ \\
+        Blis                & $1.6756$ & $0.5615$ \\
         \hline
-        Eigen               & $1.02511$ & $0.31455$ \\
+        Eigen               & $0.41820$ & $0.31899$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -427,15 +427,15 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $9.54339$ & $2.48627$ \\
+        Boost.uBLAS         & $14.2146$ & $2.895$ \\
         \hline
-        Intel's MKL         & $0.966577$ & $1.0221$ \\
+        Intel's MKL         & $1.3135$ & $1.0766$ \\
         \hline
-        OpenBLAS            & $2.05777$ & $1.46224$ \\
+        OpenBLAS            & $2.6197$ & $1.6493$ \\
         \hline
-        Blis                & $3.22867$ & $1.42055$ \\
+        Blis                & $2.6922$ & $1.4688$ \\
         \hline
-        Eigen               & $7.88912$ & $2.59245$ \\
+        Eigen               & $14.9350$ & $2.8412$ \\
         \hline
     \end{tabular}
 
@@ -447,15 +447,15 @@ we start to spawn $m_c$ amount of threads.
         \hline
         \textbf{Implementation} & \textbf{Max} & \textbf{Average}\\
         \hline
-        Boost.uBLAS         & $10.4865$ & $2.34428$ \\
+        Boost.uBLAS         & $10.1607$ & $2.4827$ \\
         \hline
-        Intel's MKL         & $0.973321$ & $1.05263$ \\
+        Intel's MKL         & $1.0474$ & $1.1164$ \\
         \hline
-        OpenBLAS            & $2.2179$ & $1.40588$ \\
+        OpenBLAS            & $1.7601$ & $1.42407$ \\
         \hline
-        Blis                & $2.93196$ & $1.30692$ \\
+        Blis                & $2.4993$ & $1.3534$ \\
         \hline
-        Eigen               & $4.67363$ & $2.344$ \\
+        Eigen               & $10.014$ & $2.3827$ \\
         \hline
     \end{tabular}
 \end{table}
