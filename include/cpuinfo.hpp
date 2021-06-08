@@ -168,9 +168,9 @@ template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_latency() noexcept{
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
-        return cpu_type::fma_latency + cpu_type::load_latency ;
+        return cpu_type::fma_latency + 2 * cpu_type::load_latency ;
     }else{
-        return cpu_type::mul_latency + cpu_type::add_latency + cpu_type::load_latency;
+        return cpu_type::mul_latency + cpu_type::add_latency + 2 * cpu_type::load_latency;
     }
 }
 
@@ -178,7 +178,7 @@ template<typename ValueType, std::size_t VecLen, CPUFamily CPUType>
 constexpr double fma_throughput() noexcept{
     // Harmonic Mean
     using cpu_type = cpu_info<ValueType,VecLen,CPUType>;
-    constexpr auto tload_save = 1. / (2. * cpu_type::load_throughput);
+    constexpr auto tload_save = 2. / (cpu_type::load_throughput);
 
     if constexpr(cpu_type::mul_latency != 0. && cpu_type::add_latency != 0.){
         constexpr auto tfma = 1. / cpu_type::fma_throughput;
@@ -218,7 +218,8 @@ constexpr std::size_t calculate_nr() noexcept{
     constexpr auto thr = fma_throughput<ValueType,VecLen,CPUType>();
     constexpr auto elements = static_cast<double>(VecLen / (sizeof(ValueType) * CHAR_BIT));
     constexpr auto mr = calculate_mr<ValueType,VecLen,CPUType>();
-    return ceil<std::size_t>((elements * lat * thr) / mr);
+    constexpr auto res = ceil<std::size_t>((elements * lat * thr) / mr);
+    return res + (res & 1ul);
 }
 
 } // namespace amt
