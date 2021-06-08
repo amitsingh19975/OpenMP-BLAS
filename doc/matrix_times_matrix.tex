@@ -248,7 +248,7 @@ and taking the harmonic mean gives the effective throughput.
 
 \begin{align*}
     L_{effective} &= 2L_{L/S} + L_{VFMA}\\
-    N_{effective} &= \frac{3}{ \frac{1}{N_{VEC}} + \frac{1}{2N_{L/S}} } \\
+    N_{effective} &= \frac{3}{ \frac{1}{N_{VEC}} + \frac{2}{N_{L/S}} } \\
 \end{align*}
 
 \begin{align*}
@@ -256,6 +256,10 @@ and taking the harmonic mean gives the effective throughput.
     N_r &= \lceil \frac{ N_{VEC} L_{effective} N_{effective} }{M_r} \rceil
 \end{align*}
 
+Note that our algorithm relies on $N_r$ being an even number.  
+Therefore, if we get odd, we have chosen the following even number, 
+but we cannot choose the last even number because our lower limit 
+is the solution to the equation.
 
 Calculating $M_r$ and $N_r$ for Intel SkyLake with the AVX2.
 
@@ -279,6 +283,9 @@ $N_{VEC} = 8$ for Single-Precision and $N_{VEC} = 4$ for Double-Precision.
     M_r &= \lceil \frac{ \sqrt{9 N_{VEC}} }{N_{VEC}} \rceil N_{VEC} \\
     N_r &= \lceil \frac{ 9 N_{VEC} }{M_r} \rceil
 \end{align*}
+
+If we solve $N_r$ here, we get $5$ which is an odd number. 
+Therefore, we choose $6$ because it is the following even number.
 
 \begin{table}[ht]
     \centering
